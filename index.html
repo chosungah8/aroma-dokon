@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aroma Do'kon</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: var(--tg-theme-bg-color, #ffffff);
+            --text-color: var(--tg-theme-text-color, #222222);
+            --hint-color: var(--tg-theme-hint-color, #888888);
+            --btn-color: var(--tg-theme-button-color, #2481cc);
+            --btn-text: var(--tg-theme-button-text-color, #ffffff);
+            --card-bg: var(--tg-theme-secondary-bg-color, #f7f7f8);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 12px;
+            box-sizing: border-box;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .header h2 {
+            margin: 0;
+            font-size: 22px;
+        }
+
+        .header p {
+            margin: 4px 0 0;
+            color: var(--hint-color);
+            font-size: 13px;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 12px;
+            padding-bottom: 20px;
+        }
+
+        .product-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        }
+
+        .product-img {
+            width: 100%;
+            height: 130px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .product-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .product-desc {
+            font-size: 11px;
+            color: var(--hint-color);
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+
+        .product-price {
+            font-weight: 700;
+            font-size: 13px;
+            color: var(--btn-color);
+            margin-bottom: 8px;
+        }
+
+        .btn {
+            background-color: var(--btn-color);
+            color: var(--btn-text);
+            border: none;
+            padding: 8px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .btn:active {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>✨ Aroma Do'kon</h2>
+        <p>Eksklyuziv parfyumeriya toplami</p>
+    </div>
+
+    <div class="products-grid" id="products"></div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // ATIRLAR RO'YXATI (Shu yerdan yangi atirlar qo'shasiz)
+        const products = [
+            {
+                id: 1,
+                name: "Baccarat Rouge 540",
+                desc: "Shirin, yog'ochli va nafis sharqona ifor.",
+                price: 450000,
+                image: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=300"
+            },
+            {
+                id: 2,
+                name: "Creed Aventus",
+                desc: "Erkaklar uchun mevali va charmli elit atir.",
+                price: 600000,
+                image: "https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=300"
+            },
+            {
+                id: 3,
+                name: "Dior Sauvage",
+                desc: "Tazelik beruvchi sitrus va murch aromati.",
+                price: 380000,
+                image: "https://images.unsplash.com/photo-1541643600914-78b084683601?w=300"
+            },
+            {
+                id: 4,
+                name: "Tom Ford Lost Cherry",
+                desc: "Oltxo'ri va gilosli romantik ifor.",
+                price: 520000,
+                image: "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?w=300"
+            }
+        ];
+
+        let cart = [];
+
+        function renderProducts() {
+            const container = document.getElementById('products');
+            container.innerHTML = '';
+
+            products.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.innerHTML = `
+                    <div>
+                        <img src="${p.image}" alt="${p.name}" class="product-img">
+                        <div class="product-title">${p.name}</div>
+                        <div class="product-desc">${p.desc}</div>
+                    </div>
+                    <div>
+                        <div class="product-price">${p.price.toLocaleString()} so'm</div>
+                        <button class="btn" onclick="addToCart(${p.id})">Savatga</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function addToCart(id) {
+            const item = products.find(p => p.id === id);
+            cart.push(item);
+            updateMainButton();
+        }
+
+        function updateMainButton() {
+            if (cart.length > 0) {
+                const total = cart.reduce((sum, item) => sum + item.price, 0);
+                tg.MainButton.setText(`Buyurtma berish: ${total.toLocaleString()} so'm (${cart.length} ta)`);
+                tg.MainButton.show();
+            } else {
+                tg.MainButton.hide();
+            }
+        }
+
+        tg.MainButton.onClick(() => {
+            const orderData = {
+                items: cart,
+                total: cart.reduce((sum, item) => sum + item.price, 0)
+            };
+            tg.sendData(JSON.stringify(orderData));
+        });
+
+        renderProducts();
+    </script>
+</body>
+</html>
