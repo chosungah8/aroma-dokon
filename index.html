@@ -24,11 +24,9 @@
 
         .add-btn { background: #007aff; color: #fff; border: none; padding: 8px; border-radius: 6px; font-size: 12px; cursor: pointer; width: 100%; }
 
-        /* Pastki savatcha paneli */
         .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e4e4e7; padding: 12px; display: none; justify-content: space-between; align-items: center; z-index: 50; }
         .cart-bar-btn { background: #34c759; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; }
 
-        /* Modal oyna */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: flex-end; }
         .modal-content { background: #fff; width: 100%; border-radius: 16px 16px 0 0; padding: 16px; max-height: 80vh; overflow-y: auto; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 16px; font-weight: bold; }
@@ -55,7 +53,6 @@
 
     <div class="grid" id="productGrid"></div>
 
-    <!-- Pastki mini panel -->
     <div class="cart-bar" id="cartBar">
         <div>
             <div style="font-size: 11px; color: #71717a;">Jami summa:</div>
@@ -64,7 +61,6 @@
         <button class="cart-bar-btn" onclick="openCartModal()">Savatcha va Buyurtma 🛒</button>
     </div>
 
-    <!-- Savatcha Modal -->
     <div class="modal" id="cartModal">
         <div class="modal-content">
             <div class="modal-header">

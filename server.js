@@ -3,8 +3,8 @@ const { Telegraf, Markup } = require('telegraf');
 // 1. BotFather bergan tokeningiz
 const BOT_TOKEN = '8650363671:AAFkkX62y8CHVO5ZgMGbrJukcwvWw7yiG7w'; 
 
-// 2. GitHub Pages havolangiz (aroma-dokon deb yozilgan)
-const WEB_APP_URL = 'https://github.com/chosungah8/aroma-dokon.git'; 
+// 2. GitHub Pages havolangiz
+const WEB_APP_URL = 'https://chosungah8.github.io/aroma-dokon/'; 
 
 const bot = new Telegraf(BOT_TOKEN);
 
@@ -21,17 +21,35 @@ bot.start((ctx) => {
 // Web App'dan buyurtma ma'lumotlarini qabul qilish
 bot.on('web_app_data', async (ctx) => {
     try {
-        const data = JSON.parse(ctx.webAppData.data);
-        let itemsList = data.items.map(item => `- ${item.name}: ${item.price.toLocaleString()} so'm`).join('\n');
+        let rawData = ctx.webAppData.data;
+        let data;
 
-        const message = `🛍 <b>Yangi buyurtma!</b>\n\n<b>Mahsulotlar:</b>\n${itemsList}\n\n<b>Jami:</b> ${data.total.toLocaleString()} so'm`;
-        
+        // Ma'lumot string bo'lsa parse qilamiz, aks holda tayyor obyektni olamiz
+        if (typeof rawData === 'string') {
+            data = JSON.parse(rawData);
+        } else {
+            data = rawData;
+        }
+
+        // Buyurtma qilingan mahsulotlar ro'yxati
+        let itemsList = (data.items || []).map(item => 
+            `• <b>${item.name}</b> (${item.count} ta) - ${(item.price * item.count).toLocaleString()} so'm`
+        ).join('\n');
+
+        // Mijozga yuboriladigan xabar
+        const message = `🛍 <b>Yangi buyurtma qabul qilindi!</b>\n\n` +
+                        `<b>Mahsulotlar:</b>\n${itemsList}\n\n` +
+                        `💰 <b>Jami summa:</b> ${(data.total || 0).toLocaleString()} so'm\n\n` +
+                        `📞 <b>Telefon:</b> ${data.phone || 'Kiritilmadi'}\n` +
+                        `📍 <b>Manzil:</b> ${data.address || 'Kiritilmadi'}\n\n` +
+                        `<i>Tez orada operatorimiz siz bilan bog'lanadi!</i>`;
+
         await ctx.replyWithHTML(message);
     } catch (e) {
-        console.error(e);
-        ctx.reply('Buyurtmani qayta ishlashda xatolik yuz berdi.');
+        console.error('Buyurtma saqlashda xatolik:', e);
+        ctx.reply('Buyurtmani qayta ishlashda xatolik yuz berdi. Iltimos, qaytadan urinib ko\'ring.');
     }
 });
 
 bot.launch();
-console.log('aroma-dokon serveri ishga tushdi!');
+console.log('aroma-dokon serveri muvaffaqiyatli ishga tushdi!');
