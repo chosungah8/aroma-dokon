@@ -7,192 +7,237 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --bg-color: var(--tg-theme-bg-color, #ffffff);
-            --text-color: var(--tg-theme-text-color, #222222);
-            --hint-color: var(--tg-theme-hint-color, #888888);
-            --btn-color: var(--tg-theme-button-color, #2481cc);
-            --btn-text: var(--tg-theme-button-text-color, #ffffff);
-            --card-bg: var(--tg-theme-secondary-bg-color, #f7f7f8);
+            --bg-color: var(--tg-theme-bg-color, #f4f4f5);
+            --card-bg: var(--tg-theme-secondary-bg-color, #ffffff);
+            --text-color: var(--tg-theme-text-color, #18181b);
+            --hint-color: var(--tg-theme-hint-color, #71717a);
+            --primary: var(--tg-theme-button-color, #007aff);
+            --primary-text: var(--tg-theme-button-text-color, #ffffff);
         }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 12px;
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-color); padding: 12px; padding-bottom: 90px; }
 
-        .header {
-            text-align: center;
-            margin-bottom: 16px;
-        }
+        .header { text-align: center; margin-bottom: 12px; }
+        .header h2 { font-size: 20px; font-weight: 700; }
+        .header p { font-size: 12px; color: var(--hint-color); }
 
-        .header h2 {
-            margin: 0;
-            font-size: 22px;
-        }
+        /* Qidiruv va Filtrlar */
+        .search-box { margin-bottom: 12px; }
+        .search-input { width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid #e4e4e7; background: var(--card-bg); color: var(--text-color); font-size: 14px; outline: none; }
 
-        .header p {
-            margin: 4px 0 0;
-            color: var(--hint-color);
-            font-size: 13px;
-        }
+        .categories { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 14px; padding-bottom: 4px; }
+        .cat-btn { padding: 6px 14px; border-radius: 20px; border: none; background: var(--card-bg); color: var(--text-color); font-size: 12px; font-weight: 500; white-space: nowrap; cursor: pointer; }
+        .cat-btn.active { background: var(--primary); color: var(--primary-text); }
 
-        .products-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 12px;
-            padding-bottom: 20px;
-        }
+        /* Katalog Grid */
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .card { background: var(--card-bg); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .card img { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; margin-bottom: 8px; }
+        .title { font-size: 13px; font-weight: 600; line-height: 1.2; margin-bottom: 4px; }
+        .desc { font-size: 10px; color: var(--hint-color); height: 26px; overflow: hidden; margin-bottom: 6px; }
+        .price { font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 8px; }
 
-        .product-card {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
-        }
+        .add-btn { background: var(--primary); color: var(--primary-text); border: none; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 600; width: 100%; cursor: pointer; }
 
-        .product-img {
-            width: 100%;
-            height: 130px;
-            object-fit: cover;
-            border-radius: 8px;
-            margin-bottom: 8px;
-        }
+        /* Savatcha va Manzil Modali */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; align-items: flex-end; }
+        .modal-content { background: var(--card-bg); width: 100%; border-radius: 20px 20px 0 0; padding: 16px; max-height: 80vh; overflow-y: auto; }
+        .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; }
+        .close-btn { font-size: 18px; cursor: pointer; color: var(--hint-color); }
 
-        .product-title {
-            font-weight: 600;
-            font-size: 14px;
-            margin-bottom: 4px;
-        }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f4f4f5; font-size: 13px; }
+        .qty-controls { display: flex; align-items: center; gap: 8px; }
+        .qty-btn { width: 24px; height: 24px; border-radius: 6px; border: 1px solid #e4e4e7; background: var(--bg-color); color: var(--text-color); font-weight: 700; }
 
-        .product-desc {
-            font-size: 11px;
-            color: var(--hint-color);
-            margin-bottom: 8px;
-            line-height: 1.3;
-        }
-
-        .product-price {
-            font-weight: 700;
-            font-size: 13px;
-            color: var(--btn-color);
-            margin-bottom: 8px;
-        }
-
-        .btn {
-            background-color: var(--btn-color);
-            color: var(--btn-text);
-            border: none;
-            padding: 8px;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 13px;
-            cursor: pointer;
-            width: 100%;
-        }
-
-        .btn:active {
-            opacity: 0.8;
-        }
+        .form-group { margin-top: 12px; }
+        .form-group label { font-size: 11px; color: var(--hint-color); display: block; margin-bottom: 4px; }
+        .form-group input { width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #e4e4e7; font-size: 13px; outline: none; }
     </style>
 </head>
 <body>
 
     <div class="header">
         <h2>✨ Aroma Do'kon</h2>
-        <p>Eksklyuziv parfyumeriya toplami</p>
+        <p>Eksklyuziv parfyumeriya to'plami</p>
     </div>
 
-    <div class="products-grid" id="products"></div>
+    <div class="search-box">
+        <input type="text" class="search-input" id="searchInput" placeholder="Atir nomini qidirish..." oninput="filterProducts()">
+    </div>
+
+    <div class="categories">
+        <button class="cat-btn active" onclick="setCategory('all', this)">Barchasi</button>
+        <button class="cat-btn" onclick="setCategory('erkak', this)">Erkaklar</button>
+        <button class="cat-btn" onclick="setCategory('ayol', this)">Ayollar</button>
+        <button class="cat-btn" onclick="setCategory('unisex', this)">Unisex</button>
+    </div>
+
+    <div class="grid" id="productGrid"></div>
+
+    <!-- Savatcha Modal -->
+    <div class="modal" id="cartModal">
+        <div class="modal-content">
+            <div class="modal-title">
+                <span>🛒 Savatchangiz</span>
+                <span class="close-btn" onclick="toggleCartModal(false)">✕</span>
+            </div>
+            <div id="cartItemsList"></div>
+            
+            <div class="form-group">
+                <label>Telefon raqamingiz:</label>
+                <input type="tel" id="phoneInput" placeholder="+998 90 123 45 67">
+            </div>
+            <div class="form-group">
+                <label>Yetkazib berish manzili:</label>
+                <input type="text" id="addressInput" placeholder="Toshkent sh., Chilonzor tumani...">
+            </div>
+        </div>
+    </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // ATIRLAR RO'YXATI (Shu yerdan yangi atirlar qo'shasiz)
         const products = [
-            {
-                id: 1,
-                name: "Baccarat Rouge 540",
-                desc: "Shirin, yog'ochli va nafis sharqona ifor.",
-                price: 450000,
-                image: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=300"
-            },
-            {
-                id: 2,
-                name: "Creed Aventus",
-                desc: "Erkaklar uchun mevali va charmli elit atir.",
-                price: 600000,
-                image: "https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=300"
-            },
-            {
-                id: 3,
-                name: "Dior Sauvage",
-                desc: "Tazelik beruvchi sitrus va murch aromati.",
-                price: 380000,
-                image: "https://images.unsplash.com/photo-1541643600914-78b084683601?w=300"
-            },
-            {
-                id: 4,
-                name: "Tom Ford Lost Cherry",
-                desc: "Oltxo'ri va gilosli romantik ifor.",
-                price: 520000,
-                image: "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?w=300"
-            }
+            { id: 1, name: "Baccarat Rouge 540", cat: "unisex", desc: "Shirin va nafis sharqona ifor", price: 450000, img: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=300" },
+            { id: 2, name: "Creed Aventus", cat: "erkak", desc: "Erkaklar uchun elit charmli atir", price: 600000, img: "https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=300" },
+            { id: 3, name: "Dior Sauvage", cat: "erkak", desc: "Tazelik beruvchi sitrus aromati", price: 380000, img: "https://images.unsplash.com/photo-1541643600914-78b084683601?w=300" },
+            { id: 4, name: "Tom Ford Lost Cherry", cat: "ayol", desc: "Gilos va oltxo'ri romantik ifori", price: 520000, img: "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?w=300" }
         ];
 
-        let cart = [];
+        let cart = {}; // { id: count }
+        let currentCat = 'all';
 
         function renderProducts() {
-            const container = document.getElementById('products');
-            container.innerHTML = '';
+            const grid = document.getElementById('productGrid');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            grid.innerHTML = '';
 
-            products.forEach(p => {
+            const filtered = products.filter(p => {
+                const matchCat = currentCat === 'all' || p.cat === currentCat;
+                const matchSearch = p.name.toLowerCase().includes(search);
+                return matchCat && matchSearch;
+            });
+
+            filtered.forEach(p => {
                 const card = document.createElement('div');
-                card.className = 'product-card';
+                card.className = 'card';
                 card.innerHTML = `
                     <div>
-                        <img src="${p.image}" alt="${p.name}" class="product-img">
-                        <div class="product-title">${p.name}</div>
-                        <div class="product-desc">${p.desc}</div>
+                        <img src="${p.img}" alt="${p.name}">
+                        <div class="title">${p.name}</div>
+                        <div class="desc">${p.desc}</div>
                     </div>
                     <div>
-                        <div class="product-price">${p.price.toLocaleString()} so'm</div>
-                        <button class="btn" onclick="addToCart(${p.id})">Savatga</button>
+                        <div class="price">${p.price.toLocaleString()} so'm</div>
+                        <button class="add-btn" onclick="addToCart(${p.id})">Savatga qo'shish</button>
                     </div>
                 `;
-                container.appendChild(card);
+                grid.appendChild(card);
             });
         }
 
+        function setCategory(cat, btn) {
+            currentCat = cat;
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderProducts();
+        }
+
+        function filterProducts() {
+            renderProducts();
+        }
+
         function addToCart(id) {
-            const item = products.find(p => p.id === id);
-            cart.push(item);
+            cart[id] = (cart[id] || 0) + 1;
             updateMainButton();
         }
 
+        function changeQty(id, delta) {
+            if (cart[id]) {
+                cart[id] += delta;
+                if (cart[id] <= 0) delete cart[id];
+            }
+            updateMainButton();
+            renderCartModal();
+        }
+
         function updateMainButton() {
-            if (cart.length > 0) {
-                const total = cart.reduce((sum, item) => sum + item.price, 0);
-                tg.MainButton.setText(`Buyurtma berish: ${total.toLocaleString()} so'm (${cart.length} ta)`);
+            const totalItems = Object.values(cart).reduce((a, b) => a + b, 0);
+            let totalPrice = 0;
+            for (let id in cart) {
+                const p = products.find(prod => prod.id == id);
+                totalPrice += p.price * cart[id];
+            }
+
+            if (totalItems > 0) {
+                tg.MainButton.setText(`Buyurtmani rasmiylashtirish (${totalPrice.toLocaleString()} so'm)`);
                 tg.MainButton.show();
             } else {
                 tg.MainButton.hide();
+                toggleCartModal(false);
+            }
+        }
+
+        function toggleCartModal(show) {
+            document.getElementById('cartModal').style.display = show ? 'flex' : 'none';
+        }
+
+        function renderCartModal() {
+            const list = document.getElementById('cartItemsList');
+            list.innerHTML = '';
+
+            for (let id in cart) {
+                const p = products.find(prod => prod.id == id);
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'cart-item';
+                itemDiv.innerHTML = `
+                    <div>
+                        <b>${p.name}</b><br>
+                        <span style="color:var(--hint-color); font-size:11px;">${p.price.toLocaleString()} so'm</span>
+                    </div>
+                    <div class="qty-controls">
+                        <button class="qty-btn" onclick="changeQty(${id}, -1)">-</button>
+                        <span>${cart[id]}</span>
+                        <button class="qty-btn" onclick="changeQty(${id}, 1)">+</button>
+                    </div>
+                `;
+                list.appendChild(itemDiv);
             }
         }
 
         tg.MainButton.onClick(() => {
-            const orderData = {
-                items: cart,
-                total: cart.reduce((sum, item) => sum + item.price, 0)
-            };
-            tg.sendData(JSON.stringify(orderData));
+            const modal = document.getElementById('cartModal');
+            if (modal.style.display !== 'flex') {
+                renderCartModal();
+                toggleCartModal(true);
+            } else {
+                const phone = document.getElementById('phoneInput').value.trim();
+                const address = document.getElementById('addressInput').value.trim();
+
+                if (!phone || !address) {
+                    alert('Iltimos, telefon raqamingiz va manzilingizni kiriting!');
+                    return;
+                }
+
+                const orderItems = [];
+                let total = 0;
+                for (let id in cart) {
+                    const p = products.find(prod => prod.id == id);
+                    orderItems.push({ name: p.name, count: cart[id], price: p.price });
+                    total += p.price * cart[id];
+                }
+
+                const orderData = {
+                    items: orderItems,
+                    total: total,
+                    phone: phone,
+                    address: address
+                };
+
+                tg.sendData(JSON.stringify(orderData));
+            }
         });
 
         renderProducts();
