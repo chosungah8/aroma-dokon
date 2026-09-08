@@ -6,54 +6,42 @@
     <title>Aroma Do'kon</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root {
-            --bg-color: var(--tg-theme-bg-color, #f4f4f5);
-            --card-bg: var(--tg-theme-secondary-bg-color, #ffffff);
-            --text-color: var(--tg-theme-text-color, #18181b);
-            --hint-color: var(--tg-theme-hint-color, #71717a);
-            --primary: var(--tg-theme-button-color, #007aff);
-            --primary-text: var(--tg-theme-button-text-color, #ffffff);
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-color); padding: 12px; padding-bottom: 90px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+        body { background-color: #f4f4f5; color: #18181b; padding: 12px; padding-bottom: 100px; }
 
         .header { text-align: center; margin-bottom: 12px; }
-        .header h2 { font-size: 20px; font-weight: 700; }
-        .header p { font-size: 12px; color: var(--hint-color); }
+        .header h2 { font-size: 20px; }
+        .header p { font-size: 12px; color: #71717a; }
 
-        .search-box { margin-bottom: 12px; }
-        .search-input { width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid #e4e4e7; background: var(--card-bg); color: var(--text-color); font-size: 14px; outline: none; }
-
-        .categories { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 14px; padding-bottom: 4px; }
-        .cat-btn { padding: 6px 14px; border-radius: 20px; border: none; background: var(--card-bg); color: var(--text-color); font-size: 12px; font-weight: 500; white-space: nowrap; cursor: pointer; }
-        .cat-btn.active { background: var(--primary); color: var(--primary-text); }
+        .search-input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 12px; font-size: 14px; }
 
         .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        .card { background: var(--card-bg); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .card img { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; margin-bottom: 8px; }
-        .title { font-size: 13px; font-weight: 600; line-height: 1.2; margin-bottom: 4px; }
-        .desc { font-size: 10px; color: var(--hint-color); height: 26px; overflow: hidden; margin-bottom: 6px; }
-        .price { font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 8px; }
+        .card { background: #fff; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; }
+        .card img { width: 100%; height: 110px; object-fit: cover; border-radius: 8px; margin-bottom: 6px; }
+        .title { font-size: 13px; font-weight: bold; margin-bottom: 4px; }
+        .desc { font-size: 11px; color: #71717a; margin-bottom: 6px; }
+        .price { font-size: 12px; font-weight: bold; color: #007aff; margin-bottom: 8px; }
 
-        .add-btn { background: var(--primary); color: var(--primary-text); border: none; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 600; width: 100%; cursor: pointer; }
+        .add-btn { background: #007aff; color: #fff; border: none; padding: 8px; border-radius: 6px; font-size: 12px; cursor: pointer; width: 100%; }
+
+        /* Pastki savatcha paneli */
+        .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e4e4e7; padding: 12px; display: none; justify-content: space-between; align-items: center; z-index: 50; }
+        .cart-bar-btn { background: #34c759; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; }
 
         /* Modal oyna */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; align-items: flex-end; }
-        .modal.active { display: flex !important; }
-        .modal-content { background: var(--card-bg); width: 100%; border-radius: 20px 20px 0 0; padding: 16px; max-height: 85vh; overflow-y: auto; }
-        .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
-        .close-btn { font-size: 20px; cursor: pointer; color: var(--hint-color); padding: 4px 8px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: flex-end; }
+        .modal-content { background: #fff; width: 100%; border-radius: 16px 16px 0 0; padding: 16px; max-height: 80vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 16px; font-weight: bold; }
+        .close-btn { font-size: 20px; cursor: pointer; color: #888; }
 
-        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f4f4f5; font-size: 13px; }
-        .qty-controls { display: flex; align-items: center; gap: 8px; }
-        .qty-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid #e4e4e7; background: var(--bg-color); color: var(--text-color); font-weight: 700; cursor: pointer; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; }
+        .qty-btn { width: 26px; height: 26px; border: 1px solid #ccc; background: #f4f4f5; border-radius: 4px; font-weight: bold; }
 
-        .form-group { margin-top: 12px; }
-        .form-group label { font-size: 11px; color: var(--hint-color); display: block; margin-bottom: 4px; font-weight: 600; }
-        .form-group input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #e4e4e7; font-size: 13px; outline: none; background: var(--bg-color); color: var(--text-color); }
-        
-        .confirm-btn { background: var(--primary); color: var(--primary-text); border: none; padding: 12px; border-radius: 10px; font-size: 14px; font-weight: 700; width: 100%; margin-top: 16px; cursor: pointer; }
+        .form-group { margin-top: 10px; }
+        .form-group label { font-size: 12px; color: #555; display: block; margin-bottom: 4px; }
+        .form-group input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
+
+        .submit-btn { background: #007aff; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 14px; width: 100%; margin-top: 14px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -63,38 +51,40 @@
         <p>Eksklyuziv parfyumeriya to'plami</p>
     </div>
 
-    <div class="search-box">
-        <input type="text" class="search-input" id="searchInput" placeholder="Atir nomini qidirish..." oninput="filterProducts()">
-    </div>
-
-    <div class="categories">
-        <button class="cat-btn active" onclick="setCategory('all', this)">Barchasi</button>
-        <button class="cat-btn" onclick="setCategory('erkak', this)">Erkaklar</button>
-        <button class="cat-btn" onclick="setCategory('ayol', this)">Ayollar</button>
-        <button class="cat-btn" onclick="setCategory('unisex', this)">Unisex</button>
-    </div>
+    <input type="text" class="search-input" id="searchInput" placeholder="Atir nomini qidirish..." oninput="renderProducts()">
 
     <div class="grid" id="productGrid"></div>
+
+    <!-- Pastki mini panel -->
+    <div class="cart-bar" id="cartBar">
+        <div>
+            <div style="font-size: 11px; color: #71717a;">Jami summa:</div>
+            <div id="cartBarTotal" style="font-weight: bold; font-size: 15px; color: #007aff;">0 so'm</div>
+        </div>
+        <button class="cart-bar-btn" onclick="openCartModal()">Savatcha va Buyurtma 🛒</button>
+    </div>
 
     <!-- Savatcha Modal -->
     <div class="modal" id="cartModal">
         <div class="modal-content">
-            <div class="modal-title">
-                <span>🛒 Savatcha va Ma'lumotlar</span>
-                <span class="close-btn" onclick="closeModal()">✕</span>
+            <div class="modal-header">
+                <span>🛒 Buyurtmani rasmiylashtirish</span>
+                <span class="close-btn" onclick="closeCartModal()">✕</span>
             </div>
-            <div id="cartItemsList"></div>
             
+            <div id="cartItemsList"></div>
+
             <div class="form-group">
-                <label>Telefon raqamingiz *</label>
+                <label>Telefon raqamingiz:</label>
                 <input type="tel" id="phoneInput" placeholder="+998 90 123 45 67">
             </div>
+
             <div class="form-group">
-                <label>Yetkazib berish manzili *</label>
+                <label>Yetkazib berish manzili:</label>
                 <input type="text" id="addressInput" placeholder="Toshkent sh., Chilonzor tumani...">
             </div>
 
-            <button class="confirm-btn" onclick="submitOrder()">Tasdiqlash va Buyurtma berish</button>
+            <button class="submit-btn" onclick="sendOrder()">Buyurtmani tasdiqlash</button>
         </div>
     </div>
 
@@ -103,25 +93,20 @@
         tg.expand();
 
         const products = [
-            { id: 1, name: "Baccarat Rouge 540", cat: "unisex", desc: "Shirin va nafis sharqona ifor", price: 450000, img: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=300" },
-            { id: 2, name: "Creed Aventus", cat: "erkak", desc: "Erkaklar uchun elit charmli atir", price: 600000, img: "https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=300" },
-            { id: 3, name: "Dior Sauvage", cat: "erkak", desc: "Tazelik beruvchi sitrus aromati", price: 380000, img: "https://images.unsplash.com/photo-1541643600914-78b084683601?w=300" },
-            { id: 4, name: "Tom Ford Lost Cherry", cat: "ayol", desc: "Gilos va oltxo'ri romantik ifori", price: 520000, img: "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?w=300" }
+            { id: 1, name: "Baccarat Rouge 540", desc: "Shirin va nafis sharqona ifor", price: 450000, img: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=300" },
+            { id: 2, name: "Creed Aventus", desc: "Erkaklar uchun elit charmli atir", price: 600000, img: "https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=300" },
+            { id: 3, name: "Dior Sauvage", desc: "Tazelik beruvchi sitrus aromati", price: 380000, img: "https://images.unsplash.com/photo-1541643600914-78b084683601?w=300" },
+            { id: 4, name: "Tom Ford Lost Cherry", desc: "Gilos va oltxo'ri romantik ifori", price: 520000, img: "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?w=300" }
         ];
 
         let cart = {}; 
-        let currentCat = 'all';
 
         function renderProducts() {
             const grid = document.getElementById('productGrid');
             const search = document.getElementById('searchInput').value.toLowerCase();
             grid.innerHTML = '';
 
-            const filtered = products.filter(p => {
-                const matchCat = currentCat === 'all' || p.cat === currentCat;
-                const matchSearch = p.name.toLowerCase().includes(search);
-                return matchCat && matchSearch;
-            });
+            const filtered = products.filter(p => p.name.toLowerCase().includes(search));
 
             filtered.forEach(p => {
                 const card = document.createElement('div');
@@ -141,20 +126,9 @@
             });
         }
 
-        function setCategory(cat, btn) {
-            currentCat = cat;
-            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            renderProducts();
-        }
-
-        function filterProducts() {
-            renderProducts();
-        }
-
         function addToCart(id) {
             cart[id] = (cart[id] || 0) + 1;
-            updateMainButton();
+            updateCartBar();
         }
 
         function changeQty(id, delta) {
@@ -162,39 +136,39 @@
                 cart[id] += delta;
                 if (cart[id] <= 0) delete cart[id];
             }
-            updateMainButton();
-            renderCartModal();
+            updateCartBar();
+            renderCartItems();
         }
 
-        function updateMainButton() {
-            const totalItems = Object.values(cart).reduce((a, b) => a + b, 0);
-            let totalPrice = 0;
+        function updateCartBar() {
+            let total = 0;
+            let count = 0;
             for (let id in cart) {
                 const p = products.find(prod => prod.id == id);
-                totalPrice += p.price * cart[id];
+                total += p.price * cart[id];
+                count += cart[id];
             }
 
-            if (totalItems > 0) {
-                tg.MainButton.setText(`Savatchani ochish (${totalPrice.toLocaleString()} so'm)`);
-                tg.MainButton.show();
+            const bar = document.getElementById('cartBar');
+            if (count > 0) {
+                bar.style.display = 'flex';
+                document.getElementById('cartBarTotal').innerText = `${total.toLocaleString()} so'm (${count} ta)`;
             } else {
-                tg.MainButton.hide();
-                closeModal();
+                bar.style.display = 'none';
+                closeCartModal();
             }
         }
 
-        function openModal() {
-            renderCartModal();
-            document.getElementById('cartModal').classList.add('active');
-            tg.MainButton.hide(); // Telegram tugmasini yashirib, modal ichidagi katta tugmani ishlatamiz
+        function openCartModal() {
+            renderCartItems();
+            document.getElementById('cartModal').style.display = 'flex';
         }
 
-        function closeModal() {
-            document.getElementById('cartModal').classList.remove('active');
-            updateMainButton();
+        function closeCartModal() {
+            document.getElementById('cartModal').style.display = 'none';
         }
 
-        function renderCartModal() {
+        function renderCartItems() {
             const list = document.getElementById('cartItemsList');
             list.innerHTML = '';
 
@@ -207,34 +181,26 @@
                 itemDiv.innerHTML = `
                     <div>
                         <b>${p.name}</b><br>
-                        <span style="color:var(--hint-color); font-size:11px;">${p.price.toLocaleString()} so'm</span>
+                        <span style="color:#71717a; font-size:11px;">${p.price.toLocaleString()} so'm</span>
                     </div>
-                    <div class="qty-controls">
+                    <div>
                         <button class="qty-btn" onclick="changeQty(${id}, -1)">-</button>
-                        <span>${cart[id]}</span>
+                        <span style="margin: 0 8px; font-weight:bold;">${cart[id]}</span>
                         <button class="qty-btn" onclick="changeQty(${id}, 1)">+</button>
                     </div>
                 `;
                 list.appendChild(itemDiv);
             }
 
-            if (!hasItems) {
-                closeModal();
-            }
+            if (!hasItems) closeCartModal();
         }
 
-        // Telegram MainButton bosilganda faqat MODAL OYNA ochiladi
-        tg.MainButton.onClick(() => {
-            openModal();
-        });
-
-        // Modal ichidagi Tasdiqlash tugmasi bosilganda buyurtma ketadi
-        function submitOrder() {
+        function sendOrder() {
             const phone = document.getElementById('phoneInput').value.trim();
             const address = document.getElementById('addressInput').value.trim();
 
             if (!phone || !address) {
-                alert('Iltimos, telefon raqamingiz va yetkazib berish manzilingizni to\'liq kiriting!');
+                alert('Iltimos, telefon raqamingiz va manzilingizni kiriting!');
                 return;
             }
 
