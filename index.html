@@ -207,16 +207,14 @@
             }
         }
 
-       tg.MainButton.onClick(() => {
+tg.MainButton.onClick(() => {
             const modal = document.getElementById('cartModal');
             
-            // Agar savatcha oynasi hali ochilmagan bo'lsa - avval savatcha va formani ochamiz
             if (modal.style.display !== 'flex') {
                 renderCartModal();
                 toggleCartModal(true);
                 tg.MainButton.setText(`Buyurtmani tasdiqlash`);
             } else {
-                // Agar oyna ochiq bo'lsa - ma'lumotlarni tekshirib botga yuboramiz
                 const phone = document.getElementById('phoneInput').value.trim();
                 const address = document.getElementById('addressInput').value.trim();
 
@@ -240,6 +238,7 @@
                     address: address
                 };
 
+                // String shaklida uzatamiz
                 tg.sendData(JSON.stringify(orderData));
             }
         });
