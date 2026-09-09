@@ -2,14 +2,34 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/telegram.mjs",
+      "src": "index.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "admin.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "products.json",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "images/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
-      "src": "/api/telegram",
-      "dest": "/api/telegram.mjs"
+      "src": "/api/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/admin",
+      "dest": "/admin.html"
     }
   ]
 }
