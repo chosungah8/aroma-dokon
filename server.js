@@ -779,25 +779,37 @@ if (require.main === module) {
 
 module.exports = async function handler(req, res) {
     if (req.method !== 'POST') {
-        return res.status(405).json({
+        res.statusCode = 405;
+        res.setHeader('Content-Type', 'application/json');
+        return res.end(JSON.stringify({
             ok: false,
             error: 'Method Not Allowed'
-        });
+        }));
     }
 
     try {
-        const update = req.body;
+        let update = req.body;
+
+        if (!update) {
+            update = await parseBody(req);
+        }
 
         await bot.handleUpdate(update);
 
-        return res.status(200).json({
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+
+        return res.end(JSON.stringify({
             ok: true
-        });
+        }));
     } catch (error) {
         console.error('Telegram webhook error:', error);
 
-        return res.status(500).json({
+        res.statusCode = 500;
+        res.setHeader('Content-Type', 'application/json');
+
+        return res.end(JSON.stringify({
             ok: false
-        });
+        }));
     }
 };
