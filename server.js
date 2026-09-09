@@ -788,6 +788,7 @@ module.exports = async function handler(req, res) {
     }
 
     try {
+        console.log('VERCEL WEBHOOK REQUEST:', req.method, req.body);
         let update = req.body;
 
         if (!update) {
