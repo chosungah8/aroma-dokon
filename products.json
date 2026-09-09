@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "name": "Tide Ultra Oxi Boost",
+    "category": "Kir yuvish",
+    "desc": "Konsentrlangan kir yuvish vositasi",
+    "price": 50000,
+    "img": "images/tide-konsentrat.jpeg",
+    "active": true,
+    "stock": 3
+  },
+  {
+    "id": 2,
+    "name": "Tide Powder",
+    "category": "Kir yuvish",
+    "desc": "Kukun shaklidagi kir yuvish vositasi",
+    "price": 75000,
+    "img": "images/tide-powder.jpg",
+    "active": true,
+    "stock": 7
+  },
+  {
+    "id": 3,
+    "name": "Tide Suyuq",
+    "category": "Kir yuvish",
+    "desc": "Suyuq kir yuvish vositasi",
+    "price": 40000,
+    "img": "images/tide-suyuq.jpg",
+    "active": true,
+    "stock": 8
+  },
+  {
+    "id": 4,
+    "name": "lalarecipe penka",
+    "category": "Kosmetika",
+    "desc": "penka",
+    "price": 15000,
+    "img": "images/product-1788880812030-0a6a456f.jpg",
+    "active": true,
+    "stock": 2
+  }
+]
