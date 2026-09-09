@@ -1,7 +1,1 @@
-{
-  "functions": {
-    "api/telegram.mjs": {
-      "runtime": "nodejs22.x"
-    }
-  }
-}
+{}
