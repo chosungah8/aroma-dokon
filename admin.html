@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Aro'ma Admin</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            color: #18181b;
+        }
+
+        .box {
+            max-width: 900px;
+            margin: 30px auto;
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,.08);
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        button {
+            border: 0;
+            border-radius: 8px;
+            padding: 11px 15px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .primary {
+            background: #007aff;
+            color: white;
+            width: 100%;
+        }
+
+        .danger {
+            background: #ff3b30;
+            color: white;
+        }
+
+        .logout {
+            background: #666;
+            color: white;
+        }
+
+        .error {
+            color: #d00;
+            margin-top: 10px;
+        }
+
+        .success {
+            color: #16803a;
+            margin-top: 10px;
+        }
+
+        .product {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .product-info {
+            flex: 1;
+        }
+
+        .product-name {
+            font-weight: bold;
+        }
+
+        .product-meta {
+            color: #777;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .login-box {
+            max-width: 400px;
+            margin: 80px auto;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="box login-box" id="loginBox">
+
+    <h1>🔐 Aro'ma Admin</h1>
+
+    <input
+        type="password"
+        id="password"
+        placeholder="Admin paroli"
+    >
+
+    <button class="primary" onclick="login()">
+        Kirish
+    </button>
+
+    <div class="error" id="loginError"></div>
+
+</div>
+
+
+<div class="box hidden" id="adminPanel">
+
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h1>🛍 Aro'ma Admin</h1>
+
+        <button class="logout" onclick="logout()">
+            Chiqish
+        </button>
+    </div>
+
+
+
+
+<details id="newProductSection" open style="margin-bottom:15px;">
+    <summary style="
+        font-size:18px;
+        font-weight:bold;
+        cursor:pointer;
+        padding:12px;
+        background:#f5f5f5;
+        border-radius:10px;
+    ">
+        ➕ Yangi mahsulot
+    </summary>
+
+    <div style="padding-top:12px;">
+
+        <input
+            id="name"
+            placeholder="Mahsulot nomi"
+        >
+
+        <select id="category">
+            <option value="Kir yuvish">Kir yuvish</option>
+            <option value="Idish yuvish">Idish yuvish</option>
+            <option value="Kosmetika">Kosmetika</option>
+            <option value="Soch parvarishi">Soch parvarishi</option>
+            <option value="Parfyumeriya">Parfyumeriya</option>
+            <option value="Uy-ro‘zg‘or">Uy-ro‘zg‘or</option>
+        </select>
+
+        <textarea
+            id="desc"
+            placeholder="Mahsulot tavsifi"
+        ></textarea>
+
+        <input
+            type="number"
+            id="price"
+            placeholder="Narxi"
+        >
+
+        <input
+            type="number"
+            id="stock"
+            min="0"
+            placeholder="Ombordagi soni"
+        >
+
+        <input
+            type="file"
+            id="imageFile"
+            accept="image/jpeg,image/png,image/webp"
+            onchange="uploadImage()"
+        >
+
+        <input
+            id="img"
+            placeholder="Rasm manzili"
+            readonly
+        >
+
+        <div id="imageMessage"></div>
+
+        <button class="primary" onclick="addProduct()">
+            Mahsulotni saqlash
+        </button>
+
+        <div id="message"></div>
+
+    </div>
+</details>
+
+    <div id="message"></div>
+
+    <hr>
+
+<div
+    id="editBox"
+    class="hidden"
+    style="
+        background:#ffffff;
+        padding:16px;
+        border-radius:14px;
+        margin-bottom:15px;
+        border:1px solid #e5e5e5;
+        box-shadow:0 3px 12px rgba(0,0,0,0.06);
+    "
+>
+
+    <h2>✏️ Mahsulotni tahrirlash</h2>
+
+    <input id="editId" type="hidden">
+
+    <input
+        id="editName"
+        placeholder="Mahsulot nomi"
+    >
+
+    <select id="editCategory">
+        <option value="Kir yuvish">Kir yuvish</option>
+        <option value="Idish yuvish">Idish yuvish</option>
+        <option value="Kosmetika">Kosmetika</option>
+        <option value="Soch parvarishi">Soch parvarishi</option>
+        <option value="Parfyumeriya">Parfyumeriya</option>
+        <option value="Uy-ro‘zg‘or">Uy-ro‘zg‘or</option>
+    </select>
+
+    <textarea
+        id="editDesc"
+        placeholder="Mahsulot tavsifi"
+    ></textarea>
+
+    <input
+        id="editPrice"
+        type="number"
+        placeholder="Narxi"
+    >
+
+<input
+    id="editStock"
+    type="number"
+    min="0"
+    placeholder="Ombordagi soni"
+>
+
+    <input
+        id="editImg"
+        placeholder="Rasm manzili"
+    >
+
+    <div style="display:flex; gap:8px;">
+        <button
+            class="primary"
+            onclick="saveEdit()"
+        >
+            💾 Saqlash
+        </button>
+
+        <button
+            style="background:#777; color:white;"
+            onclick="closeEdit()"
+        >
+            Bekor qilish
+        </button>
+    </div>
+
+    <div id="editMessage"></div>
+</div>
+
+<hr>
+
+<details id="orderSection" open style="margin-bottom:15px;">
+    <summary style="
+        font-size:18px;
+        font-weight:bold;
+        cursor:pointer;
+        padding:12px;
+        background:#f5f5f5;
+        border-radius:10px;
+    ">
+        📦 Buyurtmalar
+    </summary>
+
+    <div
+        id="orderList"
+        style="padding-top:12px;"
+    >
+        Buyurtmalar yuklanmoqda...
+    </div>
+</details>
+
+<details id="productSection" open style="margin-bottom:15px;">
+    <summary style="
+        font-size:18px;
+        font-weight:bold;
+        cursor:pointer;
+        padding:12px;
+        background:#f5f5f5;
+        border-radius:10px;
+    ">
+        🛍 Mahsulotlar
+    </summary>
+
+    <div
+        id="productList"
+        style="padding-top:12px;"
+    >
+        Yuklanmoqda...
+    </div>
+</details>
+
+</div>
+
+<script>
+
+let adminToken = sessionStorage.getItem("aroma_admin_token");
+
+
+async function login() {
+
+    const password =
+        document.getElementById("password").value.trim();
+
+    const error =
+        document.getElementById("loginError");
+
+    error.innerText = "";
+
+    if (!password) {
+        error.innerText = "Parolni kiriting";
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            "/api/admin/login",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    password: password
+                })
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            error.innerText = "Parol noto‘g‘ri!";
+            return;
+        }
+
+        adminToken = result.token;
+
+        sessionStorage.setItem(
+            "aroma_admin_token",
+            adminToken
+        );
+
+        showAdmin();
+
+    } catch (error) {
+
+        console.error(error);
+
+        error.innerText =
+            "Server bilan bog‘lanishda xatolik!";
+    }
+}
+
+
+function showAdmin() {
+
+    document
+        .getElementById("loginBox")
+        .classList.add("hidden");
+
+    document
+        .getElementById("adminPanel")
+        .classList.remove("hidden");
+
+loadProducts();
+loadOrders();
+}
+
+
+function logout() {
+
+    sessionStorage.removeItem(
+        "aroma_admin_token"
+    );
+
+    adminToken = null;
+
+    document
+        .getElementById("adminPanel")
+        .classList.add("hidden");
+
+    document
+        .getElementById("loginBox")
+        .classList.remove("hidden");
+}
+
+
+async function loadProducts() {
+
+    const list =
+        document.getElementById("productList");
+
+    try {
+
+        const response = await fetch(
+            "/api/admin/products",
+            {
+                headers: {
+                    "Authorization":
+                        "Bearer " + adminToken
+                }
+            }
+        );
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
+
+        const products =
+            await response.json();
+
+        list.innerHTML = "";
+
+        if (!products.length) {
+
+            list.innerHTML =
+                "<p>Mahsulotlar yo‘q.</p>";
+
+            return;
+        }
+
+        products.forEach(product => {
+
+            const item =
+                document.createElement("div");
+
+            item.className = "product";
+
+            item.innerHTML = `
+                <div class="product-info">
+                    <div class="product-name">
+                        ${product.name}
+                    </div>
+
+                    <div class="product-meta">
+                        ${product.category} —
+                        ${Number(product.price).toLocaleString()} so'm
+<br>
+📦 Stock: ${Number(product.stock) || 0} ta
+                    </div>
+                </div>
+
+<div style="display:flex; gap:6px;">
+    <button
+        style="background:#007aff; color:white;"
+        onclick="editProduct(${product.id})"
+    >
+        ✏️ Tahrirlash
+    </button>
+
+    <button
+        class="danger"
+        onclick="deleteProduct(${product.id})"
+    >
+        🗑 O‘chirish
+    </button>
+</div>
+            `;
+
+            list.appendChild(item);
+        });
+
+    } catch (error) {
+
+        console.error(error);
+
+        list.innerHTML =
+            "<p class='error'>Mahsulotlarni yuklashda xatolik.</p>";
+    }
+}
+
+
+async function addProduct() {
+
+    const message =
+        document.getElementById("message");
+
+    message.className = "";
+    message.innerText = "";
+
+    const name =
+        document.getElementById("name").value.trim();
+
+    const category =
+        document.getElementById("category").value;
+
+    const desc =
+        document.getElementById("desc").value.trim();
+
+    const price =
+        Number(document.getElementById("price").value);
+
+const stock =
+    Number(document.getElementById("stock").value);
+
+    const img =
+        document.getElementById("img").value.trim();
+
+    if (!name) {
+        message.className = "error";
+        message.innerText = "Mahsulot nomini kiriting!";
+        return;
+    }
+
+    if (!price || price <= 0) {
+        message.className = "error";
+        message.innerText = "Narxni to‘g‘ri kiriting!";
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            "/api/admin/products",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json",
+
+                    "Authorization":
+                        "Bearer " + adminToken
+                },
+
+                body: JSON.stringify({
+                    name,
+                    category,
+                    desc,
+                    price,
+                    img
+                })
+            }
+        );
+
+        const result =
+            await response.json();
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
+
+        if (!response.ok || !result.success) {
+
+            message.className = "error";
+
+            message.innerText =
+                result.message ||
+                "Mahsulotni saqlab bo‘lmadi.";
+
+            return;
+        }
+
+        message.className = "success";
+
+        message.innerText =
+            "✅ Mahsulot muvaffaqiyatli qo‘shildi!";
+
+        document.getElementById("name").value = "";
+        document.getElementById("desc").value = "";
+        document.getElementById("price").value = "";
+        document.getElementById("img").value = "";
+document.getElementById("stock").value = "";
+        loadProducts();
+
+    } catch (error) {
+
+        console.error(error);
+
+        message.className = "error";
+
+        message.innerText =
+            "Server bilan bog‘lanishda xatolik.";
+    }
+}
+
+
+async function deleteProduct(id) {
+
+    if (!confirm("Bu mahsulotni o‘chirmoqchimisiz?")) {
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            "/api/admin/products/" + id,
+            {
+                method: "DELETE",
+
+                headers: {
+                    "Authorization":
+                        "Bearer " + adminToken
+                }
+            }
+        );
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
+
+        const result =
+            await response.json();
+
+        if (result.success) {
+            loadProducts();
+        }
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert("Mahsulotni o‘chirishda xatolik.");
+    }
+}
+
+
+if (adminToken) {
+    showAdmin();
+}
+
+async function editProduct(id) {
+    try {
+        const response = await fetch(
+            "/api/admin/products",
+            {
+                headers: {
+                    "Authorization":
+                        "Bearer " + adminToken
+                }
+            }
+        );
+
+        const products = await response.json();
+
+        const product = products.find(
+            p => Number(p.id) === Number(id)
+        );
+
+        if (!product) {
+            alert("Mahsulot topilmadi!");
+            return;
+        }
+
+        document.getElementById("editId").value =
+            product.id;
+
+        document.getElementById("editName").value =
+            product.name;
+
+        document.getElementById("editCategory").value =
+            product.category;
+
+        document.getElementById("editDesc").value =
+            product.desc || "";
+
+        document.getElementById("editPrice").value =
+            product.price;
+document.getElementById("editStock").value =
+    Number(product.stock) || 0;
+
+        document.getElementById("editImg").value =
+            product.img || "";
+
+        document
+            .getElementById("editMessage")
+            .innerText = "";
+
+        document
+            .getElementById("editBox")
+            .classList.remove("hidden");
+
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth"
+        });
+
+    } catch (error) {
+        console.error(error);
+        alert("Mahsulotni olishda xatolik.");
+    }
+}
+
+
+function closeEdit() {
+    document
+        .getElementById("editBox")
+        .classList.add("hidden");
+}
+
+
+async function saveEdit() {
+    const id =
+        document.getElementById("editId").value;
+
+    const name =
+        document.getElementById("editName").value.trim();
+
+    const category =
+        document.getElementById("editCategory").value;
+
+    const desc =
+        document.getElementById("editDesc").value.trim();
+
+    const price =
+        Number(
+            document.getElementById("editPrice").value
+        );
+
+const stock =
+    Number(
+        document.getElementById("editStock").value
+    );
+
+    const img =
+        document.getElementById("editImg").value.trim();
+
+    const message =
+        document.getElementById("editMessage");
+
+    if (!name) {
+        message.className = "error";
+        message.innerText =
+            "Mahsulot nomini kiriting!";
+        return;
+    }
+
+    if (!price || price <= 0) {
+        message.className = "error";
+        message.innerText =
+            "Narxni to‘g‘ri kiriting!";
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            "/api/admin/products/" + id,
+            {
+                method: "PUT",
+
+                headers: {
+                    "Content-Type":
+                        "application/json",
+
+                    "Authorization":
+                        "Bearer " + adminToken
+                },
+
+                body: JSON.stringify({
+                    name,
+                    category,
+                    desc,
+                    price,
+stock,
+                    img
+                })
+            }
+        );
+
+        const result =
+            await response.json();
+
+        if (!response.ok || !result.success) {
+            message.className = "error";
+            message.innerText =
+                result.message ||
+                "Mahsulotni yangilab bo‘lmadi.";
+            return;
+        }
+
+        message.className = "success";
+        message.innerText =
+            "✅ Mahsulot yangilandi!";
+
+        loadProducts();
+
+        setTimeout(() => {
+            closeEdit();
+        }, 800);
+
+    } catch (error) {
+        console.error(error);
+
+        message.className = "error";
+        message.innerText =
+            "Server bilan bog‘lanishda xatolik.";
+    }
+}
+
+async function uploadImage() {
+    const fileInput = document.getElementById("imageFile");
+    const message = document.getElementById("imageMessage");
+
+    const file = fileInput.files[0];
+
+    if (!file) {
+        return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+        message.className = "error";
+        message.innerText = "Rasm 5 MB dan kichik bo‘lishi kerak.";
+        return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = async function () {
+        try {
+            message.className = "";
+            message.innerText = "⏳ Rasm yuklanmoqda...";
+
+            const response = await fetch(
+                "/api/admin/upload-image",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + adminToken
+                    },
+                    body: JSON.stringify({
+                        image: reader.result
+                    })
+                }
+            );
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                message.className = "error";
+                message.innerText =
+                    result.message || "Rasm yuklanmadi.";
+                return;
+            }
+
+            document.getElementById("img").value = result.path;
+
+            message.className = "success";
+            message.innerText = "✅ Rasm yuklandi.";
+
+        } catch (error) {
+            console.error(error);
+
+            message.className = "error";
+            message.innerText =
+                "Rasm yuklashda xatolik.";
+        }
+    };
+
+    reader.readAsDataURL(file);
+}
+
+async function loadOrders() {
+    const list = document.getElementById("orderList");
+
+    try {
+        const response = await fetch(
+            "/api/admin/orders",
+            {
+                headers: {
+                    "Authorization": "Bearer " + adminToken
+                }
+            }
+        );
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
+
+        const orders = await response.json();
+
+        list.innerHTML = "";
+
+        if (!orders.length) {
+            list.innerHTML = "<p>Hozircha buyurtmalar yo‘q.</p>";
+            return;
+        }
+
+        orders.slice().reverse().forEach(order => {
+            const item = document.createElement("div");
+
+            item.style.cssText = `
+                background:#fff;
+                border:1px solid #eee;
+                border-radius:12px;
+                padding:15px;
+                margin-bottom:12px;
+            `;
+
+            const itemsText = (order.items || [])
+                .map(product =>
+                    `• ${product.name} — ${product.count} ta × ${Number(product.price).toLocaleString()} so'm`
+                )
+                .join("<br>");
+
+            item.innerHTML = `
+                <div style="font-weight:bold; font-size:16px;">
+                    🛍 ${order.id}
+                </div>
+
+                <div style="font-size:12px; color:#777; margin-top:5px;">
+                    🕒 ${order.date}
+                </div>
+
+                <hr>
+
+                <div>
+                    <b>📦 Mahsulotlar:</b><br>
+                    ${itemsText}
+                </div>
+
+                <p>
+                    💰 <b>Jami:</b>
+                    ${Number(order.total).toLocaleString()} so'm
+                </p>
+
+                <p>
+                    📞 <b>Telefon:</b> ${order.phone || "—"}<br>
+                    📍 <b>Manzil:</b> ${order.address || "—"}
+                </p>
+
+                <p>
+                    👤 <b>Mijoz:</b>
+                    ${order.customer?.name || "—"}
+                    ${order.customer?.username ? " (@" + order.customer.username + ")" : ""}
+                </p>
+
+<div style="
+    padding:10px;
+    border-radius:8px;
+    margin-bottom:10px;
+    font-weight:bold;
+    background:${
+        (order.status || "Yangi") === "Yangi"
+            ? "#fff3cd"
+            : (order.status || "Yangi") === "Qabul qilindi"
+            ? "#e7f3ff"
+            : (order.status || "Yangi") === "Tayyorlanmoqda"
+            ? "#ffe8cc"
+            : (order.status || "Yangi") === "Yetkazilmoqda"
+            ? "#e8f5e9"
+            : "#d4edda"
+    };
+">
+    ${
+        (order.status || "Yangi") === "Yangi"
+            ? "🟡"
+            : (order.status || "Yangi") === "Qabul qilindi"
+            ? "🔵"
+            : (order.status || "Yangi") === "Tayyorlanmoqda"
+            ? "🟠"
+            : (order.status || "Yangi") === "Yetkazilmoqda"
+            ? "🟢"
+            : "✅"
+    }
+    Holat: ${order.status || "Yangi"}
+</div>
+
+<div style="
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+">
+    <button
+        style="background:#e7f3ff;"
+        onclick="updateOrderStatus('${order.id}', 'Qabul qilindi')"
+    >
+        ✅ Qabul qilindi
+    </button>
+
+    <button
+        style="background:#fff3cd;"
+        onclick="updateOrderStatus('${order.id}', 'Tayyorlanmoqda')"
+    >
+        🔄 Tayyorlanmoqda
+    </button>
+
+    <button
+        style="background:#e8f5e9;"
+        onclick="updateOrderStatus('${order.id}', 'Yetkazilmoqda')"
+    >
+        🚚 Yetkazilmoqda
+    </button>
+
+    <button
+        style="background:#d4edda;"
+        onclick="updateOrderStatus('${order.id}', 'Yakunlandi')"
+    >
+        ✅ Yakunlandi
+    </button>
+</div>
+            `;
+
+            list.appendChild(item);
+        });
+
+    } catch (error) {
+        console.error("BUYURTMALAR XATOSI:", error);
+
+        list.innerHTML =
+            "<p class='error'>Buyurtmalarni yuklashda xatolik.</p>";
+    }
+}
+
+async function updateOrderStatus(orderId, status) {
+    try {
+        const response = await fetch(
+            "/api/admin/orders/" + encodeURIComponent(orderId),
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + adminToken
+                },
+                body: JSON.stringify({
+                    status: status
+                })
+            }
+        );
+
+        const result = await response.json();
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
+
+        if (!response.ok || !result.success) {
+            alert(
+                result.message ||
+                "Buyurtma holatini o‘zgartirib bo‘lmadi."
+            );
+            return;
+        }
+
+        loadOrders();
+
+    } catch (error) {
+        console.error("STATUS XATOSI:", error);
+        alert("Server bilan bog‘lanishda xatolik.");
+    }
+}
+
+</script>
+
+</body>
+</html>
