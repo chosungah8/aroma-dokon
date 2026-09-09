@@ -777,40 +777,7 @@ if (require.main === module) {
     console.log("Aroma-dokon Telegram boti muvaffaqiyatli ishga tushdi!");
 }
 
-module.exports = async function handler(req, res) {
-    if (req.method !== 'POST') {
-        res.statusCode = 405;
-        res.setHeader('Content-Type', 'application/json');
-        return res.end(JSON.stringify({
-            ok: false,
-            error: 'Method Not Allowed'
-        }));
-    }
-
-    try {
-        console.log('VERCEL WEBHOOK REQUEST:', req.method, req.body);
-        let update = req.body;
-
-        if (!update) {
-            update = await parseBody(req);
-        }
-
-        await bot.handleUpdate(update);
-
-        res.statusCode = 200;
-        res.setHeader('Content-Type', 'application/json');
-
-        return res.end(JSON.stringify({
-            ok: true
-        }));
-    } catch (error) {
-        console.error('Telegram webhook error:', error);
-
-        res.statusCode = 500;
-        res.setHeader('Content-Type', 'application/json');
-
-        return res.end(JSON.stringify({
-            ok: false
-        }));
-    }
+module.exports = {
+    bot,
+    webServer
 };
