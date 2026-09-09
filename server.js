@@ -1,11 +1,24 @@
+const dns = require('dns');
+dns.setDefaultResultOrder('ipv4first');
 require('dotenv').config();
 const { Telegraf, Markup } = require('telegraf');
+const https = require('https');
+const telegramAgent = new https.Agent({ family: 4 });
+const { createClient } = require('@supabase/supabase-js');
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 // 1. BotFather bergan tokeningiz
 const BOT_TOKEN = process.env.BOT_TOKEN;
 // 2. GitHub Pages havolangiz
 const WEB_APP_URL = process.env.WEB_APP_URL;
-const bot = new Telegraf(BOT_TOKEN);
+const bot = new Telegraf(BOT_TOKEN, {
+    telegram: {
+        agent: telegramAgent
+    }
+});
 function parseBody(req) {
     return new Promise((resolve, reject) => {
         let body = '';
@@ -241,12 +254,33 @@ const webServer = http.createServer(async (req, res) => {
         }
 
         try {
-            const file = await fs.promises.readFile(
-                path.join(__dirname, 'products.json'),
-                'utf8'
-            );
 
-            return sendJson(200, JSON.parse(file));
+const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .order('id', { ascending: true });
+
+if (error) {
+    console.error('SUPABASE PRODUCT GET XATOSI:', error);
+
+    return sendJson(500, {
+        success: false,
+        message: 'Mahsulotlarni Supabase dan o‘qib bo‘lmadi'
+    });
+}
+
+const products = data.map(product => ({
+    id: product.id,
+    name: product.name,
+    category: product.category,
+    desc: product.description || '',
+    price: Number(product.price) || 0,
+    img: product.image || '',
+    active: product.active !== false,
+    stock: Number(product.stock) || 0
+}));
+
+return sendJson(200, products);
 
         } catch (error) {
             console.error('PRODUCT GET XATOSI:', error);
@@ -733,9 +767,17 @@ if (req.url === '/products.json') {
     });
 });
 
-webServer.listen(PORT, () => {
-    console.log(`Aroma Do'kon web sayti: http://localhost:${PORT}`);
-});
 
-bot.launch();
-console.log('Aroma-dokon Telegram boti muvaffaqiyatli ishga tushdi!');
+if (require.main === module) {
+    webServer.listen(PORT, () => {
+        console.log(`Aroma Do'kon web sayti: http://localhost:${PORT}`);
+    });
+
+    bot.launch();
+    console.log("Aroma-dokon Telegram boti muvaffaqiyatli ishga tushdi!");
+}
+
+module.exports = {
+    bot,
+    webServer
+};
