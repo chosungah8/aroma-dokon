@@ -1,6 +1,15 @@
-module.exports = (req, res) => {
-    res.status(200).json({
-        success: true,
-        message: "Aro'ma Vercel server ishlayapti"
-    });
+module.exports = async function (request) {
+    return new Response(
+        JSON.stringify({
+            success: true,
+            message: "Aro'ma Vercel server ishlayapti"
+        }),
+        {
+            status: 200,
+            headers: {
+                "Content-Type": "application/json"
+            }
+        }
+    );
 };
+
