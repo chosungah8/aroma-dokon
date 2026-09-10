@@ -180,7 +180,7 @@ let selectedCategory = "all";
 
 async function loadProducts() {
     try {
-        const response = await fetch("products.json");
+        const response = await fetch("/api/products");
 
         if (!response.ok) {
             throw new Error("products.json yuklanmadi");
