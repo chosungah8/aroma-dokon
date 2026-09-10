@@ -21,7 +21,7 @@ export async function POST(request) {
 
 export async function GET() {
     return Response.json({
-        ok: false,
-        error: 'Method Not Allowed'
-    }, { status: 405 });
+        ok: true,
+        webAppUrl: process.env.WEB_APP_URL || null
+    });
 }
