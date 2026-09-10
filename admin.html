@@ -581,6 +581,7 @@ const stock =
                     category,
                     desc,
                     price,
+                    stock,
                     img
                 })
             }
@@ -800,15 +801,14 @@ const stock =
                     "Authorization":
                         "Bearer " + adminToken
                 },
-
-                body: JSON.stringify({
-                    name,
-                    category,
-                    desc,
-                    price,
-stock,
-                    img
-                })
+body: JSON.stringify({
+    name,
+    category,
+    desc,
+    price,
+    stock,
+    img
+})
             }
         );
 
