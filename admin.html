@@ -961,7 +961,7 @@ async function uploadEditImage() {
                 return;
             }
 
-            document.getElementById("editImg").value = result.path;
+document.getElementById("editImg").value = result.path || result.url || "";
 
             message.className = "success";
             message.innerText = "✅ Yangi rasm yuklandi.";
