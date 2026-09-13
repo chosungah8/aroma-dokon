@@ -274,9 +274,19 @@
 >
 
     <input
+        type="file"
+        id="editImageFile"
+        accept="image/jpeg,image/png,image/webp"
+        onchange="uploadEditImage()"
+    >
+
+    <input
         id="editImg"
         placeholder="Rasm manzili"
+        readonly
     >
+
+    <div id="editImageMessage"></div>
 
     <div style="display:flex; gap:8px;">
         <button
@@ -899,6 +909,67 @@ async function uploadImage() {
             message.className = "error";
             message.innerText =
                 "Rasm yuklashda xatolik.";
+        }
+    };
+
+    reader.readAsDataURL(file);
+}
+
+async function uploadEditImage() {
+    const fileInput = document.getElementById("editImageFile");
+    const message = document.getElementById("editImageMessage");
+
+    const file = fileInput.files[0];
+
+    if (!file) {
+        return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+        message.className = "error";
+        message.innerText = "Rasm 5 MB dan kichik bo‘lishi kerak.";
+        return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = async function () {
+        try {
+            message.className = "";
+            message.innerText = "⏳ Rasm yuklanmoqda...";
+
+            const response = await fetch(
+                "/api/admin/upload-image",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + adminToken
+                    },
+                    body: JSON.stringify({
+                        image: reader.result
+                    })
+                }
+            );
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                message.className = "error";
+                message.innerText =
+                    result.message || "Rasm yuklanmadi.";
+                return;
+            }
+
+            document.getElementById("editImg").value = result.path;
+
+            message.className = "success";
+            message.innerText = "✅ Yangi rasm yuklandi.";
+        } catch (error) {
+            console.error(error);
+
+            message.className = "error";
+            message.innerText = "Rasm yuklashda xatolik.";
         }
     };
 
