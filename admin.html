@@ -189,6 +189,11 @@
             placeholder="Narxi"
         >
 
+<textarea
+    id="variants"
+    placeholder="Variantlar (har birini alohida qatorda yozing)&#10;Masalan:&#10;Qizil&#10;Pushti&#10;Ko‘k"
+></textarea>
+
         <input
             type="number"
             id="stock"
@@ -559,6 +564,16 @@ const stock =
     const img =
         document.getElementById("img").value.trim();
 
+const variantsText =
+    document.getElementById("variants").value.trim();
+
+const variants = variantsText
+    ? variantsText
+        .split("\n")
+        .map(v => v.trim())
+        .filter(Boolean)
+    : [];
+
     if (!name) {
         message.className = "error";
         message.innerText = "Mahsulot nomini kiriting!";
@@ -592,7 +607,8 @@ const stock =
                     desc,
                     price,
                     stock,
-                    img
+                    img,
+                    variants
                 })
             }
         );
