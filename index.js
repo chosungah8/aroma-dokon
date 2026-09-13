@@ -49,7 +49,8 @@ if (req.url === '/api/products' && req.method === 'GET') {
             price: Number(product.price) || 0,
             img: product.image || '',
             active: product.active !== false,
-            stock: Number(product.stock) || 0
+stock: Number(product.stock) || 0,
+variants: Array.isArray(product.variants) ? product.variants : []
         }));
 
         res.statusCode = 200;
