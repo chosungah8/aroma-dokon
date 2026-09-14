@@ -437,7 +437,7 @@ function addToCart(id) {
 
 const variant = window.selectedVariants?.[id] || "";
 
-if (Array.isArray(product.variants) && product.variants.length > 0 && !variant) {
+if (Array.isArray(product.variants) && product.variants.length > 0 && !variant)  {
     alert("Avval variantni tanlang.");
     return;
 } 
@@ -476,27 +476,6 @@ function changeQty(id, delta) {
     renderProducts();
 }
 
-function addToCart(id) {
-    const product = products.find(
-        p => Number(p.id) === Number(id)
-    );
-
-    if (!product || Number(product.stock) <= 0) {
-        return;
-    }
-
-    const currentQty = cart[id] || 0;
-
-    if (currentQty >= Number(product.stock)) {
-        alert("Bu mahsulotning qolgan qismi savatchada.");
-        return;
-    }
-
-    cart[id] = currentQty + 1;
-
-    updateCartBar();
-    renderProducts();
-}
 
 
 function changeQty(id, delta) {
