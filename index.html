@@ -280,6 +280,39 @@ function renderProducts() {
             `;
         }
 
+const variantOptions = Array.isArray(p.variants) && p.variants.length
+    ? `
+        <div style="margin:10px 0;">
+            <label style="
+                display:block;
+                margin-bottom:5px;
+                font-weight:bold;
+            ">
+                Variant:
+            </label>
+
+            <select
+                id="variant-${p.id}"
+                onchange="selectVariant(${p.id}, this.value)"
+                style="
+                    width:100%;
+                    padding:8px;
+                    border:1px solid #ddd;
+                    border-radius:8px;
+                "
+            >
+                <option value="">Variantni tanlang</option>
+
+                ${p.variants.map(v => `
+                    <option value="${v}">
+                        ${v}
+                    </option>
+                `).join("")}
+            </select>
+        </div>
+      `
+    : "";
+
         card.innerHTML = `
             <div>
                 <img src="${p.img}" alt="${p.name}">
@@ -288,11 +321,14 @@ function renderProducts() {
                     ${p.name}
                 </div>
 
-                <div class="desc">
-                    ${p.desc}
-                </div>
 
-                ${stockMessage}
+<div class="desc">
+    ${p.desc}
+</div>
+
+${variantOptions}
+
+${stockMessage}
 
                 <div class="price">
                     ${Number(p.price).toLocaleString()} so'm
@@ -369,6 +405,14 @@ function renderProducts() {
     });
 }
 
+function selectVariant(id, value) {
+    if (!window.selectedVariants) {
+        window.selectedVariants = {};
+    }
+
+    window.selectedVariants[id] = value;
+}
+
 function addToCart(id) {
     const product = products.find(
         p => Number(p.id) === Number(id)
@@ -391,7 +435,13 @@ function addToCart(id) {
         return;
     }
 
-    cart[id] = currentQty + 1;
+const variant = window.selectedVariants?.[id] || "";
+
+if (Array.isArray(product.variants) && product.variants.length > 0 && !variant) {
+    alert("Avval variantni tanlang.");
+    return;
+} 
+   cart[id] = currentQty + 1;
 
     updateCartBar();
     renderProducts();
@@ -554,11 +604,12 @@ function sendOrder() {
         const p = products.find(prod => prod.id == id);
 
         if (p && cart[id] > 0) {
-            orderItems.push({
-                name: p.name,
-                count: cart[id],
-                price: p.price
-            });
+orderItems.push({
+    name: p.name,
+    variant: window.selectedVariants?.[id] || "",
+    count: cart[id],
+    price: p.price
+});
 
             total += p.price * cart[id];
         }
