@@ -547,7 +547,12 @@ function changeQty(id, delta) {
                 itemDiv.className = 'cart-item';
                 itemDiv.innerHTML = `
                     <div>
-                        <b>${p.name}</b><br>
+<b>${p.name}</b><br>
+<span style="color:#71717a; font-size:12px;">
+    ${window.selectedVariants?.[id]
+        ? "Variant: " + window.selectedVariants[id]
+        : ""}
+</span><br>
                         <span style="color:#71717a; font-size:11px;">${p.price.toLocaleString()} so'm</span>
                     </div>
                     <div>
@@ -590,6 +595,11 @@ orderItems.push({
     price: p.price
 });
 
+console.log("BUYURTMAGA KETAYOTGAN:", {
+    name: p.name,
+    variant: window.selectedVariants?.[id] || "",
+    count: cart[id]
+});
             total += p.price * cart[id];
         }
     }
