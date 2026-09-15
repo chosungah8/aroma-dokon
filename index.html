@@ -143,77 +143,224 @@
     <button class="category-btn" onclick="selectCategory('Uy-ro‘zg‘or', this)">Uy-ro‘zg‘or</button>
 </div>
 
-<div class="find-product-box">
-    <div style="font-size:18px; font-weight:bold; margin-bottom:8px;">
-        🔎 Mahsulot topib beramiz
-    </div>
+<!-- MAHSULOT TOPIB BERAMIZ BANNER -->
+<div
+    class="find-product-banner"
+    onclick="openFindProductModal()"
+    style="
+        width:100%;
+        margin:12px 0 16px 0;
+        padding:14px 16px;
+        box-sizing:border-box;
+        background:linear-gradient(135deg, #fff0f5, #ffe4ed);
+        border:1px solid #ffd0df;
+        border-radius:14px;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:12px;
+        cursor:pointer;
+    "
+>
+    <div style="display:flex; align-items:center; gap:12px;">
+        <div
+            style="
+                width:42px;
+                height:42px;
+                border-radius:12px;
+                background:#fff;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                font-size:22px;
+                flex-shrink:0;
+            "
+        >
+            🔎
+        </div>
 
-    <div style="font-size:13px; color:#666; margin-bottom:12px;">
-        Siz izlayotgan mahsulotni yozing va xohlasangiz rasmini yuboring.
-        Biz siz uchun topib beramiz va narxini aytamiz.
-    </div>
-
-    <textarea
-        id="findProductText"
-        placeholder="Masalan: Menga shu narsa kerak, narxi qancha?"
-        style="
-            width:100%;
-            min-height:90px;
-            padding:10px;
-            border:1px solid #ddd;
-            border-radius:10px;
-            box-sizing:border-box;
-            resize:vertical;
-            font-size:14px;
-        "
-    ></textarea>
-
-    <div style="margin-top:10px;">
-        <label style="
-            display:block;
-            padding:12px;
-            border:1px dashed #bbb;
-            border-radius:10px;
-            text-align:center;
-            cursor:pointer;
-            color:#666;
-        ">
-            📷 Rasm qo‘shish
-            <input
-                type="file"
-                id="findProductImage"
-                accept="image/*"
-                style="display:none;"
-                onchange="previewFindProductImage()"
+        <div>
+            <div
+                style="
+                    font-size:15px;
+                    font-weight:700;
+                    color:#222;
+                "
             >
-        </label>
+                Mahsulotni topa olmayapsizmi?
+            </div>
+
+            <div
+                style="
+                    font-size:12px;
+                    color:#777;
+                    margin-top:3px;
+                "
+            >
+                Biz siz uchun topib beramiz!
+            </div>
+        </div>
     </div>
-
-
-    <div id="findProductImagePreview" style="margin-top:10px;"></div>
-
-    <button
-        onclick="sendFindProductRequest()"
-        style="
-            width:100%;
-            margin-top:12px;
-            padding:12px;
-            border:none;
-            border-radius:10px;
-            background:#007aff;
-            color:white;
-            font-size:15px;
-            font-weight:bold;
-            cursor:pointer;
-        "
-    >
-        Yuborish
-    </button>
 
     <div
-        id="findProductMessage"
-        style="margin-top:8px; font-size:13px;"
-    ></div>
+        style="
+            background:#e83e73;
+            color:white;
+            padding:9px 12px;
+            border-radius:10px;
+            font-size:12px;
+            font-weight:700;
+            white-space:nowrap;
+        "
+    >
+        So‘rov yuborish →
+    </div>
+</div>
+
+
+<!-- MAHSULOT TOPIB BERISH OYNASI -->
+<div
+    id="findProductModal"
+    style="
+        display:none;
+        position:fixed;
+        inset:0;
+        background:rgba(0,0,0,0.45);
+        z-index:9999;
+        padding:20px;
+        box-sizing:border-box;
+        align-items:center;
+        justify-content:center;
+    "
+    onclick="closeFindProductModal(event)"
+>
+    <div
+        style="
+            width:100%;
+            max-width:500px;
+            max-height:90vh;
+            overflow-y:auto;
+            background:#fff;
+            border-radius:18px;
+            padding:20px;
+            box-sizing:border-box;
+            position:relative;
+        "
+        onclick="event.stopPropagation()"
+    >
+
+        <button
+            onclick="closeFindProductModal()"
+            style="
+                position:absolute;
+                right:14px;
+                top:12px;
+                width:34px;
+                height:34px;
+                border:none;
+                border-radius:50%;
+                background:#f5f5f5;
+                font-size:20px;
+                cursor:pointer;
+            "
+        >
+            ×
+        </button>
+
+        <div
+            style="
+                font-size:19px;
+                font-weight:bold;
+                margin-bottom:7px;
+                padding-right:35px;
+            "
+        >
+            🔎 Mahsulot topib beramiz
+        </div>
+
+        <div
+            style="
+                font-size:13px;
+                color:#666;
+                margin-bottom:14px;
+            "
+        >
+            Kerakli mahsulotni yozing va xohlasangiz rasmini yuboring.
+        </div>
+
+        <textarea
+            id="findProductText"
+            placeholder="Masalan: Menga shu narsa kerak, narxi qancha?"
+            style="
+                width:100%;
+                min-height:90px;
+                padding:12px;
+                border:1px solid #ddd;
+                border-radius:12px;
+                box-sizing:border-box;
+                resize:vertical;
+                font-size:14px;
+                outline:none;
+            "
+        ></textarea>
+
+        <div style="margin-top:10px;">
+            <label
+                style="
+                    display:block;
+                    padding:13px;
+                    border:1px dashed #bbb;
+                    border-radius:12px;
+                    text-align:center;
+                    cursor:pointer;
+                    color:#666;
+                    background:#fafafa;
+                "
+            >
+                📷 Rasm qo‘shish
+                <input
+                    type="file"
+                    id="findProductImage"
+                    accept="image/*"
+                    style="display:none;"
+                    onchange="previewFindProductImage()"
+                >
+            </label>
+        </div>
+
+        <div
+            id="findProductImagePreview"
+            style="margin-top:10px;"
+        ></div>
+
+        <button
+            onclick="sendFindProductRequest()"
+            style="
+                width:100%;
+                margin-top:12px;
+                padding:13px;
+                border:none;
+                border-radius:12px;
+                background:#e83e73;
+                color:white;
+                font-size:15px;
+                font-weight:bold;
+                cursor:pointer;
+            "
+        >
+            📤 Yuborish
+        </button>
+
+        <div
+            id="findProductMessage"
+            style="
+                margin-top:8px;
+                font-size:13px;
+                text-align:center;
+            "
+        ></div>
+
+    </div>
 </div>
 
 <div class="grid" id="productGrid"></div>    
@@ -530,6 +677,26 @@ function previewFindProductImage() {
             "
         >
     `;
+}
+
+function openFindProductModal() {
+    const modal = document.getElementById("findProductModal");
+
+    if (modal) {
+        modal.style.display = "flex";
+    }
+}
+
+function closeFindProductModal(event) {
+    if (event && event.target !== event.currentTarget) {
+        return;
+    }
+
+    const modal = document.getElementById("findProductModal");
+
+    if (modal) {
+        modal.style.display = "none";
+    }
 }
 
 async function sendFindProductRequest() {
