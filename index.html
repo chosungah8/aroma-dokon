@@ -216,7 +216,8 @@
     ></div>
 </div>
 
-    <div class="cart-bar" id="cartBar">
+<div class="grid" id="productGrid"></div>    
+<div class="cart-bar" id="cartBar">
         <div>
             <div style="font-size: 11px; color: #71717a;">Jami summa:</div>
             <div id="cartBarTotal" style="font-weight: bold; font-size: 15px; color: #007aff;">0 so'm</div>
@@ -300,9 +301,15 @@ function selectCategory(category, button) {
 
 function renderProducts() {
     const grid = document.getElementById("productGrid");
+
+if (!grid) {
+    return;
+}
+
     const search = document.getElementById("searchInput").value.toLowerCase();
 
     grid.innerHTML = "";
+
 
     const filtered = products.filter(p => {
         const matchesSearch = p.name.toLowerCase().includes(search);
@@ -313,6 +320,19 @@ function renderProducts() {
 
         return matchesSearch && matchesCategory;
     });
+
+const filtered = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(search);
+
+    const matchesCategory =
+        selectedCategory === "all" ||
+        p.category === selectedCategory;
+
+    return matchesSearch && matchesCategory;
+});
+
+console.log("PRODUCTS:", products);
+console.log("FILTERED:", filtered);
 
     if (filtered.length === 0) {
         grid.innerHTML = `
