@@ -133,7 +133,80 @@
     <button class="category-btn" onclick="selectCategory('Parfyumeriya', this)">Parfyumeriya</button>
     <button class="category-btn" onclick="selectCategory('Uy-ro‘zg‘or', this)">Uy-ro‘zg‘or</button>
 </div>
-    <div class="grid" id="productGrid"></div>
+
+<div class="find-product-box">
+    <div style="font-size:18px; font-weight:bold; margin-bottom:8px;">
+        🔎 Mahsulot topib beramiz
+    </div>
+
+    <div style="font-size:13px; color:#666; margin-bottom:12px;">
+        Siz izlayotgan mahsulotni yozing va xohlasangiz rasmini yuboring.
+        Biz siz uchun topib beramiz va narxini aytamiz.
+    </div>
+
+    <textarea
+        id="findProductText"
+        placeholder="Masalan: Menga shu narsa kerak, narxi qancha?"
+        style="
+            width:100%;
+            min-height:90px;
+            padding:10px;
+            border:1px solid #ddd;
+            border-radius:10px;
+            box-sizing:border-box;
+            resize:vertical;
+            font-size:14px;
+        "
+    ></textarea>
+
+    <div style="margin-top:10px;">
+        <label style="
+            display:block;
+            padding:12px;
+            border:1px dashed #bbb;
+            border-radius:10px;
+            text-align:center;
+            cursor:pointer;
+            color:#666;
+        ">
+            📷 Rasm qo‘shish
+            <input
+                type="file"
+                id="findProductImage"
+                accept="image/*"
+                style="display:none;"
+                onchange="previewFindProductImage()"
+            >
+        </label>
+    </div>
+
+<div class="grid" id="productGrid"></div>
+
+    <div id="findProductImagePreview" style="margin-top:10px;"></div>
+
+    <button
+        onclick="sendFindProductRequest()"
+        style="
+            width:100%;
+            margin-top:12px;
+            padding:12px;
+            border:none;
+            border-radius:10px;
+            background:#007aff;
+            color:white;
+            font-size:15px;
+            font-weight:bold;
+            cursor:pointer;
+        "
+    >
+        Yuborish
+    </button>
+
+    <div
+        id="findProductMessage"
+        style="margin-top:8px; font-size:13px;"
+    ></div>
+</div>
 
     <div class="cart-bar" id="cartBar">
         <div>
@@ -411,6 +484,90 @@ function selectVariant(id, value) {
     }
 
     window.selectedVariants[id] = value;
+}
+
+function previewFindProductImage() {
+    const input = document.getElementById("findProductImage");
+    const preview = document.getElementById("findProductImagePreview");
+
+    preview.innerHTML = "";
+
+    if (!input.files || !input.files[0]) {
+        return;
+    }
+
+    const file = input.files[0];
+    const imageUrl = URL.createObjectURL(file);
+
+    preview.innerHTML = `
+        <img
+            src="${imageUrl}"
+            style="
+                width:100%;
+                max-height:220px;
+                object-fit:contain;
+                border-radius:10px;
+                border:1px solid #eee;
+            "
+        >
+    `;
+}
+
+function sendFindProductRequest() {
+    const text =
+        document.getElementById("findProductText").value.trim();
+
+    const imageInput =
+        document.getElementById("findProductImage");
+
+    const message =
+        document.getElementById("findProductMessage");
+
+    if (!text && (!imageInput.files || !imageInput.files[0])) {
+        message.style.color = "#d00";
+        message.innerText =
+            "Mahsulot nomini yozing yoki rasm yuboring.";
+        return;
+    }
+
+    message.style.color = "#007a";
+    message.innerText = "So‘rov tayyorlanmoqda...";
+
+    const file = imageInput.files?.[0];
+
+    if (file) {
+        const reader = new FileReader();
+
+        reader.onload = function () {
+            const requestData = {
+                text: text,
+                image: reader.result || ""
+            };
+
+            console.log(
+                "MAHSULOT TOPISH SO‘ROVI:",
+                requestData
+            );
+
+            message.style.color = "green";
+            message.innerText =
+                "So‘rovingiz tayyor. Keyingi bosqichda admin'ga yuboramiz.";
+        };
+
+        reader.readAsDataURL(file);
+    } else {
+        console.log(
+            "MAHSULOT TOPISH SO‘ROVI:",
+            {
+                text: text,
+                image: ""
+            }
+        );
+
+        message.style.color = "green";
+        message.innerText =
+            "So‘rovingiz tayyor. Keyingi bosqichda admin'ga yuboramiz.";
+    }
 }
 
 function addToCart(id) {
