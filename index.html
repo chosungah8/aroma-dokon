@@ -321,15 +321,6 @@ if (!grid) {
         return matchesSearch && matchesCategory;
     });
 
-const filtered = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(search);
-
-    const matchesCategory =
-        selectedCategory === "all" ||
-        p.category === selectedCategory;
-
-    return matchesSearch && matchesCategory;
-});
 
 console.log("PRODUCTS:", products);
 console.log("FILTERED:", filtered);
