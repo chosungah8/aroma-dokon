@@ -550,13 +550,14 @@ async function sendFindProductRequest() {
     }
 
     message.style.color = "#666";
-    message.innerText = "Rasm yuklanmoqda...";
+    message.innerText = "Yuborilmoqda...";
 
     try {
         let imageUrl = "";
 
         const file = imageInput.files?.[0];
 
+        // 1. Rasmni yuklash
         if (file) {
             const reader = new FileReader();
 
@@ -593,22 +594,48 @@ async function sendFindProductRequest() {
             imageUrl = uploadResult.url || "";
         }
 
-        const requestData = {
-            text: text,
-            image: imageUrl,
-            telegramUserId:
-                tg.initDataUnsafe?.user?.id || null
-        };
-
-        console.log(
-            "MAHSULOT TOPISH SO‘ROVI:",
-            requestData
+        // 2. So‘rovni serverga yuborish
+        const requestResponse = await fetch(
+            "/api/product-requests",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    text: text,
+                    imageUrl: imageUrl,
+                    telegramUserId:
+                        tg.initDataUnsafe?.user?.id || null,
+                    customerName:
+                        tg.initDataUnsafe?.user?.first_name || "",
+                    customerUsername:
+                        tg.initDataUnsafe?.user?.username || ""
+                })
+            }
         );
+
+        const requestResult =
+            await requestResponse.json();
+
+        if (!requestResponse.ok || !requestResult.success) {
+            throw new Error(
+                requestResult.message ||
+                "So‘rov yuborilmadi"
+            );
+        }
 
         message.style.color = "green";
         message.innerText =
-            "So‘rovingiz yuborishga tayyor.";
-            
+            "✅ So‘rovingiz adminga yuborildi!";
+
+        // Maydonlarni tozalash
+        document.getElementById("findProductText").value = "";
+        imageInput.value = "";
+        document.getElementById(
+            "findProductImagePreview"
+        ).innerHTML = "";
+
     } catch (error) {
         console.error(
             "MAHSULOT SO‘ROVI XATOSI:",
@@ -617,7 +644,7 @@ async function sendFindProductRequest() {
 
         message.style.color = "#d00";
         message.innerText =
-            "Rasmni yuklashda xatolik yuz berdi.";
+            "❌ So‘rov yuborishda xatolik yuz berdi.";
     }
 }
 
