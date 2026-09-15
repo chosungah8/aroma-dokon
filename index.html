@@ -513,7 +513,7 @@ function previewFindProductImage() {
     `;
 }
 
-function sendFindProductRequest() {
+async function sendFindProductRequest() {
     const text =
         document.getElementById("findProductText").value.trim();
 
@@ -530,43 +530,75 @@ function sendFindProductRequest() {
         return;
     }
 
-    message.style.color = "#007a";
-    message.innerText = "So‘rov tayyorlanmoqda...";
+    message.style.color = "#666";
+    message.innerText = "Rasm yuklanmoqda...";
 
-    const file = imageInput.files?.[0];
+    try {
+        let imageUrl = "";
 
-    if (file) {
-        const reader = new FileReader();
+        const file = imageInput.files?.[0];
 
-        reader.onload = function () {
-            const requestData = {
-                text: text,
-                image: reader.result || ""
-            };
+        if (file) {
+            const reader = new FileReader();
 
-            console.log(
-                "MAHSULOT TOPISH SO‘ROVI:",
-                requestData
+            const imageData = await new Promise((resolve, reject) => {
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () =>
+                    reject(new Error("Rasmni o‘qib bo‘lmadi"));
+                reader.readAsDataURL(file);
+            });
+
+            const uploadResponse = await fetch(
+                "/api/upload-request-image",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        image: imageData
+                    })
+                }
             );
 
-            message.style.color = "green";
-            message.innerText =
-                "So‘rovingiz tayyor. Keyingi bosqichda admin'ga yuboramiz.";
+            const uploadResult =
+                await uploadResponse.json();
+
+            if (!uploadResponse.ok || !uploadResult.success) {
+                throw new Error(
+                    uploadResult.message ||
+                    "Rasmni yuklab bo‘lmadi"
+                );
+            }
+
+            imageUrl = uploadResult.url || "";
+        }
+
+        const requestData = {
+            text: text,
+            image: imageUrl,
+            telegramUserId:
+                tg.initDataUnsafe?.user?.id || null
         };
 
-        reader.readAsDataURL(file);
-    } else {
         console.log(
             "MAHSULOT TOPISH SO‘ROVI:",
-            {
-                text: text,
-                image: ""
-            }
+            requestData
         );
 
         message.style.color = "green";
         message.innerText =
-            "So‘rovingiz tayyor. Keyingi bosqichda admin'ga yuboramiz.";
+            "So‘rovingiz yuborishga tayyor.";
+            
+    } catch (error) {
+        console.error(
+            "MAHSULOT SO‘ROVI XATOSI:",
+            error
+        );
+
+        message.style.color = "#d00";
+        message.innerText =
+            "Rasmni yuklashda xatolik yuz berdi.";
     }
 }
 
