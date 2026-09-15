@@ -400,6 +400,8 @@
         tg.expand();
 
 const telegramUser = tg.initDataUnsafe?.user;
+console.log("TELEGRAM USER:", tg.initDataUnsafe?.user);
+console.log("TELEGRAM USER:", tg.initDataUnsafe?.user);
 
 const telegramUserId = telegramUser?.id || null;
 
@@ -761,36 +763,20 @@ async function sendFindProductRequest() {
             imageUrl = uploadResult.url || "";
         }
 
-        // 2. So‘rovni serverga yuborish
-        const requestResponse = await fetch(
-            "/api/product-requests",
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    text: text,
-                    imageUrl: imageUrl,
-                    telegramUserId:
-                        tg.initDataUnsafe?.user?.id || null,
-                    customerName:
-                        tg.initDataUnsafe?.user?.first_name || "",
-                    customerUsername:
-                        tg.initDataUnsafe?.user?.username || ""
-                })
-            }
-        );
-
-        const requestResult =
-            await requestResponse.json();
-
-        if (!requestResponse.ok || !requestResult.success) {
-            throw new Error(
-                requestResult.message ||
-                "So‘rov yuborilmadi"
-            );
+        // 2. So‘rovni Telegram botga yuborish
+        if (!window.Telegram || !window.Telegram.WebApp) {
+            throw new Error("Telegram Web App topilmadi");
         }
+
+        const productRequestData = {
+            type: "product_request",
+            text: text,
+            imageUrl: imageUrl
+        };
+
+        Telegram.WebApp.sendData(
+            JSON.stringify(productRequestData)
+        );
 
         message.style.color = "green";
         message.innerText =
