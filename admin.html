@@ -147,7 +147,56 @@
         </button>
     </div>
 
+    <details id="categorySection" open style="margin-bottom:15px;">
+        <summary style="
+            font-size:18px;
+            font-weight:bold;
+            cursor:pointer;
+            padding:12px;
+            background:#f5f5f5;
+            border-radius:10px;
+        ">
+            📂 Kategoriyalar
+        </summary>
 
+        <div style="padding-top:12px;">
+
+            <div style="
+                display:flex;
+                flex-wrap:wrap;
+                gap:8px;
+                margin-bottom:12px;
+            ">
+                <input
+                    type="text"
+                    id="newCategoryName"
+                    placeholder="Yangi kategoriya nomi"
+                    style="flex:1;"
+                >
+
+                <select
+                    id="categoryParent"
+                    style="
+                        width:100%;
+                        margin-top:8px;
+                    "
+                >
+                    <option value="">📂 Asosiy kategoriya</option>
+                </select>
+
+                <button
+                    class="primary"
+                    onclick="addCategory()"
+                    style="width:auto; padding:10px 14px; margin-top:8px;"
+                >
+                    ➕ Qo‘shish
+                </button>
+            </div>
+
+            <div id="categoryList"></div>
+
+        </div>
+    </details>
 
 
 <details id="newProductSection" open style="margin-bottom:15px;">
@@ -251,14 +300,7 @@
         placeholder="Mahsulot nomi"
     >
 
-    <select id="editCategory">
-        <option value="Kir yuvish">Kir yuvish</option>
-        <option value="Idish yuvish">Idish yuvish</option>
-        <option value="Kosmetika">Kosmetika</option>
-        <option value="Soch parvarishi">Soch parvarishi</option>
-        <option value="Parfyumeriya">Parfyumeriya</option>
-        <option value="Uy-ro‘zg‘or">Uy-ro‘zg‘or</option>
-    </select>
+<select id="editCategory"></select>
 
     <textarea
         id="editDesc"
@@ -431,6 +473,7 @@ function showAdmin() {
 
 loadProducts();
 loadOrders();
+loadCategories();
 }
 
 
@@ -1184,7 +1227,401 @@ async function updateOrderStatus(orderId, status) {
     }
 }
 
+
+async function loadCategories() {
+    const token = adminToken;
+
+    if (!token) return;
+
+    try {
+        const response = await fetch('/api/admin/categories', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error(data);
+            return;
+        }
+
+        const list = document.getElementById('categoryList');
+
+        // Asosiy kategoriyalarni tanlash ro‘yxatini to‘ldirish
+        const parentSelect = document.getElementById('categoryParent');
+
+        if (parentSelect) {
+            parentSelect.innerHTML = `
+                <option value="">📂 Asosiy kategoriya</option>
+            `;
+
+            data
+                .filter(category => category.parent_id === null)
+                .forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.id;
+                    option.textContent = category.name;
+                    parentSelect.appendChild(option);
+                });
+        }
+
+if (!Array.isArray(data) || data.length === 0) {
+            list.innerHTML = `
+                <div style="
+                    padding:12px;
+                    text-align:center;
+                    color:#888;
+                    background:#f8f8f8;
+                    border-radius:8px;
+                ">
+                    Kategoriyalar mavjud emas
+                </div>
+            `;
+            return;
+        }
+
+        // Kategoriya selectlarini avtomatik to‘ldirish
+        const categorySelect = document.getElementById('category');
+        const editCategorySelect = document.getElementById('editCategory');
+
+        function buildCategoryOptions() {
+            const mainCategories = data.filter(
+                category => category.parent_id === null
+            );
+
+            return mainCategories.map(mainCategory => {
+                const children = data.filter(
+                    category =>
+                        Number(category.parent_id) === Number(mainCategory.id)
+                );
+
+                const childOptions = children.map(child => `
+                    <option value="${escapeHtml(child.name)}">
+                        ↳ ${escapeHtml(child.name)}
+                    </option>
+                `).join('');
+
+                return `
+                    <optgroup label="📁 ${escapeHtml(mainCategory.name)}">
+                        <option value="${escapeHtml(mainCategory.name)}">
+                            ${escapeHtml(mainCategory.name)}
+                        </option>
+                        ${childOptions}
+                    </optgroup>
+                `;
+            }).join('');
+        }
+
+        const options = buildCategoryOptions();
+
+        if (categorySelect) {
+            categorySelect.innerHTML = options;
+        }
+
+        if (editCategorySelect) {
+            editCategorySelect.innerHTML = options;
+        }
+
+const mainCategories = data.filter(
+            category => category.parent_id === null
+        );
+
+        list.innerHTML = mainCategories.map(mainCategory => {
+            const children = data.filter(
+                category =>
+                    Number(category.parent_id) === Number(mainCategory.id)
+            );
+
+            const mainActions = `
+                <div style="display:flex; gap:6px;">
+                    <button
+                        onclick="editCategory(${mainCategory.id}, '${escapeJs(mainCategory.name)}')"
+                        style="
+                            border:none;
+                            background:#fff;
+                            padding:7px 10px;
+                            border-radius:7px;
+                            cursor:pointer;
+                        "
+                    >
+                        ✏️
+                    </button>
+
+                    <button
+                        onclick="deleteCategory(${mainCategory.id}, '${escapeJs(mainCategory.name)}')"
+                        style="
+                            border:none;
+                            background:#fff;
+                            padding:7px 10px;
+                            border-radius:7px;
+                            cursor:pointer;
+                        "
+                    >
+                        🗑️
+                    </button>
+                </div>
+            `;
+
+            const subCategories = children.length
+                ? `
+                    <div style="
+                        margin-top:8px;
+                        margin-left:18px;
+                        padding-left:12px;
+                        border-left:3px solid #d9d9d9;
+                        display:flex;
+                        flex-direction:column;
+                        gap:6px;
+                    ">
+                        <div style="
+                            font-size:10px;
+                            color:#888;
+                            margin-bottom:2px;
+                        ">
+                            ↳ Ichki kategoriyalar
+                        </div>
+
+                        ${children.map(child => `
+                            <div style="
+                                display:flex;
+                                align-items:center;
+                                justify-content:space-between;
+                                gap:8px;
+                                padding:8px 10px;
+                                background:#fff;
+                                border:1px solid #ececec;
+                                border-radius:8px;
+                            ">
+                                <span style="
+                                    font-size:13px;
+                                    color:#333;
+                                ">
+                                    ↳ ${escapeHtml(child.name)}
+                                </span>
+
+                                <div style="display:flex; gap:5px;">
+                                    <button
+                                        onclick="editCategory(${child.id}, '${escapeJs(child.name)}')"
+                                        style="
+                                            border:none;
+                                            background:#f8f8f8;
+                                            padding:5px 8px;
+                                            border-radius:6px;
+                                            cursor:pointer;
+                                        "
+                                    >
+                                        ✏️
+                                    </button>
+
+                                    <button
+                                        onclick="deleteCategory(${child.id}, '${escapeJs(child.name)}')"
+                                        style="
+                                            border:none;
+                                            background:#f8f8f8;
+                                            padding:5px 8px;
+                                            border-radius:6px;
+                                            cursor:pointer;
+                                        "
+                                    >
+                                        🗑️
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `
+                : '';
+
+            return `
+                <div style="
+                    width:100%;
+                    box-sizing:border-box;
+                    padding:10px;
+                    margin-bottom:10px;
+                    background:#f5f5f5;
+                    border:1px solid #e7e7e7;
+                    border-radius:12px;
+                ">
+                    <div style="
+                        display:flex;
+                        align-items:center;
+                        justify-content:space-between;
+                        gap:8px;
+                    ">
+                        <span style="
+                            font-size:15px;
+                            font-weight:700;
+                            color:#222;
+                        ">
+                            📁 ${escapeHtml(mainCategory.name)}
+                        </span>
+
+                        ${mainActions}
+                    </div>
+
+                    ${subCategories}
+                </div>
+            `;
+        }).join('');
+
+    } catch (error) {
+        console.error('Kategoriya yuklashda xatolik:', error);
+    }
+}
+
+
+async function addCategory() {
+    const input = document.getElementById('newCategoryName');
+    const parentSelect = document.getElementById('categoryParent');
+    const name = input.value.trim();
+    const parent_id = parentSelect && parentSelect.value
+        ? Number(parentSelect.value)
+        : null;
+
+    if (!name) {
+        alert('Kategoriya nomini kiriting');
+        input.focus();
+        return;
+    }
+
+    const token = adminToken;
+
+    try {
+        const response = await fetch('/api/admin/categories', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                name,
+                parent_id
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            alert(data.error || 'Kategoriya qo‘shishda xatolik');
+            return;
+        }
+
+        input.value = '';
+        if (parentSelect) {
+            parentSelect.value = '';
+        }
+
+        await loadCategories();
+
+        alert('✅ Kategoriya qo‘shildi');
+
+    } catch (error) {
+        console.error(error);
+        alert('Server bilan bog‘lanishda xatolik');
+    }
+}
+
+
+async function editCategory(id, oldName) {
+    const newName = prompt(
+        'Yangi kategoriya nomini kiriting:',
+        oldName
+    );
+
+    if (newName === null) return;
+
+    const name = newName.trim();
+
+    if (!name) {
+        alert('Kategoriya nomi bo‘sh bo‘lishi mumkin emas');
+        return;
+    }
+
+    if (name === oldName) return;
+
+    const token = adminToken;
+
+    try {
+        const response = await fetch(`/api/admin/categories/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ name })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            alert(data.error || 'Kategoriya o‘zgartirishda xatolik');
+            return;
+        }
+
+        await loadCategories();
+
+        alert('✅ Kategoriya o‘zgartirildi');
+
+    } catch (error) {
+        console.error(error);
+        alert('Server bilan bog‘lanishda xatolik');
+    }
+}
+
+
+async function deleteCategory(id, name) {
+    const confirmed = confirm(
+        `"${name}" kategoriyasini o‘chirishni xohlaysizmi?`
+    );
+
+    if (!confirmed) return;
+
+    const token = adminToken;
+
+    try {
+        const response = await fetch(`/api/admin/categories/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            alert(data.error || 'Kategoriya o‘chirishda xatolik');
+            return;
+        }
+
+        await loadCategories();
+
+        alert('🗑️ Kategoriya o‘chirildi');
+
+    } catch (error) {
+        console.error(error);
+        alert('Server bilan bog‘lanishda xatolik');
+    }
+}
+
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+
+function escapeJs(text) {
+    return String(text)
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/\r/g, '')
+        .replace(/\n/g, '\\n');
+}
 </script>
+
 
 </body>
 </html>
