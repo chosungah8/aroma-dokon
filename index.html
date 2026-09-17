@@ -24,65 +24,62 @@
 
         .search-input { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 10px; font-size: 13px; }
 .categories {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    white-space: nowrap !important;
     margin-bottom: 12px;
-    padding-bottom: 4px;
+    padding: 2px 2px 6px 2px;
+    scrollbar-width: none;
+}
+
+.categories::-webkit-scrollbar {
+    display: none;
 }
 
 .category-group {
-    width: 100%;
+    display: inline-block !important;
+    width: auto !important;
     box-sizing: border-box;
-    padding: 8px;
-    background: #f8f8f8;
-    border: 1px solid #e5e5e5;
-    border-radius: 12px;
+    padding: 0;
+    margin: 0 6px 0 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
 }
 
 .category-main-row {
-    display: block;
-    width: 100%;
-}
-
-.category-main-row .category-btn {
-    width: 100%;
-    box-sizing: border-box;
-    text-align: left;
-    font-weight: 700;
-    background: #ffffff;
-    padding: 9px 12px;
+    display: inline-block !important;
+    width: auto !important;
 }
 
 .subcategory-list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
-    margin-top: 7px;
-    margin-left: 10px;
-    padding-left: 10px;
-    border-left: 3px solid #d8d8d8;
-}
-
-.subcategory-list .category-btn {
-    width: 100%;
-    box-sizing: border-box;
-    text-align: left;
-    font-size: 11px;
-    padding: 7px 9px;
-    background: #ffffff;
+    display: inline-block !important;
+    margin: 0;
+    padding: 0;
+    border: none;
+    white-space: nowrap;
 }
 
 .category-btn {
-    flex: 0 0 auto;
-    border: none;
-    background: #ffffff;
-    color: #333;
-    padding: 8px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    cursor: pointer;
-    border: 1px solid #ddd;
+    display: inline-block !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    flex: none !important;
+    box-sizing: border-box;
+    white-space: nowrap !important;
+    vertical-align: middle;
+    margin-right: 6px;
+}
+
+.subcategory-list .category-btn {
+    display: inline-block !important;
+    width: auto !important;
+    white-space: nowrap !important;
+    margin-right: 6px;
 }
 
 .category-btn.active {
@@ -405,7 +402,7 @@
     </div>
 </div>
 
-<div class="grid" id="productGrid"></div>    
+<div class="grid" id="productGrid"></div>
 <div class="cart-bar" id="cartBar">
         <div>
             <div style="font-size: 11px; color: #71717a;">Jami summa:</div>
@@ -420,7 +417,7 @@
                 <span>🛒 Buyurtmani rasmiylashtirish</span>
                 <span class="close-btn" onclick="closeCartModal()">✕</span>
             </div>
-            
+
             <div id="cartItemsList"></div>
 
             <div class="form-group">
@@ -479,7 +476,7 @@ async function loadProducts() {
     }
 }
 
-async function loadCategories() {
+async function loadCategories(selectedMainId = null) {
     try {
         const response = await fetch("/api/categories");
 
@@ -496,133 +493,166 @@ async function loadCategories() {
 
         container.innerHTML = "";
 
-        // Barchasi
+        // Ichki kategoriyalar oynasi
+        if (selectedMainId !== null) {
+            const mainCategory = allCategories.find(
+                category => Number(category.id) === Number(selectedMainId)
+            );
+
+            const children = allCategories.filter(
+                category =>
+                    Number(category.parent_id) === Number(selectedMainId)
+            );
+
+            // Orqaga qaytish tugmasi
+            const backButton = document.createElement("button");
+
+            backButton.className = "category-btn";
+            backButton.textContent = "← Orqaga";
+
+            backButton.style.cssText = `
+                display:inline-block !important;
+                width:auto !important;
+                min-width:0 !important;
+                flex:none !important;
+                white-space:nowrap !important;
+                font-weight:600;
+            `;
+
+            backButton.onclick = function () {
+                selectedCategory = "all";
+                loadCategories(null);
+                renderProducts();
+            };
+
+            container.appendChild(backButton);
+
+            // Asosiy kategoriya nomi
+            if (mainCategory) {
+                const title = document.createElement("span");
+
+                title.textContent = "📁 " + mainCategory.name;
+
+                title.style.cssText = `
+                    display:inline-block;
+                    margin:0 4px 0 2px;
+                    padding:7px 10px;
+                    font-size:12px;
+                    font-weight:700;
+                    color:#555;
+                    white-space:nowrap;
+                    vertical-align:middle;
+                `;
+
+                container.appendChild(title);
+            }
+
+            // Ichki kategoriyalar
+            children.forEach(child => {
+                const subButton = document.createElement("button");
+
+                subButton.className = "category-btn";
+
+                if (selectedCategory === child.name) {
+                    subButton.classList.add("active");
+                }
+
+                subButton.textContent = child.name;
+
+                subButton.style.cssText = `
+                    display:inline-block !important;
+                    width:auto !important;
+                    min-width:0 !important;
+                    flex:none !important;
+                    white-space:nowrap !important;
+                    font-size:11px;
+                    padding:7px 10px;
+                    margin-right:6px;
+                    background:#f7f7f7;
+                `;
+
+                subButton.onclick = function () {
+                    selectedCategory = child.name;
+
+                    document.querySelectorAll(".category-btn").forEach(btn => {
+                        btn.classList.remove("active");
+                    });
+
+                    subButton.classList.add("active");
+
+                    renderProducts();
+                };
+
+                container.appendChild(subButton);
+            });
+
+            return;
+        }
+
+        // Asosiy kategoriyalar qatori
         const allButton = document.createElement("button");
-        allButton.className = "category-btn active";
+
+        allButton.className = "category-btn";
+
+        if (selectedCategory === "all") {
+            allButton.classList.add("active");
+        }
+
         allButton.textContent = "Barchasi";
+
         allButton.style.cssText = `
-            width: 100%;
-            display: block;
-            box-sizing: border-box;
-            text-align: left;
+            display:inline-block !important;
+            width:auto !important;
+            min-width:0 !important;
+            flex:none !important;
+            white-space:nowrap !important;
         `;
 
         allButton.onclick = function () {
-            selectCategory("all", this);
+            selectedCategory = "all";
+            loadCategories(null);
+            renderProducts();
         };
 
         container.appendChild(allButton);
 
-        // Faqat asosiy kategoriyalar
         const mainCategories = allCategories.filter(
             category => category.parent_id === null
         );
 
         mainCategories.forEach(mainCategory => {
+            const button = document.createElement("button");
 
-            const group = document.createElement("div");
+            button.className = "category-btn";
 
-            group.className = "category-group";
+            button.textContent = mainCategory.name;
 
-            group.style.cssText = `
-                display: block !important;
-                width: 100% !important;
-                box-sizing: border-box;
-                padding: 8px;
-                margin: 0;
-                background: #f8f8f8;
-                border: 1px solid #e5e5e5;
-                border-radius: 12px;
+            button.style.cssText = `
+                display:inline-block !important;
+                width:auto !important;
+                min-width:0 !important;
+                flex:none !important;
+                white-space:nowrap !important;
+                margin-right:6px;
             `;
 
-            // Asosiy kategoriya
-            const mainButton = document.createElement("button");
+            button.onclick = function () {
+                const children = allCategories.filter(
+                    category =>
+                        Number(category.parent_id) === Number(mainCategory.id)
+                );
 
-            mainButton.className = "category-btn";
+                selectedCategory = mainCategory.name;
 
-            mainButton.textContent = "📁 " + mainCategory.name;
+                // Ichki kategoriyalar mavjud bo‘lsa, ularning oynasini ochamiz
+                if (children.length > 0) {
+                    loadCategories(mainCategory.id);
+                }
 
-            mainButton.style.cssText = `
-                display: block !important;
-                width: 100% !important;
-                box-sizing: border-box;
-                text-align: left;
-                font-weight: 700;
-                background: #ffffff;
-                padding: 10px 12px;
-                margin: 0;
-            `;
-
-            mainButton.onclick = function () {
-                selectCategory(mainCategory.name, this);
+                renderProducts();
             };
 
-            group.appendChild(mainButton);
-
-            // Subkategoriyalar
-            const children = allCategories.filter(
-                category =>
-                    Number(category.parent_id) === Number(mainCategory.id)
-            );
-
-            if (children.length > 0) {
-
-                const subTitle = document.createElement("div");
-
-                subTitle.textContent = "Ichki kategoriyalar";
-
-                subTitle.style.cssText = `
-                    font-size: 10px;
-                    color: #888;
-                    margin: 7px 0 4px 10px;
-                `;
-
-                group.appendChild(subTitle);
-
-                const subList = document.createElement("div");
-
-                subList.className = "subcategory-list";
-
-                subList.style.cssText = `
-                    display: flex !important;
-                    flex-direction: column !important;
-                    gap: 5px;
-                    margin: 0 0 0 10px;
-                    padding-left: 10px;
-                    border-left: 3px solid #d8d8d8;
-                `;
-
-                children.forEach(child => {
-
-                    const subButton = document.createElement("button");
-
-                    subButton.className = "category-btn";
-
-                    subButton.textContent = "↳ " + child.name;
-
-                    subButton.style.cssText = `
-                        display: block !important;
-                        width: 100% !important;
-                        box-sizing: border-box;
-                        text-align: left;
-                        font-size: 11px;
-                        padding: 7px 10px;
-                        margin: 0;
-                        background: #ffffff;
-                        border-radius: 8px;
-                    `;
-
-                    subButton.onclick = function () {
-                        selectCategory(child.name, this);
-                    };
-
-                    subList.appendChild(subButton);
-                });
-
-                group.appendChild(subList);
-            }
-
-            container.appendChild(group);
+            container.appendChild(button);
         });
 
     } catch (error) {
@@ -1041,7 +1071,7 @@ const variant = window.selectedVariants?.[id] || "";
 if (Array.isArray(product.variants) && product.variants.length > 0 && !variant)  {
     alert("Avval variantni tanlang.");
     return;
-} 
+}
    cart[id] = currentQty + 1;
 
     updateCartBar();
@@ -1165,7 +1195,38 @@ function changeQty(id, delta) {
                 list.appendChild(itemDiv);
             }
 
-            if (!hasItems) closeCartModal();
+            if (!hasItems) {
+                list.innerHTML = `
+                    <div style="
+                        text-align:center;
+                        padding:30px 15px;
+                        color:#777;
+                    ">
+                        <div style="
+                            font-size:42px;
+                            margin-bottom:10px;
+                        ">
+                            🛒
+                        </div>
+
+                        <div style="
+                            font-size:16px;
+                            font-weight:bold;
+                            color:#444;
+                            margin-bottom:5px;
+                        ">
+                            Savat bo‘sh
+                        </div>
+
+                        <div style="
+                            font-size:12px;
+                            color:#999;
+                        ">
+                            Hozircha savatga hech qanday mahsulot qo‘shilmagan.
+                        </div>
+                    </div>
+                `;
+            }
         }
 
 function sendOrder() {
@@ -1448,8 +1509,9 @@ function showOrderDetails(order) {
 }
 
 
+loadCategories();
 loadProducts();
-    loadCategories();
+
 
 
 
