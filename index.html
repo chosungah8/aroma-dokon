@@ -57,9 +57,10 @@
 
         .add-btn { background: #007aff; color: #fff; border: none; padding: 8px; border-radius: 6px; font-size: 12px; cursor: pointer; width: 100%; }
 
-        .cart-bar { position: fixed; top: 12px; right: 12px; bottom: auto; left: auto; background: transparent; padding: 0; display: none; justify-content: center; align-items: center; z-index: 50; }
+        .cart-bar { position: fixed; top: 12px; right: 12px; bottom: auto; left: auto; background: transparent; padding: 0; display: flex; justify-content: center; align-items: center; z-index: 50; }
         .cart-bar > div { display: none; }
-        .cart-bar-btn { background: #34c759; color: white; border: none; width: 46px; height: 46px; padding: 0; border-radius: 50%; font-weight: bold; cursor: pointer; font-size: 20px; box-shadow: 0 3px 10px rgba(0,0,0,0.18); }
+        .cart-bar-btn { position: relative; background: #34c759; color: white; border: none; width: 46px; height: 46px; padding: 0; border-radius: 50%; font-weight: bold; cursor: pointer; font-size: 20px; box-shadow: 0 3px 10px rgba(0,0,0,0.18); }
+        #cartCountBadge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; border-radius: 10px; background: #ff3b30; color: white; font-size: 10px; font-weight: bold; line-height: 18px; text-align: center; border: 2px solid white; }
 
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: flex-end; }
         .modal-content { background: #fff; width: 100%; border-radius: 16px 16px 0 0; padding: 16px; max-height: 80vh; overflow-y: auto; }
@@ -88,14 +89,16 @@
     style="
         display:block;
         width:auto;
-        margin:0 auto 10px auto;
-        padding:7px 12px;
-        border:none;
-        border-radius:9px;
-        background:#f5f5f5;
-        color:#555;
+        margin:0 auto 12px auto;
+        padding:8px 16px;
+        border:1px solid #e8e8e8;
+        border-radius:20px;
+        background:#fff;
+        color:#444;
         font-size:12px;
-        font-weight:bold;
+        font-weight:600;
+        box-shadow:0 2px 8px rgba(0,0,0,0.06);
+        cursor:pointer;
     "
 >
     📦 Buyurtmalarim
@@ -230,7 +233,7 @@
         inset:0;
         background:rgba(0,0,0,0.45);
         z-index:9999;
-        padding:20px;
+        padding:15px;
         box-sizing:border-box;
         align-items:center;
         justify-content:center;
@@ -272,7 +275,7 @@
 
         <div
             style="
-                font-size:19px;
+                font-size:16px;
                 font-weight:bold;
                 margin-bottom:7px;
                 padding-right:35px;
@@ -283,9 +286,9 @@
 
         <div
             style="
-                font-size:13px;
+                font-size:12px;
                 color:#666;
-                margin-bottom:14px;
+                margin-bottom:10px;
             "
         >
             Kerakli mahsulotni yozing va xohlasangiz rasmini yuboring.
@@ -296,8 +299,8 @@
             placeholder="Masalan: Menga shu narsa kerak, narxi qancha?"
             style="
                 width:100%;
-                min-height:90px;
-                padding:12px;
+                min-height:70px;
+                padding:10px;
                 border:1px solid #ddd;
                 border-radius:12px;
                 box-sizing:border-box;
@@ -372,7 +375,7 @@
             <div style="font-size: 11px; color: #71717a;">Jami summa:</div>
             <div id="cartBarTotal" style="font-weight: bold; font-size: 15px; color: #007aff;">0 so'm</div>
         </div>
-        <button class="cart-bar-btn" onclick="openCartModal()" aria-label="Savat">🛒</button>
+        <button class="cart-bar-btn" onclick="openCartModal()" aria-label="Savat">🛒<span id="cartCountBadge">0</span></button>
     </div>
 
     <div class="modal" id="cartModal">
@@ -900,13 +903,13 @@ function changeQty(id, delta) {
             }
 
             const bar = document.getElementById('cartBar');
-            if (count > 0) {
-                bar.style.display = 'flex';
-                document.getElementById('cartBarTotal').innerText = `${total.toLocaleString()} so'm (${count} ta)`;
-            } else {
-                bar.style.display = 'none';
-                closeCartModal();
-            }
+            const badge = document.getElementById('cartCountBadge');
+
+            bar.style.display = 'flex';
+            badge.innerText = count > 99 ? '99+' : count;
+
+            document.getElementById('cartBarTotal').innerText =
+                `${total.toLocaleString()} so'm (${count} ta)`;
         }
 
         function openCartModal() {
