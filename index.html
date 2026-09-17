@@ -617,12 +617,8 @@ ${stockMessage}
                 </div>
 
                 ${
-                    stock > 0
+                    stock <= 0
                         ? `
-                            <button
-                                class="add-btn"
-                        `
-                        : `
                             <button
                                 class="add-btn"
                                 disabled
@@ -635,6 +631,7 @@ ${stockMessage}
                                 Mahsulot tugagan
                             </button>
                         `
+                        : ``
                 }
 
             </div>
