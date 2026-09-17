@@ -25,10 +25,52 @@
         .search-input { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 10px; font-size: 13px; }
 .categories {
     display: flex;
-    gap: 8px;
-    overflow-x: auto;
+    flex-direction: column;
+    gap: 10px;
     margin-bottom: 12px;
     padding-bottom: 4px;
+}
+
+.category-group {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px;
+    background: #f8f8f8;
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+}
+
+.category-main-row {
+    display: block;
+    width: 100%;
+}
+
+.category-main-row .category-btn {
+    width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+    font-weight: 700;
+    background: #ffffff;
+    padding: 9px 12px;
+}
+
+.subcategory-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 7px;
+    margin-left: 10px;
+    padding-left: 10px;
+    border-left: 3px solid #d8d8d8;
+}
+
+.subcategory-list .category-btn {
+    width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+    font-size: 11px;
+    padding: 7px 9px;
+    background: #ffffff;
 }
 
 .category-btn {
@@ -141,12 +183,6 @@
     <input type="text" class="search-input" id="searchInput" placeholder="Qidirish" oninput="renderProducts()">
 <div class="categories" id="categories">
     <button class="category-btn active" onclick="selectCategory('all', this)">Barchasi</button>
-    <button class="category-btn" onclick="selectCategory('Kir yuvish', this)">Kir yuvish</button>
-    <button class="category-btn" onclick="selectCategory('Idish yuvish', this)">Idish yuvish</button>
-    <button class="category-btn" onclick="selectCategory('Kosmetika', this)">Kosmetika</button>
-    <button class="category-btn" onclick="selectCategory('Soch parvarishi', this)">Soch parvarishi</button>
-    <button class="category-btn" onclick="selectCategory('Parfyumeriya', this)">Parfyumeriya</button>
-    <button class="category-btn" onclick="selectCategory('Uy-ro‘zg‘or', this)">Uy-ro‘zg‘or</button>
 </div>
 
 <!-- MAHSULOT TOPIB BERAMIZ BANNER -->
@@ -414,6 +450,7 @@ const telegramUserId = telegramUser?.id || null;
 let products = [];
 let cart = {};
 let selectedCategory = "all";
+let allCategories = [];
 
 async function loadProducts() {
     try {
@@ -439,6 +476,157 @@ async function loadProducts() {
                 </div>
             `;
         }
+    }
+}
+
+async function loadCategories() {
+    try {
+        const response = await fetch("/api/categories");
+
+        if (!response.ok) {
+            throw new Error("Kategoriyalar yuklanmadi");
+        }
+
+        const categories = await response.json();
+        allCategories = Array.isArray(categories) ? categories : [];
+
+        const container = document.getElementById("categories");
+
+        if (!container) return;
+
+        container.innerHTML = "";
+
+        // Barchasi
+        const allButton = document.createElement("button");
+        allButton.className = "category-btn active";
+        allButton.textContent = "Barchasi";
+        allButton.style.cssText = `
+            width: 100%;
+            display: block;
+            box-sizing: border-box;
+            text-align: left;
+        `;
+
+        allButton.onclick = function () {
+            selectCategory("all", this);
+        };
+
+        container.appendChild(allButton);
+
+        // Faqat asosiy kategoriyalar
+        const mainCategories = allCategories.filter(
+            category => category.parent_id === null
+        );
+
+        mainCategories.forEach(mainCategory => {
+
+            const group = document.createElement("div");
+
+            group.className = "category-group";
+
+            group.style.cssText = `
+                display: block !important;
+                width: 100% !important;
+                box-sizing: border-box;
+                padding: 8px;
+                margin: 0;
+                background: #f8f8f8;
+                border: 1px solid #e5e5e5;
+                border-radius: 12px;
+            `;
+
+            // Asosiy kategoriya
+            const mainButton = document.createElement("button");
+
+            mainButton.className = "category-btn";
+
+            mainButton.textContent = "📁 " + mainCategory.name;
+
+            mainButton.style.cssText = `
+                display: block !important;
+                width: 100% !important;
+                box-sizing: border-box;
+                text-align: left;
+                font-weight: 700;
+                background: #ffffff;
+                padding: 10px 12px;
+                margin: 0;
+            `;
+
+            mainButton.onclick = function () {
+                selectCategory(mainCategory.name, this);
+            };
+
+            group.appendChild(mainButton);
+
+            // Subkategoriyalar
+            const children = allCategories.filter(
+                category =>
+                    Number(category.parent_id) === Number(mainCategory.id)
+            );
+
+            if (children.length > 0) {
+
+                const subTitle = document.createElement("div");
+
+                subTitle.textContent = "Ichki kategoriyalar";
+
+                subTitle.style.cssText = `
+                    font-size: 10px;
+                    color: #888;
+                    margin: 7px 0 4px 10px;
+                `;
+
+                group.appendChild(subTitle);
+
+                const subList = document.createElement("div");
+
+                subList.className = "subcategory-list";
+
+                subList.style.cssText = `
+                    display: flex !important;
+                    flex-direction: column !important;
+                    gap: 5px;
+                    margin: 0 0 0 10px;
+                    padding-left: 10px;
+                    border-left: 3px solid #d8d8d8;
+                `;
+
+                children.forEach(child => {
+
+                    const subButton = document.createElement("button");
+
+                    subButton.className = "category-btn";
+
+                    subButton.textContent = "↳ " + child.name;
+
+                    subButton.style.cssText = `
+                        display: block !important;
+                        width: 100% !important;
+                        box-sizing: border-box;
+                        text-align: left;
+                        font-size: 11px;
+                        padding: 7px 10px;
+                        margin: 0;
+                        background: #ffffff;
+                        border-radius: 8px;
+                    `;
+
+                    subButton.onclick = function () {
+                        selectCategory(child.name, this);
+                    };
+
+                    subList.appendChild(subButton);
+                });
+
+                group.appendChild(subList);
+            }
+
+            container.appendChild(group);
+        });
+
+    } catch (error) {
+        console.error("Kategoriyalarni yuklash xatosi:", error);
     }
 }
 
@@ -469,9 +657,36 @@ if (!grid) {
     const filtered = products.filter(p => {
         const matchesSearch = p.name.toLowerCase().includes(search);
 
+        let categoryNames = [];
+
+        if (selectedCategory !== "all") {
+            const selected = allCategories.find(
+                category => category.name === selectedCategory
+            );
+
+            if (selected) {
+                categoryNames.push(selected.name);
+
+                function addChildCategoryNames(parentId) {
+                    allCategories
+                        .filter(category =>
+                            Number(category.parent_id) === Number(parentId)
+                        )
+                        .forEach(child => {
+                            categoryNames.push(child.name);
+                            addChildCategoryNames(child.id);
+                        });
+                }
+
+                addChildCategoryNames(selected.id);
+            } else {
+                categoryNames.push(selectedCategory);
+            }
+        }
+
         const matchesCategory =
             selectedCategory === "all" ||
-            p.category === selectedCategory;
+            categoryNames.includes(p.category);
 
         return matchesSearch && matchesCategory;
     });
@@ -1234,6 +1449,7 @@ function showOrderDetails(order) {
 
 
 loadProducts();
+    loadCategories();
 
 
 

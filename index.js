@@ -69,6 +69,40 @@ variants: Array.isArray(product.variants) ? product.variants : []
     }
 }
 
+    if (req.url === '/api/categories' && req.method === 'GET') {
+        try {
+            const { createClient } = require('@supabase/supabase-js');
+
+            const supabase = createClient(
+                process.env.SUPABASE_URL,
+                process.env.SUPABASE_SERVICE_ROLE_KEY
+            );
+
+            const { data, error } = await supabase
+                .from('categories')
+                .select('id, name, parent_id')
+                .order('id', { ascending: true });
+
+            if (error) {
+                throw error;
+            }
+
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            return res.end(JSON.stringify(data || []));
+
+        } catch (error) {
+            console.error('PUBLIC CATEGORIES XATOSI:', error);
+
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            return res.end(JSON.stringify({
+                success: false,
+                message: 'Kategoriyalarni yuklab bo‘lmadi'
+            }));
+        }
+    }
+
     if (req.url === '/api/telegram' && req.method === 'POST') {
         try {
             const update = req.body || await readBody(req);
