@@ -1617,10 +1617,16 @@ function updateCartBar() {
         function openCartModal() {
             renderCartItems();
             document.getElementById('cartModal').style.display = 'flex';
+
+            const bottomOrdersNav = document.getElementById('bottomOrdersNav');
+            if (bottomOrdersNav) bottomOrdersNav.style.display = 'none';
         }
 
         function closeCartModal() {
             document.getElementById('cartModal').style.display = 'none';
+
+            const bottomOrdersNav = document.getElementById('bottomOrdersNav');
+            if (bottomOrdersNav) bottomOrdersNav.style.display = 'flex';
         }
 
         function renderCartItems() {
