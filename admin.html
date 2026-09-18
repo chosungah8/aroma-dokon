@@ -304,8 +304,97 @@
 
     <textarea
         id="editDesc"
-        placeholder="Mahsulot tavsifi"
+        rows="7"
+        placeholder="Mahsulotning batafsil tavsifini yozing..."
+        style="
+            width:100%;
+            min-height:160px;
+            padding:12px;
+            box-sizing:border-box;
+            resize:vertical;
+            line-height:1.5;
+        "
     ></textarea>
+
+    <div style="
+        display:flex;
+        align-items:center;
+        gap:8px;
+        margin-top:8px;
+        margin-bottom:8px;
+    ">
+        <label
+            style="
+                display:inline-flex;
+                align-items:center;
+                gap:6px;
+                padding:8px 12px;
+                border:1px dashed #bbb;
+                border-radius:8px;
+                background:#fafafa;
+                cursor:pointer;
+                font-size:12px;
+                color:#555;
+            "
+        >
+            📷 Tavsif orasiga rasm qo‘shish
+            <input
+                type="file"
+                id="inlineDescriptionImage"
+                accept="image/jpeg,image/png,image/webp"
+                style="display:none;"
+                onchange="uploadInlineDescriptionImage()"
+            >
+        </label>
+
+        <span
+            id="inlineDescriptionMessage"
+            style="
+                font-size:11px;
+                color:#777;
+            "
+        ></span>
+    </div>
+
+    <div style="
+        display:flex;
+        align-items:center;
+        gap:8px;
+        margin-top:8px;
+        margin-bottom:8px;
+    ">
+        <label
+            style="
+                display:inline-flex;
+                align-items:center;
+                gap:6px;
+                padding:8px 12px;
+                border:1px dashed #bbb;
+                border-radius:8px;
+                background:#fafafa;
+                cursor:pointer;
+                font-size:12px;
+                color:#555;
+            "
+        >
+            📷 Tavsif orasiga rasm qo‘shish
+            <input
+                type="file"
+                id="inlineDescriptionImage"
+                accept="image/jpeg,image/png,image/webp"
+                style="display:none;"
+                onchange="uploadInlineDescriptionImage()"
+            >
+        </label>
+
+        <span
+            id="inlineDescriptionMessage"
+            style="
+                font-size:11px;
+                color:#777;
+            "
+        ></span>
+    </div>
 
     <input
         id="editPrice"
@@ -1033,6 +1122,106 @@ document.getElementById("editImg").value = result.path || result.url || "";
     };
 
     reader.readAsDataURL(file);
+}
+
+async function uploadInlineDescriptionImage() {
+    const fileInput = document.getElementById("inlineDescriptionImage");
+    const textarea = document.getElementById("editDesc");
+    const message = document.getElementById("inlineDescriptionMessage");
+
+    const file = fileInput?.files?.[0];
+
+    if (!file) {
+        return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+        message.className = "error";
+        message.innerText = "Rasm 5 MB dan kichik bo‘lishi kerak.";
+        fileInput.value = "";
+        return;
+    }
+
+    try {
+        message.className = "";
+        message.innerText = "⏳ Rasm yuklanmoqda...";
+
+        const reader = new FileReader();
+
+        const imageData = await new Promise((resolve, reject) => {
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () =>
+                reject(new Error("Rasmni o‘qib bo‘lmadi"));
+            reader.readAsDataURL(file);
+        });
+
+        const response = await fetch(
+            "/api/admin/upload-image",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + adminToken
+                },
+                body: JSON.stringify({
+                    image: imageData
+                })
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(
+                result.message || "Rasm yuklanmadi."
+            );
+        }
+
+        const imageUrl = result.path || result.url || "";
+
+        if (!imageUrl) {
+            throw new Error("Rasm manzili qaytmadi.");
+        }
+
+        const start = textarea.selectionStart ?? textarea.value.length;
+        const end = textarea.selectionEnd ?? start;
+
+        const before = textarea.value.substring(0, start);
+        const after = textarea.value.substring(end);
+
+        const imageMarker =
+            `\n[IMAGE:${imageUrl}]\n`;
+
+        textarea.value =
+            before + imageMarker + after;
+
+        const newCursorPosition =
+            start + imageMarker.length;
+
+        textarea.focus();
+        textarea.setSelectionRange(
+            newCursorPosition,
+            newCursorPosition
+        );
+
+        message.className = "success";
+        message.innerText =
+            "✅ Rasm tavsifga qo‘shildi.";
+
+        fileInput.value = "";
+
+    } catch (error) {
+        console.error(
+            "INLINE DESCRIPTION IMAGE XATOSI:",
+            error
+        );
+
+        message.className = "error";
+        message.innerText =
+            error.message || "Rasm yuklashda xatolik.";
+
+        fileInput.value = "";
+    }
 }
 
 async function loadOrders() {
