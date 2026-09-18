@@ -1539,24 +1539,110 @@ async function editCategory(id, oldName) {
         return;
     }
 
-    if (name === oldName) return;
-
     const token = adminToken;
 
     try {
-        const response = await fetch(`/api/admin/categories/${id}`, {
-            method: 'PUT',
+        // Kategoriyalarni olish
+        const response = await fetch('/api/admin/categories', {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ name })
+            }
         });
 
-        const data = await response.json();
+        const categories = await response.json();
 
-        if (!response.ok) {
-            alert(data.error || 'Kategoriya o‘zgartirishda xatolik');
+        if (!response.ok || !Array.isArray(categories)) {
+            alert('Kategoriyalarni olishda xatolik');
+            return;
+        }
+
+        const currentCategory = categories.find(
+            category => Number(category.id) === Number(id)
+        );
+
+        if (!currentCategory) {
+            alert('Kategoriya topilmadi');
+            return;
+        }
+
+        let parent_id = null;
+
+        // Agar bu subkategoriya bo‘lsa, asosiy kategoriyani tanlash
+        if (currentCategory.parent_id !== null) {
+
+            const mainCategories = categories.filter(
+                category =>
+                    category.parent_id === null &&
+                    Number(category.id) !== Number(id)
+            );
+
+            let parentText =
+                '0. Asosiy kategoriya\n';
+
+            mainCategories.forEach((category, index) => {
+                parentText +=
+                    `${index + 1}. ${category.name}\n`;
+            });
+
+            const currentParent = mainCategories.find(
+                category =>
+                    Number(category.id) === Number(currentCategory.parent_id)
+            );
+
+            if (currentParent) {
+                parentText +=
+                    `\nHozirgi asosiy kategoriya: ${currentParent.name}`;
+            }
+
+            const answer = prompt(
+                'Asosiy kategoriyani tanlang:\n\n' +
+                parentText +
+                '\n\n0 - Asosiy kategoriya bo‘lishi uchun'
+            );
+
+            if (answer === null) return;
+
+            const choice = Number(answer);
+
+            if (!Number.isInteger(choice) || choice < 0 || choice > mainCategories.length) {
+                alert('Noto‘g‘ri tanlov');
+                return;
+            }
+
+            if (choice === 0) {
+                parent_id = null;
+            } else {
+                parent_id = mainCategories[choice - 1].id;
+            }
+
+        } else {
+            // Asosiy kategoriya bo‘lib qoladi
+            parent_id = null;
+        }
+
+        const updateResponse = await fetch(
+            `/api/admin/categories/${id}`,
+            {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    name,
+                    parent_id
+                })
+            }
+        );
+
+        const data = await updateResponse.json();
+
+        if (!updateResponse.ok) {
+            alert(
+                data.error ||
+                data.message ||
+                'Kategoriya o‘zgartirishda xatolik'
+            );
             return;
         }
 
@@ -1565,7 +1651,7 @@ async function editCategory(id, oldName) {
         alert('✅ Kategoriya o‘zgartirildi');
 
     } catch (error) {
-        console.error(error);
+        console.error('EDIT CATEGORY XATOSI:', error);
         alert('Server bilan bog‘lanishda xatolik');
     }
 }
