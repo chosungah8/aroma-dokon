@@ -915,7 +915,7 @@ function selectCategory(category, button) {
 
 function openSearchModal() {
     const modal = document.getElementById('searchModal');
-    const input = document.getElementById('searchInput');
+    const input = document.getElementById('searchModalInput');
 
     if (!modal || !input) return;
 
@@ -928,7 +928,7 @@ function openSearchModal() {
 
 function closeSearchModal() {
     const modal = document.getElementById('searchModal');
-    const input = document.getElementById('searchInput');
+    const input = document.getElementById('searchModalInput');
 
     if (!modal) return;
 
@@ -950,7 +950,7 @@ if (!grid) {
     return;
 }
 
-    const search = document.getElementById("searchInput").value.toLowerCase();
+    const search = document.getElementById("searchModalInput").value.toLowerCase();
 
     grid.innerHTML = "";
 
@@ -2158,7 +2158,7 @@ loadProducts();
         ">
             <input
                 type="text"
-                id="searchInput"
+                id="searchModalInput"
                 placeholder="Mahsulot qidiring..."
                 oninput="renderProducts()"
                 autofocus
