@@ -1639,15 +1639,58 @@ const mainCategories = data.filter(
                         justify-content:space-between;
                         gap:8px;
                     ">
-                        <span style="
-                            font-size:15px;
-                            font-weight:700;
-                            color:#222;
+                        <div style="
+                            display:flex;
+                            align-items:center;
+                            gap:10px;
+                            min-width:0;
                         ">
-                            📁 ${escapeHtml(mainCategory.name)}
-                        </span>
+                            <div style="
+                                width:48px;
+                                height:48px;
+                                border-radius:10px;
+                                overflow:hidden;
+                                background:#fff;
+                                border:1px solid #e5e5e5;
+                                display:flex;
+                                align-items:center;
+                                justify-content:center;
+                                flex-shrink:0;
+                            ">
+                                ${mainCategory.image
+                                    ? `<img src="${escapeHtml(mainCategory.image)}"
+                                        style="width:100%;height:100%;object-fit:cover;">`
+                                    : `<span style="font-size:24px;">📁</span>`
+                                }
+                            </div>
+
+                            <span style="
+                                font-size:15px;
+                                font-weight:700;
+                                color:#222;
+                            ">
+                                ${escapeHtml(mainCategory.name)}
+                            </span>
+                        </div>
 
                         ${mainActions}
+                    </div>
+
+                    <div style="
+                        margin-top:8px;
+                        display:flex;
+                        align-items:center;
+                        gap:8px;
+                    ">
+                        <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            onchange="changeCategoryImage(${mainCategory.id}, this)"
+                            style="
+                                width:100%;
+                                font-size:11px;
+                            "
+                        >
                     </div>
 
                     ${subCategories}
@@ -1819,7 +1862,8 @@ async function editCategory(id, oldName) {
                 },
                 body: JSON.stringify({
                     name,
-                    parent_id
+                    parent_id,
+                    image: currentCategory.image || ''
                 })
             }
         );
@@ -1842,6 +1886,118 @@ async function editCategory(id, oldName) {
     } catch (error) {
         console.error('EDIT CATEGORY XATOSI:', error);
         alert('Server bilan bog‘lanishda xatolik');
+    }
+}
+
+
+async function changeCategoryImage(id, input) {
+    const file = input.files && input.files[0];
+
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        alert('Faqat JPG, PNG yoki WEBP rasm tanlang');
+        input.value = '';
+        return;
+    }
+
+    if (file.size > 7 * 1024 * 1024) {
+        alert('Rasm hajmi 7 MB dan katta bo‘lmasligi kerak');
+        input.value = '';
+        return;
+    }
+
+    try {
+        const reader = new FileReader();
+
+        reader.onload = async function () {
+            try {
+                const token = adminToken;
+
+                const uploadResponse = await fetch('/api/admin/upload-image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        image: reader.result
+                    })
+                });
+
+                const uploadData = await uploadResponse.json();
+
+                if (!uploadResponse.ok || !uploadData.success) {
+                    alert(
+                        uploadData.message ||
+                        uploadData.error ||
+                        'Rasm yuklashda xatolik'
+                    );
+                    return;
+                }
+
+                const categoriesResponse = await fetch('/api/admin/categories', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const categories = await categoriesResponse.json();
+
+                const category = Array.isArray(categories)
+                    ? categories.find(c => Number(c.id) === Number(id))
+                    : null;
+
+                if (!category) {
+                    alert('Kategoriya topilmadi');
+                    return;
+                }
+
+                const updateResponse = await fetch(
+                    `/api/admin/categories/${id}`,
+                    {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            name: category.name,
+                            parent_id: category.parent_id,
+                            image: uploadData.imageUrl || uploadData.url || ''
+                        })
+                    }
+                );
+
+                const updateData = await updateResponse.json();
+
+                if (!updateResponse.ok) {
+                    alert(
+                        updateData.message ||
+                        updateData.error ||
+                        'Kategoriya rasmini saqlashda xatolik'
+                    );
+                    return;
+                }
+
+                await loadCategories();
+
+                alert('✅ Kategoriya rasmi o‘zgartirildi');
+
+            } catch (error) {
+                console.error('CATEGORY IMAGE XATOSI:', error);
+                alert('Rasmni saqlashda xatolik');
+            } finally {
+                input.value = '';
+            }
+        };
+
+        reader.readAsDataURL(file);
+
+    } catch (error) {
+        console.error('CATEGORY IMAGE READER XATOSI:', error);
+        alert('Rasmni o‘qishda xatolik');
+        input.value = '';
     }
 }
 

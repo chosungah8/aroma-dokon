@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aroma Do'kon</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js">
+    </script>
     <style>
 .find-product-box {
     width: 100%;
@@ -24,7 +25,11 @@
 
         .search-input { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 10px; font-size: 13px; }
 .categories {
-    display: block !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
     width: 100% !important;
     box-sizing: border-box;
     overflow-x: auto !important;
@@ -33,6 +38,7 @@
     margin-bottom: 12px;
     padding: 2px 2px 6px 2px;
     scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
 }
 
 .categories::-webkit-scrollbar {
@@ -99,14 +105,14 @@
     box-shadow: 0 3px 10px rgba(232,62,115,0.30) !important;
     font-weight: 700 !important;
 }
-        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        .card { background: #fff; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; }
-        .card img { width: 100%; height: 110px; object-fit: cover; border-radius: 8px; margin-bottom: 6px; }
-        .title { font-size: 13px; font-weight: bold; margin-bottom: 4px; }
-        .desc { font-size: 11px; color: #71717a; margin-bottom: 6px; }
-        .price { font-size: 12px; font-weight: bold; color: #007aff; margin-bottom: 8px; }
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        .card { background: #fff; border-radius: 11px; padding: 7px; display: flex; flex-direction: column; justify-content: space-between; }
+        .card img { width: 100%; height: 90px; object-fit: cover; border-radius: 8px; margin-bottom: 5px; }
+        .title { font-size: 12px; font-weight: bold; margin-bottom: 3px; line-height:1.3; }
+        .desc { font-size: 10px; color: #71717a; margin-bottom: 4px; line-height:1.3; }
+        .price { font-size: 12px; font-weight: bold; color: #007aff; margin-bottom: 5px; }
 
-        .add-btn { background: #007aff; color: #fff; border: none; padding: 8px; border-radius: 6px; font-size: 12px; cursor: pointer; width: 100%; }
+        .add-btn { background: #007aff; color: #fff; border: none; padding: 6px; border-radius: 6px; font-size: 11px; cursor: pointer; width: 100%; }
 
         .cart-bar { position: fixed; top: 12px; right: 12px; bottom: auto; left: auto; background: transparent; padding: 0; display: flex; justify-content: center; align-items: center; z-index: 50; }
         .cart-bar > div { display: none; }
@@ -135,25 +141,60 @@
         <p>Eksklyuziv parfyumeriya to'plami</p>
     </div>
 
-<button
-    onclick="showMyOrders()"
-    style="
-        display:block;
-        width:auto;
-        margin:0 auto 12px auto;
-        padding:8px 16px;
-        border:1px solid #e8e8e8;
-        border-radius:20px;
-        background:#fff;
-        color:#444;
-        font-size:12px;
-        font-weight:600;
-        box-shadow:0 2px 8px rgba(0,0,0,0.06);
-        cursor:pointer;
-    "
->
-    📦 Buyurtmalarim
-</button>
+<!-- YUQORIDAGI AKSIYA / KUPON -->
+<div id="topPromo" style="
+    display:flex;
+    gap:8px;
+    overflow-x:auto;
+    margin:10px 0 12px;
+    padding:2px 1px 5px;
+    scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+">
+    <div style="
+        min-width:220px;
+        box-sizing:border-box;
+        padding:10px 12px;
+        border-radius:12px;
+        background:linear-gradient(135deg,#fff0f5,#ffe3ed);
+        border:1px solid #ffd3e1;
+        display:flex;
+        align-items:center;
+        gap:9px;
+    ">
+        <span style="font-size:25px;">🎁</span>
+        <div style="min-width:0;">
+            <div style="font-size:12px;font-weight:700;color:#d92f68;">
+                Bugungi aksiya
+            </div>
+            <div style="font-size:10px;color:#666;margin-top:2px;">
+                Maxsus narxdagi mahsulotlarni ko‘ring
+            </div>
+        </div>
+    </div>
+
+    <div style="
+        min-width:220px;
+        box-sizing:border-box;
+        padding:10px 12px;
+        border-radius:12px;
+        background:linear-gradient(135deg,#f5f0ff,#ebe2ff);
+        border:1px solid #ddd0ff;
+        display:flex;
+        align-items:center;
+        gap:9px;
+    ">
+        <span style="font-size:25px;">🏷️</span>
+        <div style="min-width:0;">
+            <div style="font-size:12px;font-weight:700;color:#6d43c5;">
+                Maxsus taklif
+            </div>
+            <div style="font-size:10px;color:#666;margin-top:2px;">
+                Yangi mahsulotlar va foydali narxlar
+            </div>
+        </div>
+    </div>
+</div>
 
 <div id="myOrdersBox" style="
     display:none;
@@ -488,6 +529,46 @@ async function loadProducts() {
     }
 }
 
+function getCategoryIcon(name) {
+    const value = String(name || "").toLowerCase();
+
+    if (value.includes("kir")) return "🧺";
+    if (value.includes("idish")) return "🍽️";
+    if (value.includes("kosmetik")) return "🧴";
+    if (value.includes("soch")) return "💇";
+    if (value.includes("parfyum")) return "🌸";
+    if (value.includes("uy")) return "🏠";
+    if (value.includes("makiyaj")) return "💄";
+    if (value.includes("teri")) return "✨";
+    if (value.includes("yuz")) return "😊";
+    if (value.includes("tana")) return "🧴";
+    if (value.includes("chaqaloq")) return "🍼";
+    if (value.includes("ayol")) return "🌷";
+
+    return "🏷️";
+}
+
+function getCategoryVisual(category) {
+    if (category && category.image) {
+        return `<img src="${String(category.image).replace(/"/g, '&quot;')}"
+            style="
+                width:38px;
+                height:38px;
+                object-fit:cover;
+                border-radius:9px;
+                display:block;
+            "
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <span style="display:none;font-size:20px;">
+                ${getCategoryIcon(category.name)}
+            </span>`;
+    }
+
+    return `<span style="font-size:20px;">
+        ${getCategoryIcon(category ? category.name : '')}
+    </span>`;
+}
+
 async function loadCategories(selectedMainId = null) {
     try {
         const response = await fetch("/api/categories");
@@ -573,18 +654,42 @@ async function loadCategories(selectedMainId = null) {
                     subButton.classList.add("active");
                 }
 
-                subButton.textContent = child.name;
+                subButton.innerHTML = `
+                    <span style="
+                        display:block;
+                        font-size:20px;
+                        line-height:22px;
+                        margin-bottom:4px;
+                    ">
+                        ${getCategoryVisual(child)}
+                    </span>
+                    <span style="
+                        display:block;
+                        font-size:11px;
+                        line-height:14px;
+                        max-width:62px;
+                        overflow:hidden;
+                        text-overflow:ellipsis;
+                        white-space:nowrap;
+                    ">
+                        ${child.name}
+                    </span>
+                `;
 
                 subButton.style.cssText = `
-                    display:inline-block !important;
-                    width:auto !important;
-                    min-width:0 !important;
+                    display:flex !important;
+                    flex-direction:column !important;
+                    align-items:center !important;
+                    justify-content:center !important;
+                    width:68px !important;
+                    min-width:68px !important;
+                    height:68px !important;
+                    padding:6px 4px !important;
                     flex:none !important;
-                    white-space:nowrap !important;
-                    font-size:11px;
-                    padding:7px 10px;
-                    margin-right:6px;
+                    white-space:normal !important;
+                    margin-right:7px;
                     background:#f7f7f7;
+                    border-radius:12px !important;
                 `;
 
                 subButton.onclick = function () {
@@ -614,14 +719,33 @@ async function loadCategories(selectedMainId = null) {
             allButton.classList.add("active");
         }
 
-        allButton.textContent = "Barchasi";
+        allButton.innerHTML = `
+            <span style="
+                display:block;
+                font-size:20px;
+                line-height:22px;
+                margin-bottom:4px;
+            ">▦</span>
+            <span style="
+                display:block;
+                font-size:11px;
+                line-height:14px;
+            ">Barchasi</span>
+        `;
 
         allButton.style.cssText = `
-            display:inline-block !important;
-            width:auto !important;
-            min-width:0 !important;
+            display:flex !important;
+            flex-direction:column !important;
+            align-items:center !important;
+            justify-content:center !important;
+            width:68px !important;
+            min-width:68px !important;
+            height:68px !important;
+            padding:6px 4px !important;
             flex:none !important;
-            white-space:nowrap !important;
+            white-space:normal !important;
+            margin-right:7px;
+            border-radius:12px !important;
         `;
 
         allButton.onclick = function () {
@@ -641,15 +765,41 @@ async function loadCategories(selectedMainId = null) {
 
             button.className = "category-btn";
 
-            button.textContent = mainCategory.name;
+            button.innerHTML = `
+                <span style="
+                    display:block;
+                    font-size:20px;
+                    line-height:22px;
+                    margin-bottom:4px;
+                ">
+                    ${getCategoryVisual(mainCategory)}
+                </span>
+                <span style="
+                    display:block;
+                    font-size:11px;
+                    line-height:14px;
+                    max-width:62px;
+                    overflow:hidden;
+                    text-overflow:ellipsis;
+                    white-space:nowrap;
+                ">
+                    ${mainCategory.name}
+                </span>
+            `;
 
             button.style.cssText = `
-                display:inline-block !important;
-                width:auto !important;
-                min-width:0 !important;
+                display:flex !important;
+                flex-direction:column !important;
+                align-items:center !important;
+                justify-content:center !important;
+                width:68px !important;
+                min-width:68px !important;
+                height:68px !important;
+                padding:6px 4px !important;
                 flex:none !important;
-                white-space:nowrap !important;
-                margin-right:6px;
+                white-space:normal !important;
+                margin-right:7px;
+                border-radius:12px !important;
             `;
 
             // Oldindan tanlangan asosiy kategoriyani rang bilan ko‘rsatish
@@ -746,6 +896,9 @@ function selectCategory(category, button) {
 }
 
 function renderProducts() {
+    console.log("RENDER START");
+    console.log("PRODUCTS COUNT:", products.length);
+
     const grid = document.getElementById("productGrid");
 
 if (!grid) {
@@ -758,7 +911,12 @@ if (!grid) {
 
 
     const filtered = products.filter(p => {
-        const matchesSearch = p.name.toLowerCase().includes(search);
+        const searchText = search.trim();
+        const matchesSearch =
+            !searchText ||
+            String(p.name || "").toLowerCase().includes(searchText) ||
+            String(p.desc || "").toLowerCase().includes(searchText) ||
+            String(p.category || "").toLowerCase().includes(searchText);
 
         let categoryNames = [];
 
@@ -1425,7 +1583,19 @@ function changeQty(id, delta) {
     renderCartItems();
     renderProducts();
 }
-        function updateCartBar() {
+        function removeFromCart(id) {
+    delete cart[id];
+
+    if (window.selectedVariants) {
+        delete window.selectedVariants[id];
+    }
+
+    updateCartBar();
+    renderCartItems();
+    renderProducts();
+}
+
+function updateCartBar() {
             let total = 0;
             let count = 0;
             for (let id in cart) {
@@ -1548,6 +1718,24 @@ function changeQty(id, delta) {
                             onclick="changeQty(${id}, 1)"
                         >
                             +
+                        </button>
+
+                        <button
+                            onclick="removeFromCart(${id})"
+                            style="
+                                width:32px;
+                                height:32px;
+                                margin-left:4px;
+                                border:1px solid #ffd6d6;
+                                background:#fff1f1;
+                                color:#e53935;
+                                border-radius:8px;
+                                cursor:pointer;
+                                font-size:15px;
+                            "
+                            aria-label="Mahsulotni o‘chirish"
+                        >
+                            🗑️
                         </button>
                     </div>
                 `;
@@ -1889,6 +2077,42 @@ loadProducts();
 
     </script>
 
+
+<!-- PASTKI BUYURTMALARIM -->
+<div id="bottomOrdersNav" style="
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    height:58px;
+    background:rgba(255,255,255,0.97);
+    border-top:1px solid #e8e8e8;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+    box-shadow:0 -3px 15px rgba(0,0,0,0.08);
+">
+    <button
+        onclick="showMyOrders()"
+        style="
+            border:none;
+            background:transparent;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:7px;
+            color:#e83e73;
+            font-size:12px;
+            font-weight:700;
+            cursor:pointer;
+            padding:8px 25px;
+        "
+    >
+        <span style="font-size:21px;">📦</span>
+        <span>Buyurtmalarim</span>
+    </button>
+</div>
 
 
 </body>
