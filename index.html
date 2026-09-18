@@ -264,7 +264,7 @@
             white-space:nowrap;
         "
     >
-        Yuborish →
+        So‘rov yuborish →
     </div>
 </div>
 
@@ -1052,6 +1052,9 @@ function showProductDetails(id) {
             align-items:flex-end;
             justify-content:center;
             background:rgba(0,0,0,0.5);
+            overflow:hidden;
+            overscroll-behavior:none;
+            touch-action:none;
         `;
 
         document.body.appendChild(modal);
@@ -1065,6 +1068,10 @@ function showProductDetails(id) {
                 max-width:520px;
                 max-height:88vh;
                 overflow-y:auto;
+                overflow-x:hidden;
+                overscroll-behavior:contain;
+                -webkit-overflow-scrolling:touch;
+                touch-action:pan-y;
                 background:#fff;
                 border-radius:20px 20px 0 0;
                 padding:16px;
@@ -1149,6 +1156,14 @@ function showProductDetails(id) {
     };
 
     modal.style.display = "flex";
+
+    // Orqa sahifa scrollini vaqtincha bloklash
+    document.body.dataset.productScrollTop =
+        String(window.scrollY || window.pageYOffset || 0);
+
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.width = "100%";
 }
 
 function closeProductDetails() {
@@ -1157,6 +1172,16 @@ function closeProductDetails() {
     if (modal) {
         modal.style.display = "none";
     }
+
+    // Orqa sahifa scrollini qayta yoqish
+    const savedScrollTop =
+        Number(document.body.dataset.productScrollTop || 0);
+
+    document.body.style.overflow = "";
+    document.body.style.position = "";
+    document.body.style.width = "";
+
+    window.scrollTo(0, savedScrollTop);
 }
 
 function previewFindProductImage() {
