@@ -73,6 +73,14 @@
     white-space: nowrap !important;
     vertical-align: middle;
     margin-right: 6px;
+    padding: 10px 15px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 22px;
+    border: 1px solid #dedede;
+    background: #ffffff;
+    color: #333;
+    transition: .15s ease;
 }
 
 .subcategory-list .category-btn {
@@ -80,12 +88,16 @@
     width: auto !important;
     white-space: nowrap !important;
     margin-right: 6px;
+    padding: 9px 13px;
+    font-size: 13px;
 }
 
 .category-btn.active {
-    background: #007aff;
-    color: white;
-    border-color: #007aff;
+    background: #e83e73 !important;
+    color: #ffffff !important;
+    border-color: #e83e73 !important;
+    box-shadow: 0 3px 10px rgba(232,62,115,0.30) !important;
+    font-weight: 700 !important;
 }
         .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         .card { background: #fff; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; }
@@ -188,8 +200,8 @@
     onclick="openFindProductModal()"
     style="
         width:100%;
-        margin:12px 0 16px 0;
-        padding:14px 16px;
+        margin:7px 0 10px 0;
+        padding:8px 10px;
         box-sizing:border-box;
         background:linear-gradient(135deg, #fff0f5, #ffe4ed);
         border:1px solid #ffd0df;
@@ -197,21 +209,21 @@
         display:flex;
         align-items:center;
         justify-content:space-between;
-        gap:12px;
+        gap:7px;
         cursor:pointer;
     "
 >
-    <div style="display:flex; align-items:center; gap:12px;">
+    <div style="display:flex; align-items:center; gap:7px;">
         <div
             style="
-                width:42px;
-                height:42px;
+                width:32px;
+                height:32px;
                 border-radius:12px;
                 background:#fff;
                 display:flex;
                 align-items:center;
                 justify-content:center;
-                font-size:22px;
+                font-size:17px;
                 flex-shrink:0;
             "
         >
@@ -221,22 +233,22 @@
         <div>
             <div
                 style="
-                    font-size:15px;
+                    font-size:10px;
                     font-weight:700;
                     color:#222;
                 "
             >
-                Mahsulotni topa olmayapsizmi?
+                Mahsulot topa olmayapsizmi?
             </div>
 
             <div
                 style="
-                    font-size:12px;
+                    font-size:10px;
                     color:#777;
-                    margin-top:3px;
+                    margin-top:2px;
                 "
             >
-                Biz siz uchun topib beramiz!
+                Biz siz uchun topib beramiz
             </div>
         </div>
     </div>
@@ -245,14 +257,14 @@
         style="
             background:#e83e73;
             color:white;
-            padding:9px 12px;
+            padding:6px 9px;
             border-radius:10px;
-            font-size:12px;
+            font-size:10px;
             font-weight:700;
             white-space:nowrap;
         "
     >
-        So‘rov yuborish →
+        Yuborish →
     </div>
 </div>
 
@@ -420,17 +432,17 @@
 
             <div id="cartItemsList"></div>
 
-            <div class="form-group">
+            <div class="form-group" id="phoneForm">
                 <label>Telefon raqamingiz:</label>
                 <input type="tel" id="phoneInput" placeholder="+998 90 123 45 67">
             </div>
 
-            <div class="form-group">
+            <div class="form-group" id="addressForm">
                 <label>Yetkazib berish manzili:</label>
                 <input type="text" id="addressInput" placeholder="Toshkent sh., Chilonzor tumani...">
             </div>
 
-            <button class="submit-btn" onclick="sendOrder()">Buyurtmani tasdiqlash</button>
+            <button class="submit-btn" id="submitOrderBtn" onclick="sendOrder()">Buyurtmani tasdiqlash</button>
         </div>
     </div>
 
@@ -535,11 +547,15 @@ async function loadCategories(selectedMainId = null) {
 
                 title.style.cssText = `
                     display:inline-block;
-                    margin:0 4px 0 2px;
-                    padding:7px 10px;
-                    font-size:12px;
+                    margin:0 6px 0 2px;
+                    padding:8px 12px;
+                    font-size:13px;
                     font-weight:700;
-                    color:#555;
+                    color:#ffffff;
+                    background:#e83e73;
+                    border:1px solid #e83e73;
+                    border-radius:20px;
+                    box-shadow:0 3px 10px rgba(232,62,115,0.25);
                     white-space:nowrap;
                     vertical-align:middle;
                 `;
@@ -636,6 +652,30 @@ async function loadCategories(selectedMainId = null) {
                 margin-right:6px;
             `;
 
+            // Oldindan tanlangan asosiy kategoriyani rang bilan ko‘rsatish
+            if (
+                selectedMainId === null &&
+                selectedCategory === mainCategory.name
+            ) {
+                button.classList.add("active");
+
+                button.style.setProperty(
+                    "background",
+                    "#e83e73",
+                    "important"
+                );
+                button.style.setProperty(
+                    "color",
+                    "#ffffff",
+                    "important"
+                );
+                button.style.setProperty(
+                    "border-color",
+                    "#e83e73",
+                    "important"
+                );
+            }
+
             button.onclick = function () {
                 const children = allCategories.filter(
                     category =>
@@ -643,6 +683,39 @@ async function loadCategories(selectedMainId = null) {
                 );
 
                 selectedCategory = mainCategory.name;
+
+                // Barcha kategoriyalar rangini tozalash
+                document.querySelectorAll(".category-btn").forEach(btn => {
+                    btn.classList.remove("active");
+                    btn.style.removeProperty("background");
+                    btn.style.removeProperty("color");
+                    btn.style.removeProperty("border-color");
+                    btn.style.removeProperty("box-shadow");
+                });
+
+                // Bosilgan kategoriya pushti bo‘ladi
+                button.classList.add("active");
+
+                button.style.setProperty(
+                    "background",
+                    "#e83e73",
+                    "important"
+                );
+                button.style.setProperty(
+                    "color",
+                    "#ffffff",
+                    "important"
+                );
+                button.style.setProperty(
+                    "border-color",
+                    "#e83e73",
+                    "important"
+                );
+                button.style.setProperty(
+                    "box-shadow",
+                    "0 3px 10px rgba(232,62,115,0.30)",
+                    "important"
+                );
 
                 // Ichki kategoriyalar mavjud bo‘lsa, ularning oynasini ochamiz
                 if (children.length > 0) {
@@ -1170,6 +1243,10 @@ function changeQty(id, delta) {
             const list = document.getElementById('cartItemsList');
             list.innerHTML = '';
 
+            const phoneForm = document.getElementById('phoneForm');
+            const addressForm = document.getElementById('addressForm');
+            const submitOrderBtn = document.getElementById('submitOrderBtn');
+
             let hasItems = false;
             for (let id in cart) {
                 hasItems = true;
@@ -1193,6 +1270,18 @@ function changeQty(id, delta) {
                     </div>
                 `;
                 list.appendChild(itemDiv);
+            }
+
+            if (phoneForm) {
+                phoneForm.style.display = hasItems ? 'block' : 'none';
+            }
+
+            if (addressForm) {
+                addressForm.style.display = hasItems ? 'block' : 'none';
+            }
+
+            if (submitOrderBtn) {
+                submitOrderBtn.style.display = hasItems ? 'block' : 'none';
             }
 
             if (!hasItems) {
