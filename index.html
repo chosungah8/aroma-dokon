@@ -117,6 +117,7 @@
         .cart-bar { position: fixed; top: 12px; right: 12px; bottom: auto; left: auto; background: transparent; padding: 0; display: flex; justify-content: center; align-items: center; z-index: 50; }
         .cart-bar > div { display: none; }
         .cart-bar-btn { position: relative; background: #34c759; color: white; border: none; width: 46px; height: 46px; padding: 0; border-radius: 50%; font-weight: bold; cursor: pointer; font-size: 20px; box-shadow: 0 3px 10px rgba(0,0,0,0.18); }
+        .search-top-btn { position: fixed; top: 12px; right: 66px; background: #fff; color: #333; border: 1px solid #e5e5e5; width: 46px; height: 46px; padding: 0; border-radius: 50%; font-weight: bold; cursor: pointer; font-size: 20px; box-shadow: 0 3px 10px rgba(0,0,0,0.12); z-index: 50; }
         #cartCountBadge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; border-radius: 10px; background: #ff3b30; color: white; font-size: 10px; font-weight: bold; line-height: 18px; text-align: center; border: 2px solid white; }
 
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: flex-end; }
@@ -230,24 +231,6 @@
     </div>
 </div>
 
-    <button
-        id="openSearchBtn"
-        onclick="openSearchModal()"
-        style="
-            width:100%;
-            box-sizing:border-box;
-            padding:9px 12px;
-            border:1px solid #ddd;
-            border-radius:10px;
-            background:#fff;
-            color:#777;
-            text-align:left;
-            font-size:13px;
-            margin-bottom:10px;
-            cursor:pointer;
-        "
-    >
-        🔍 Qidirish
     </button>
 <div class="categories" id="categories">
     <button class="category-btn active" onclick="selectCategory('all', this)">Barchasi</button>
@@ -479,6 +462,7 @@
             <div style="font-size: 11px; color: #71717a;">Jami summa:</div>
             <div id="cartBarTotal" style="font-weight: bold; font-size: 15px; color: #007aff;">0 so'm</div>
         </div>
+        <button class="search-top-btn" onclick="openSearchModal()" aria-label="Qidirish">🔍</button>
         <button class="cart-bar-btn" onclick="openCartModal()" aria-label="Savat">🛒<span id="cartCountBadge">0</span></button>
     </div>
 
@@ -938,6 +922,99 @@ function closeSearchModal() {
         input.value = '';
         renderProducts();
     }
+}
+
+function renderSearchResults() {
+    const input = document.getElementById("searchModalInput");
+    const results = document.getElementById("searchResults");
+
+    if (!input || !results) return;
+
+    const search = input.value.trim().toLowerCase();
+
+    if (!search) {
+        results.style.display = 'none';
+        results.innerHTML = '';
+        return;
+    }
+
+    const filtered = products.filter(p =>
+        String(p.name || "").toLowerCase().includes(search) ||
+        String(p.desc || "").toLowerCase().includes(search) ||
+        String(p.category || "").toLowerCase().includes(search)
+    );
+
+    results.style.display = 'block';
+
+    if (filtered.length === 0) {
+        results.innerHTML = `
+            <div style="
+                text-align:center;
+                padding:25px 10px;
+                color:#777;
+                font-size:13px;
+            ">
+                Mahsulot topilmadi 😔
+            </div>
+        `;
+        return;
+    }
+
+    results.innerHTML = filtered.map(p => `
+        <div
+            onclick="closeSearchModal(); showProductDetails(${p.id});"
+            style="
+                display:flex;
+                align-items:center;
+                gap:10px;
+                padding:9px;
+                margin-bottom:7px;
+                border:1px solid #eee;
+                border-radius:10px;
+                background:#fff;
+                cursor:pointer;
+            "
+        >
+            <img
+                src="${p.img || ''}"
+                alt="${p.name || ''}"
+                style="
+                    width:58px;
+                    height:58px;
+                    object-fit:cover;
+                    border-radius:8px;
+                    flex-shrink:0;
+                "
+            >
+
+            <div style="min-width:0;">
+                <div style="
+                    font-size:13px;
+                    font-weight:700;
+                    line-height:1.3;
+                    margin-bottom:4px;
+                ">
+                    ${p.name || ''}
+                </div>
+
+                <div style="
+                    font-size:11px;
+                    color:#777;
+                    margin-bottom:4px;
+                ">
+                    ${p.category || ''}
+                </div>
+
+                <div style="
+                    font-size:12px;
+                    font-weight:700;
+                    color:#007aff;
+                ">
+                    ${Number(p.price || 0).toLocaleString()} so'm
+                </div>
+            </div>
+        </div>
+    `).join('');
 }
 
 function renderProducts() {
@@ -2160,7 +2237,7 @@ loadProducts();
                 type="text"
                 id="searchModalInput"
                 placeholder="Mahsulot qidiring..."
-                oninput="renderProducts()"
+                oninput="renderSearchResults(); renderProducts()"
                 autofocus
                 style="
                     flex:1;
@@ -2193,6 +2270,16 @@ loadProducts();
             color:#999;
             margin-bottom:8px;
         ">Mahsulot nomi, tavsifi yoki kategoriyasi bo‘yicha qidiring</div>
+
+        <div
+            id="searchResults"
+            style="
+                max-height:65vh;
+                overflow-y:auto;
+                display:none;
+                margin-top:8px;
+            "
+        ></div>
     </div>
 </div>
 
