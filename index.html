@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aroma Do'kon</title>
@@ -19,9 +20,9 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
         body { background-color: #f4f4f5; color: #18181b; padding: 12px; padding-bottom: 100px; }
 
-        .header { text-align: center; margin-bottom: 12px; }
-        .header h2 { font-size: 20px; }
-        .header p { font-size: 12px; color: #71717a; }
+        .shop-logo { display:block; width:150px; height:auto; margin:5px 0 3px; }
+        .header h2 { font-size: 20px; margin: 5px 0 3px; font-weight: 600; letter-spacing: 0.5px; }
+        .header p { display: none; }
 
         .search-input { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 10px; font-size: 13px; }
 .categories {
@@ -79,10 +80,10 @@
     white-space: nowrap !important;
     vertical-align: middle;
     margin-right: 6px;
-    padding: 10px 15px;
-    font-size: 14px;
+    padding: 5px 9px !important;
+    font-size: 11px !important;
     font-weight: 600;
-    border-radius: 22px;
+    border-radius: 18px;
     border: 1px solid #dedede;
     background: #ffffff;
     color: #333;
@@ -106,8 +107,8 @@
     font-weight: 700 !important;
 }
         .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-        .card { background: #fff; border-radius: 11px; padding: 7px; display: flex; flex-direction: column; justify-content: space-between; }
-        .card img { width: 100%; height: 90px; object-fit: cover; border-radius: 8px; margin-bottom: 5px; }
+        .card { background: #fff; border-radius: 11px; padding: 5px; display: flex; flex-direction: column; justify-content: space-between; }
+        .card img { width: 100%; height: 75px; object-fit: cover; border-radius: 8px; margin-bottom: 5px; }
         .title { font-size: 12px; font-weight: bold; margin-bottom: 3px; line-height:1.3; }
         .desc { font-size: 10px; color: #71717a; margin-bottom: 4px; line-height:1.3; }
         .price { font-size: 12px; font-weight: bold; color: #007aff; margin-bottom: 5px; }
@@ -138,25 +139,27 @@
 <body>
 
     <div class="header">
-        <h2>✨ Aroma Do'kon</h2>
+        <img src="images/aroma-logo.png" alt="AROMA DKON" class="shop-logo">
         <p>Eksklyuziv parfyumeriya to'plami</p>
     </div>
 
 <!-- YUQORIDAGI AKSIYA / KUPON -->
 <div id="topPromo" style="
-    display:flex;
-    gap:8px;
-    overflow-x:auto;
-    margin:10px 0 12px;
-    padding:2px 1px 5px;
-    scrollbar-width:none;
-    -webkit-overflow-scrolling:touch;
+    width:calc(100% + 24px);
+    box-sizing:border-box;
+    margin:10px -12px 12px;
+    padding:0;
+    background:#fff;
+    border:none;
+    border-radius:0;
+    overflow:hidden;
 ">
     <div style="
-        min-width:220px;
+        width:100%;
         box-sizing:border-box;
-        padding:10px 12px;
-        border-radius:12px;
+        padding:9px 12px;
+        border-top:1px solid #eee;
+        border-radius:0;
         background:linear-gradient(135deg,#fff0f5,#ffe3ed);
         border:1px solid #ffd3e1;
         display:flex;
@@ -175,10 +178,11 @@
     </div>
 
     <div style="
-        min-width:220px;
+        width:100%;
         box-sizing:border-box;
-        padding:10px 12px;
-        border-radius:12px;
+        padding:9px 12px;
+        border-top:1px solid #eee;
+        border-radius:0;
         background:linear-gradient(135deg,#f5f0ff,#ebe2ff);
         border:1px solid #ddd0ff;
         display:flex;
@@ -475,6 +479,26 @@
 
             <div id="cartItemsList"></div>
 
+            <div style="margin:12px 0; padding:12px; background:#f8f8f8; border-radius:12px;">
+                <div style="font-weight:700; margin-bottom:8px;">🎟️ Kupon kodi</div>
+                <div style="display:flex; gap:8px;">
+                    <input
+                        type="text"
+                        id="couponCodeInput"
+                        placeholder="Masalan: AROMA20"
+                        style="flex:1; margin:0; text-transform:uppercase;"
+                    >
+                    <button
+                        type="button"
+                        onclick="applyCoupon()"
+                        style="padding:10px 14px; border:none; border-radius:10px; background:#111; color:#fff; font-weight:700;"
+                    >
+                        Qo‘llash
+                    </button>
+                </div>
+                <div id="couponResult" style="margin-top:8px; font-size:13px;"></div>
+            </div>
+
             <div class="form-group" id="phoneForm">
                 <label>Telefon raqamingiz:</label>
                 <input type="tel" id="phoneInput" placeholder="+998 90 123 45 67">
@@ -503,6 +527,89 @@ let products = [];
 let cart = {};
 let selectedCategory = "all";
 let allCategories = [];
+
+let appliedCoupon = null;
+let couponDiscountAmount = 0;
+
+async function applyCoupon() {
+    const input = document.getElementById("couponCodeInput");
+    const result = document.getElementById("couponResult");
+
+    const code = input.value.trim().toUpperCase();
+
+    if (!code) {
+        result.textContent = "❌ Kupon kodini kiriting";
+        result.style.color = "#d00";
+        return;
+    }
+
+    let orderAmount = 0;
+
+    Object.keys(cart).forEach(id => {
+        const product = products.find(p => String(p.id) === String(id));
+
+        if (!product) return;
+
+        const finalPrice = product.discountActive && product.discountPercent > 0
+            ? Math.round(Number(product.price) * (1 - Number(product.discountPercent) / 100))
+            : Number(product.price);
+
+        orderAmount += finalPrice * cart[id];
+    });
+
+    if (orderAmount <= 0) {
+        result.textContent = "❌ Savat bo‘sh";
+        result.style.color = "#d00";
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/coupons/validate", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                code,
+                orderAmount
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            appliedCoupon = null;
+            couponDiscountAmount = 0;
+            result.textContent = "❌ " + (data.message || "Kuponni qo‘llab bo‘lmadi");
+            result.style.color = "#d00";
+            updateCartBar();
+            return;
+        }
+
+        appliedCoupon = data.coupon;
+        couponDiscountAmount = Math.round(
+            orderAmount * Number(data.coupon.discountPercent) / 100
+        );
+
+        result.textContent =
+            "✅ " + data.coupon.code +
+            " qo‘llandi: -" +
+            Number(data.coupon.discountPercent) +
+            "% (" +
+            couponDiscountAmount.toLocaleString() +
+            " so‘m)";
+
+        result.style.color = "#16803c";
+
+        updateCartBar();
+
+    } catch (error) {
+        console.error("COUPON APPLY XATOSI:", error);
+        result.textContent = "❌ Server bilan bog‘lanishda xatolik";
+        result.style.color = "#d00";
+    }
+}
+
 
 async function loadProducts() {
     try {
@@ -683,13 +790,13 @@ async function loadCategories(selectedMainId = null) {
                     flex-direction:column !important;
                     align-items:center !important;
                     justify-content:center !important;
-                    width:68px !important;
-                    min-width:68px !important;
-                    height:68px !important;
-                    padding:6px 4px !important;
+                    width:58px !important;
+                    min-width:58px !important;
+                    height:58px !important;
+                    padding:4px 3px !important;
                     flex:none !important;
                     white-space:normal !important;
-                    margin-right:7px;
+                    margin-right:5px;
                     background:#f7f7f7;
                     border-radius:12px !important;
                 `;
@@ -740,13 +847,13 @@ async function loadCategories(selectedMainId = null) {
             flex-direction:column !important;
             align-items:center !important;
             justify-content:center !important;
-            width:68px !important;
-            min-width:68px !important;
-            height:68px !important;
-            padding:6px 4px !important;
+            width:58px !important;
+            min-width:58px !important;
+            height:58px !important;
+            padding:4px 3px !important;
             flex:none !important;
             white-space:normal !important;
-            margin-right:7px;
+            margin-right:5px;
             border-radius:12px !important;
         `;
 
@@ -778,12 +885,14 @@ async function loadCategories(selectedMainId = null) {
                 </span>
                 <span style="
                     display:block;
-                    font-size:11px;
-                    line-height:14px;
-                    max-width:62px;
-                    overflow:hidden;
-                    text-overflow:ellipsis;
-                    white-space:nowrap;
+                    font-size:10px;
+                    line-height:12px;
+                    width:70px;
+                    max-width:70px;
+                    overflow:visible;
+                    text-overflow:clip;
+                    white-space:normal;
+                    text-align:center;
                 ">
                     ${mainCategory.name}
                 </span>
@@ -794,13 +903,13 @@ async function loadCategories(selectedMainId = null) {
                 flex-direction:column !important;
                 align-items:center !important;
                 justify-content:center !important;
-                width:68px !important;
-                min-width:68px !important;
-                height:68px !important;
-                padding:6px 4px !important;
+                width:72px !important;
+                min-width:72px !important;
+                height:58px !important;
+                padding:4px 3px !important;
                 flex:none !important;
                 white-space:normal !important;
-                margin-right:7px;
+                margin-right:5px;
                 border-radius:12px !important;
             `;
 
@@ -1191,7 +1300,11 @@ ${variantOptions}
 ${stockMessage}
 
                 <div class="price">
-                    ${Number(p.price).toLocaleString()} so'm
+                    ${p.discountActive && p.discountPercent > 0
+                        ? `<span style="text-decoration:line-through;color:#999;font-size:10px;">${Number(p.price).toLocaleString()} so'm</span>
+                           <span style="color:#e53935;font-weight:800;">${Math.round(Number(p.price) * (1 - Number(p.discountPercent) / 100)).toLocaleString()} so'm</span>
+                           <span style="color:#e53935;font-size:9px;">-${Number(p.discountPercent)}%</span>`
+                        : `${Number(p.price).toLocaleString()} so'm`}
                 </div>
             </div>
 
@@ -1425,7 +1538,11 @@ function showProductDetails(id) {
                     font-weight:700;
                     color:#007aff;
                 ">
-                    ${Number(product.price).toLocaleString()} so'm
+                    ${product.discountActive && product.discountPercent > 0
+                        ? `<span style="text-decoration:line-through;color:#999;font-size:12px;">${Number(product.price).toLocaleString()} so'm</span><br>
+                           <span style="color:#e53935;font-size:18px;font-weight:800;">${Math.round(Number(product.price) * (1 - Number(product.discountPercent) / 100)).toLocaleString()} so'm</span>
+                           <span style="color:#e53935;font-size:11px;">-${Number(product.discountPercent)}%</span>`
+                        : `${Number(product.price).toLocaleString()} so'm`}
                 </div>
             </div>
         </div>
@@ -1722,8 +1839,18 @@ function updateCartBar() {
             let count = 0;
             for (let id in cart) {
                 const p = products.find(prod => prod.id == id);
-                total += p.price * cart[id];
+                const finalPrice = p.discountActive && p.discountPercent > 0
+                    ? Math.round(Number(p.price) * (1 - Number(p.discountPercent) / 100))
+                    : Number(p.price);
+                total += finalPrice * cart[id];
                 count += cart[id];
+            }
+
+            if (appliedCoupon && Number(appliedCoupon.discountPercent) > 0) {
+                couponDiscountAmount = Math.round(total * Number(appliedCoupon.discountPercent) / 100);
+                total = Math.max(0, total - couponDiscountAmount);
+            } else {
+                couponDiscountAmount = 0;
             }
 
             const bar = document.getElementById('cartBar');
@@ -1941,7 +2068,9 @@ orderItems.push({
     name: p.name,
     variant: window.selectedVariants?.[id] || "",
     count: cart[id],
-    price: p.price
+    price: p.discountActive && p.discountPercent > 0
+        ? Math.round(Number(p.price) * (1 - Number(p.discountPercent) / 100))
+        : Number(p.price)
 });
 
 console.log("BUYURTMAGA KETAYOTGAN:", {
@@ -1949,8 +2078,20 @@ console.log("BUYURTMAGA KETAYOTGAN:", {
     variant: window.selectedVariants?.[id] || "",
     count: cart[id]
 });
-            total += p.price * cart[id];
+            const finalPrice = p.discountActive && p.discountPercent > 0
+                ? Math.round(Number(p.price) * (1 - Number(p.discountPercent) / 100))
+                : Number(p.price);
+            total += finalPrice * cart[id];
         }
+    }
+
+    if (appliedCoupon && Number(appliedCoupon.discountPercent) > 0) {
+        couponDiscountAmount = Math.round(
+            total * Number(appliedCoupon.discountPercent) / 100
+        );
+        total = Math.max(0, total - couponDiscountAmount);
+    } else {
+        couponDiscountAmount = 0;
     }
 
     if (orderItems.length === 0) {
@@ -1961,6 +2102,9 @@ console.log("BUYURTMAGA KETAYOTGAN:", {
 const orderData = {
     items: orderItems,
     total: total,
+    couponCode: appliedCoupon?.code || null,
+    couponDiscountPercent: appliedCoupon ? Number(appliedCoupon.discountPercent) || 0 : 0,
+    couponDiscountAmount: couponDiscountAmount || 0,
     phone: phone,
     address: address,
     telegramUserId: tg.initDataUnsafe?.user?.id || null
