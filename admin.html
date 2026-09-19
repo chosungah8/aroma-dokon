@@ -277,6 +277,11 @@
 
         <div id="couponMessage" style="margin-top:10px;"></div>
 
+        <div style="margin-top:16px;">
+            <div style="font-weight:700; margin-bottom:8px;">📋 Mavjud kuponlar</div>
+            <div id="couponList"></div>
+        </div>
+
     </div>
 </details>
 
@@ -673,6 +678,7 @@ function showAdmin() {
 loadProducts();
 loadOrders();
 loadCategories();
+loadCoupons();
 }
 
 
@@ -2236,6 +2242,67 @@ async function setCategoryDiscount(id, name) {
         alert("Server bilan bog‘lanishda xatolik");
     }
 }
+
+async function loadCoupons() {
+    const list = document.getElementById("couponList");
+    if (!list) return;
+
+    try {
+        const response = await fetch("/api/admin/coupons", {
+            headers: {
+                "Authorization": "Bearer " + adminToken
+            }
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            list.innerHTML = "<div style="color:#d00;">Kuponlarni yuklab bo‘lmadi</div>";
+            return;
+        }
+
+        const coupons = result.coupons || [];
+
+        if (!coupons.length) {
+            list.innerHTML = "<div style="color:#777;">Hozircha kuponlar mavjud emas</div>";
+            return;
+        }
+
+        list.innerHTML = coupons.map(coupon => {
+            const activeText = coupon.active ? "🟢 Faol" : "🔴 O‘chiq";
+            const limitText = coupon.usage_limit === null
+                ? "Cheksiz"
+                : Number(coupon.usage_limit);
+
+            return `
+                <div style="
+                    padding:12px;
+                    margin-bottom:8px;
+                    border:1px solid #e5e5e5;
+                    border-radius:10px;
+                    background:#fff;
+                ">
+                    <div style="font-weight:800; font-size:16px;">
+                        🎟️ ${coupon.code}
+                    </div>
+                    <div style="margin-top:5px;">
+                        ${Number(coupon.discount_percent)}% chegirma ·
+                        Min: ${Number(coupon.min_order_amount || 0).toLocaleString()} so‘m
+                    </div>
+                    <div style="margin-top:5px;">
+                        ${activeText} ·
+                        Ishlatilgan: ${Number(coupon.used_count || 0)} / ${limitText}
+                    </div>
+                </div>
+            `;
+        }).join("");
+
+    } catch (error) {
+        console.error("COUPON LIST XATOSI:", error);
+        list.innerHTML = "<div style="color:#d00;">Server bilan bog‘lanishda xatolik</div>";
+    }
+}
+
 
 async function createCoupon() {
     const code = document.getElementById("couponCode").value.trim().toUpperCase();
