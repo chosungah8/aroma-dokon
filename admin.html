@@ -2257,14 +2257,14 @@ async function loadCoupons() {
         const result = await response.json();
 
         if (!response.ok || !result.success) {
-            list.innerHTML = "<div style="color:#d00;">Kuponlarni yuklab bo‘lmadi</div>";
+            list.innerHTML = "<div style='color:#d00;'>Kuponlarni yuklab bo‘lmadi</div>";
             return;
         }
 
         const coupons = result.coupons || [];
 
         if (!coupons.length) {
-            list.innerHTML = "<div style="color:#777;">Hozircha kuponlar mavjud emas</div>";
+            list.innerHTML = "<div style='color:#777;'>Hozircha kuponlar mavjud emas</div>";
             return;
         }
 
@@ -2299,7 +2299,7 @@ async function loadCoupons() {
 
     } catch (error) {
         console.error("COUPON LIST XATOSI:", error);
-        list.innerHTML = "<div style="color:#d00;">Server bilan bog‘lanishda xatolik</div>";
+        list.innerHTML = "<div style='color:#d00;'>Server bilan bog‘lanishda xatolik</div>";
     }
 }
 
