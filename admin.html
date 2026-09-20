@@ -580,6 +580,171 @@
     </div>
 </details>
 
+
+<details id="promotionSection" open style="margin-bottom:15px;">
+    <summary style="
+        font-size:18px;
+        font-weight:bold;
+        cursor:pointer;
+        padding:12px;
+        background:#f5f5f5;
+        border-radius:10px;
+    ">
+        🎁 Aksiya va maxsus takliflar
+    </summary>
+
+    <div style="padding-top:12px;">
+
+        <!-- BUGUNGI AKSIYA -->
+        <div style="
+            padding:14px;
+            margin-bottom:12px;
+            border:1px solid #ffd3e1;
+            border-radius:12px;
+            background:#fff8fb;
+        ">
+            <h3 style="margin:0 0 12px;color:#d92f68;">
+                🎁 Bugungi aksiya
+            </h3>
+
+            <input
+                id="dailyOfferTitle"
+                placeholder="Aksiya sarlavhasi"
+            >
+
+            <textarea
+                id="dailyOfferDescription"
+                placeholder="Aksiya haqida yozuv"
+                rows="3"
+                style="width:100%;box-sizing:border-box;"
+            ></textarea>
+
+            <label style="display:block;margin:10px 0 5px;font-weight:600;">
+                Aksiya rasmi
+            </label>
+
+            <input
+                id="dailyOfferImage"
+                type="file"
+                accept="image/*"
+                onchange="previewPromotionImage('daily_offer')"
+            >
+
+            <div
+                id="dailyOfferImagePreview"
+                style="margin-top:8px;"
+            ></div>
+
+            <label style="
+                display:flex;
+                align-items:center;
+                gap:8px;
+                margin:12px 0;
+            ">
+                <input
+                    id="dailyOfferActive"
+                    type="checkbox"
+                    checked
+                >
+                Aksiyani ko‘rsatish
+            </label>
+
+            <button
+                class="primary"
+                type="button"
+                onclick="savePromotion('daily_offer')"
+            >
+                💾 Bugungi aksiyani saqlash
+            </button>
+
+            <div
+                id="dailyOfferMessage"
+                style="margin-top:10px;"
+            ></div>
+        </div>
+
+
+        <!-- MAXSUS TAKLIF -->
+        <div style="
+            padding:14px;
+            border:1px solid #ddd0ff;
+            border-radius:12px;
+            background:#faf8ff;
+        ">
+            <h3 style="margin:0 0 12px;color:#6d43c5;">
+                🏷️ Maxsus taklif
+            </h3>
+
+            <input
+                id="specialOfferTitle"
+                placeholder="Taklif sarlavhasi"
+            >
+
+            <textarea
+                id="specialOfferDescription"
+                placeholder="Taklif haqida yozuv"
+                rows="3"
+                style="width:100%;box-sizing:border-box;"
+            ></textarea>
+
+            <label style="display:block;margin:10px 0 5px;font-weight:600;">
+                Taklif rasmi
+            </label>
+
+            <input
+                id="specialOfferImage"
+                type="file"
+                accept="image/*"
+                onchange="previewPromotionImage('special_offer')"
+            >
+
+            <div
+                id="specialOfferImagePreview"
+                style="margin-top:8px;"
+            ></div>
+
+            <label style="display:block;margin:10px 0 5px;font-weight:600;">
+                Kupon
+            </label>
+
+            <select
+                id="specialOfferCoupon"
+                style="width:100%;box-sizing:border-box;"
+            >
+                <option value="">Kuponsiz</option>
+            </select>
+
+            <label style="
+                display:flex;
+                align-items:center;
+                gap:8px;
+                margin:12px 0;
+            ">
+                <input
+                    id="specialOfferActive"
+                    type="checkbox"
+                    checked
+                >
+                Maxsus taklifni ko‘rsatish
+            </label>
+
+            <button
+                class="primary"
+                type="button"
+                onclick="savePromotion('special_offer')"
+            >
+                💾 Maxsus taklifni saqlash
+            </button>
+
+            <div
+                id="specialOfferMessage"
+                style="margin-top:10px;"
+            ></div>
+        </div>
+
+    </div>
+</details>
+
 <details id="productSection" open style="margin-bottom:15px;">
     <summary style="
         font-size:18px;
@@ -679,6 +844,8 @@ loadProducts();
 loadOrders();
 loadCategories();
 loadCoupons();
+loadPromotions();
+loadPromotionCoupons();
 }
 
 
@@ -927,7 +1094,7 @@ async function deleteProduct(id) {
         const response = await fetch(
             "/api/admin/products/" + id,
             {
-                method: "DELETE",
+                method: "POST",
 
                 headers: {
                     "Authorization":
@@ -2293,6 +2460,38 @@ async function loadCoupons() {
                         ${activeText} ·
                         Ishlatilgan: ${Number(coupon.used_count || 0)} / ${limitText}
                     </div>
+
+                    <button
+                        type="button"
+                        onclick="toggleCoupon(${coupon.id}, ${coupon.active ? "false" : "true"})"
+                        style="
+                            margin-top:10px;
+                            padding:8px 12px;
+                            border:none;
+                            border-radius:8px;
+                            background:${coupon.active ? "#e53935" : "#16803c"};
+                            color:#fff;
+                            cursor:pointer;
+                        "
+                    >
+                        ${coupon.active ? "🔴 O‘chirish" : "🟢 Faollashtirish"}
+                    </button>
+
+                    <button
+                        type="button"
+                        onclick="deleteCoupon(${coupon.id}, '${coupon.code}')"
+                        style="
+                            margin-top:8px;
+                            padding:8px 12px;
+                            border:none;
+                            border-radius:8px;
+                            background:#555;
+                            color:#fff;
+                            cursor:pointer;
+                        "
+                    >
+                        🗑️ Kuponni o‘chirish
+                    </button>
                 </div>
             `;
         }).join("");
@@ -2302,6 +2501,478 @@ async function loadCoupons() {
         list.innerHTML = "<div style='color:#d00;'>Server bilan bog‘lanishda xatolik</div>";
     }
 }
+
+
+async function toggleCoupon(id, active) {
+    try {
+        const response = await fetch("/api/admin/coupons/toggle", {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + adminToken
+            },
+            body: JSON.stringify({
+                id,
+                active
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            alert("❌ " + (result.message || "Kupon holatini o‘zgartirib bo‘lmadi"));
+            return;
+        }
+
+        await loadCoupons();
+
+    } catch (error) {
+        console.error("COUPON TOGGLE XATOSI:", error);
+        alert("❌ Server bilan bog‘lanishda xatolik");
+    }
+}
+
+
+async function deleteCoupon(id, code) {
+    const confirmed = confirm(
+        "⚠️ " + code + " kuponini o‘chirishni xohlaysizmi?"
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/admin/coupons/delete", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + adminToken
+            },
+            body: JSON.stringify({
+                id
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            alert("❌ " + (result.message || "Kuponni o‘chirib bo‘lmadi"));
+            return;
+        }
+
+        alert("✅ " + code + " kuponi o‘chirildi");
+        await loadCoupons();
+
+    } catch (error) {
+        console.error("COUPON DELETE XATOSI:", error);
+        alert("❌ Server bilan bog‘lanishda xatolik");
+    }
+}
+
+
+// AKSIYA RASMINI PREVIEW QILISH
+function previewPromotionImage(type) {
+    const input = document.getElementById(
+        type === "daily_offer"
+            ? "dailyOfferImage"
+            : "specialOfferImage"
+    );
+
+    const preview = document.getElementById(
+        type === "daily_offer"
+            ? "dailyOfferImagePreview"
+            : "specialOfferImagePreview"
+    );
+
+    if (!input || !preview) return;
+
+    preview.innerHTML = "";
+
+    if (!input.files || !input.files[0]) return;
+
+    const file = input.files[0];
+    const imageUrl = URL.createObjectURL(file);
+
+    preview.innerHTML = `
+        <img
+            src="${imageUrl}"
+            style="
+                width:100%;
+                max-height:180px;
+                object-fit:cover;
+                border-radius:10px;
+                border:1px solid #eee;
+            "
+        >
+    `;
+}
+
+
+// KUPONLARNI MAXSUS TAKLIF SELECTIGA YUKLASH
+async function loadPromotionCoupons() {
+    const select = document.getElementById("specialOfferCoupon");
+
+    if (!select) return;
+
+    try {
+        const response = await fetch("/api/admin/coupons", {
+            headers: {
+                "Authorization": "Bearer " + adminToken
+            }
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            return;
+        }
+
+        const coupons = result.coupons || [];
+
+        select.innerHTML = `
+            <option value="">Kuponsiz</option>
+            ${coupons.map(coupon => `
+                <option value="${coupon.code}">
+                    ${coupon.code} — ${Number(coupon.discount_percent || 0)}%
+                </option>
+            `).join("")}
+        `;
+
+    } catch (error) {
+        console.error("PROMOTION COUPONS XATOSI:", error);
+    }
+}
+
+
+// AKSIYALARNI ADMIN PANELGA YUKLASH
+async function loadPromotions() {
+    try {
+        const response = await fetch("/api/admin/promotions", {
+            headers: {
+                "Authorization": "Bearer " + adminToken
+            }
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            return;
+        }
+
+        const promotions = result.promotions || [];
+
+        const daily = promotions.find(
+            item => item.type === "daily_offer"
+        );
+
+        const special = promotions.find(
+            item => item.type === "special_offer"
+        );
+
+        if (daily) {
+            document.getElementById("dailyOfferTitle").value =
+                daily.title || "";
+
+            document.getElementById("dailyOfferDescription").value =
+                daily.description || "";
+
+            document.getElementById("dailyOfferActive").checked =
+                daily.active !== false;
+
+            if (daily.image_url) {
+                document.getElementById("dailyOfferImagePreview").innerHTML = `
+                    <img
+                        src="${daily.image_url}"
+                        style="
+                            width:100%;
+                            max-height:180px;
+                            object-fit:cover;
+                            border-radius:10px;
+                            border:1px solid #eee;
+                        "
+                    >
+
+                    <button
+                        type="button"
+                        onclick="deletePromotionImage(${daily.id}, 'daily_offer')"
+                        style="
+                            margin-top:8px;
+                            padding:7px 12px;
+                            border:none;
+                            border-radius:8px;
+                            background:#ffe8e8;
+                            color:#c62828;
+                            font-weight:700;
+                            cursor:pointer;
+                        "
+                    >
+                        🗑️ Rasmni o‘chirish
+                    </button>
+                `;
+            }
+        }
+
+        if (special) {
+            document.getElementById("specialOfferTitle").value =
+                special.title || "";
+
+            document.getElementById("specialOfferDescription").value =
+                special.description || "";
+
+            document.getElementById("specialOfferActive").checked =
+                special.active !== false;
+
+            document.getElementById("specialOfferCoupon").value =
+                special.coupon_code || "";
+
+            if (special.image_url) {
+                document.getElementById("specialOfferImagePreview").innerHTML = `
+                    <img
+                        src="${special.image_url}"
+                        style="
+                            width:100%;
+                            max-height:180px;
+                            object-fit:cover;
+                            border-radius:10px;
+                            border:1px solid #eee;
+                        "
+                    >
+
+                    <button
+                        type="button"
+                        onclick="deletePromotionImage(${special.id}, 'special_offer')"
+                        style="
+                            margin-top:8px;
+                            padding:7px 12px;
+                            border:none;
+                            border-radius:8px;
+                            background:#ffe8e8;
+                            color:#c62828;
+                            font-weight:700;
+                            cursor:pointer;
+                        "
+                    >
+                        🗑️ Rasmni o‘chirish
+                    </button>
+                `;
+            }
+        }
+
+    } catch (error) {
+        console.error("PROMOTIONS LOAD XATOSI:", error);
+    }
+}
+
+
+// AKSIYA RASMINI O‘CHIRISH
+async function deletePromotionImage(id, type) {
+    if (!confirm("Rasmni o‘chirishni xohlaysizmi?")) {
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            "/api/admin/promotions/image-delete",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + adminToken
+                },
+                body: JSON.stringify({
+                    id
+                })
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            alert(
+                "❌ " +
+                (result.message || "Rasmni o‘chirib bo‘lmadi")
+            );
+            return;
+        }
+
+        const preview = document.getElementById(
+            type === "daily_offer"
+                ? "dailyOfferImagePreview"
+                : "specialOfferImagePreview"
+        );
+
+        const input = document.getElementById(
+            type === "daily_offer"
+                ? "dailyOfferImage"
+                : "specialOfferImage"
+        );
+
+        if (preview) {
+            preview.innerHTML = "";
+        }
+
+        if (input) {
+            input.value = "";
+        }
+
+        alert("✅ Rasm o‘chirildi");
+
+    } catch (error) {
+        console.error(
+            "PROMOTION IMAGE DELETE XATOSI:",
+            error
+        );
+
+        alert(
+            "❌ Server bilan bog‘lanishda xatolik"
+        );
+    }
+}
+
+
+// AKSIYANI SAQLASH
+async function savePromotion(type) {
+    const isDaily = type === "daily_offer";
+
+    const title = document.getElementById(
+        isDaily ? "dailyOfferTitle" : "specialOfferTitle"
+    ).value.trim();
+
+    const description = document.getElementById(
+        isDaily
+            ? "dailyOfferDescription"
+            : "specialOfferDescription"
+    ).value.trim();
+
+    const imageInput = document.getElementById(
+        isDaily
+            ? "dailyOfferImage"
+            : "specialOfferImage"
+    );
+
+    const active = document.getElementById(
+        isDaily
+            ? "dailyOfferActive"
+            : "specialOfferActive"
+    ).checked;
+
+    const couponCode = isDaily
+        ? null
+        : (
+            document.getElementById("specialOfferCoupon").value || null
+        );
+
+    const message = document.getElementById(
+        isDaily
+            ? "dailyOfferMessage"
+            : "specialOfferMessage"
+    );
+
+    if (!title) {
+        message.style.color = "#d00";
+        message.textContent = "❌ Sarlavha kiriting";
+        return;
+    }
+
+    message.style.color = "#666";
+    message.textContent = "Saqlanmoqda...";
+
+    try {
+        let imageUrl = null;
+
+        const file = imageInput.files?.[0];
+
+        if (file) {
+            const reader = new FileReader();
+
+            const imageData = await new Promise((resolve, reject) => {
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () =>
+                    reject(new Error("Rasmni o‘qib bo‘lmadi"));
+                reader.readAsDataURL(file);
+            });
+
+            const uploadResponse = await fetch(
+                "/api/admin/upload-image",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + adminToken
+                    },
+                    body: JSON.stringify({
+                        image: imageData
+                    })
+                }
+            );
+
+            const uploadResult =
+                await uploadResponse.json();
+
+            if (
+                !uploadResponse.ok ||
+                !uploadResult.success
+            ) {
+                throw new Error(
+                    uploadResult.message ||
+                    "Rasmni yuklab bo‘lmadi"
+                );
+            }
+
+            imageUrl =
+                uploadResult.path ||
+                uploadResult.url ||
+                "";
+        }
+
+        const response = await fetch(
+            "/api/admin/promotions",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + adminToken
+                },
+                body: JSON.stringify({
+                    type,
+                    title,
+                    description,
+                    imageUrl,
+                    couponCode,
+                    active
+                })
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            message.style.color = "#d00";
+            message.textContent =
+                "❌ " +
+                (result.message ||
+                "Aksiyani saqlab bo‘lmadi");
+            return;
+        }
+
+        message.style.color = "green";
+        message.textContent =
+            "✅ Aksiya muvaffaqiyatli saqlandi";
+
+        await loadPromotions();
+
+    } catch (error) {
+        console.error("PROMOTION SAVE XATOSI:", error);
+
+        message.style.color = "#d00";
+        message.textContent =
+            "❌ " +
+            (error.message ||
+            "Server bilan bog‘lanishda xatolik");
+    }
+}
+
 
 
 async function createCoupon() {
