@@ -107,8 +107,23 @@
     font-weight: 700 !important;
 }
         .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-        .card { background: #fff; border-radius: 11px; padding: 5px; display: flex; flex-direction: column; justify-content: space-between; }
-        .card img { width: 100%; height: 75px; object-fit: cover; border-radius: 8px; margin-bottom: 5px; }
+        .card {
+            background: #fff;
+            border-radius: 11px;
+            padding: 8px;
+            min-height: 285px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .card img {
+    width: 100%;
+    height: 125px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 7px;
+}
         .title { font-size: 12px; font-weight: bold; margin-bottom: 3px; line-height:1.3; }
         .desc { font-size: 10px; color: #71717a; margin-bottom: 4px; line-height:1.3; }
         .price { font-size: 12px; font-weight: bold; color: #007aff; margin-bottom: 5px; }
@@ -154,49 +169,61 @@
     border-radius:0;
     overflow:hidden;
 ">
-    <div style="
-        width:100%;
-        box-sizing:border-box;
-        padding:9px 12px;
-        border-top:1px solid #eee;
-        border-radius:0;
-        background:linear-gradient(135deg,#fff0f5,#ffe3ed);
-        border:1px solid #ffd3e1;
-        display:flex;
-        align-items:center;
-        gap:9px;
-    ">
-        <span style="font-size:25px;">🎁</span>
-        <div style="min-width:0;">
-            <div style="font-size:12px;font-weight:700;color:#d92f68;">
-                Bugungi aksiya
-            </div>
-            <div style="font-size:10px;color:#666;margin-top:2px;">
-                Maxsus narxdagi mahsulotlarni ko‘ring
-            </div>
+    <div
+        id="dailyOfferPublic"
+        style="
+            width:100%;
+            box-sizing:border-box;
+            padding:9px 12px;
+            border-top:1px solid #eee;
+            border-radius:0;
+            background:linear-gradient(135deg,#fff0f5,#ffe3ed);
+            border:1px solid #ffd3e1;
+        "
+    >
+        <div style="
+            font-size:12px;
+            font-weight:700;
+            color:#d92f68;
+        ">
+            🎁 Bugungi aksiya
+        </div>
+
+        <div style="
+            font-size:10px;
+            color:#666;
+            margin-top:2px;
+        ">
+            Maxsus narxdagi mahsulotlarni ko‘ring
         </div>
     </div>
 
-    <div style="
-        width:100%;
-        box-sizing:border-box;
-        padding:9px 12px;
-        border-top:1px solid #eee;
-        border-radius:0;
-        background:linear-gradient(135deg,#f5f0ff,#ebe2ff);
-        border:1px solid #ddd0ff;
-        display:flex;
-        align-items:center;
-        gap:9px;
-    ">
-        <span style="font-size:25px;">🏷️</span>
-        <div style="min-width:0;">
-            <div style="font-size:12px;font-weight:700;color:#6d43c5;">
-                Maxsus taklif
-            </div>
-            <div style="font-size:10px;color:#666;margin-top:2px;">
-                Yangi mahsulotlar va foydali narxlar
-            </div>
+    <div
+        id="specialOfferPublic"
+        style="
+            width:100%;
+            box-sizing:border-box;
+            padding:9px 12px;
+            border-top:1px solid #eee;
+            border-radius:0;
+            background:linear-gradient(135deg,#f5f0ff,#ebe2ff);
+            border:1px solid #ddd0ff;
+        "
+    >
+        <div style="
+            font-size:12px;
+            font-weight:700;
+            color:#6d43c5;
+        ">
+            🏷️ Maxsus taklif
+        </div>
+
+        <div style="
+            font-size:10px;
+            color:#666;
+            margin-top:2px;
+        ">
+            Yangi mahsulotlar va foydali narxlar
         </div>
     </div>
 </div>
@@ -480,6 +507,79 @@
             <div id="cartItemsList"></div>
 
             <div
+                id="cartSummary"
+                style="
+                    margin:12px 0;
+                    padding:14px;
+                    background:#fff;
+                    border:1px solid #e5e5e5;
+                    border-radius:12px;
+                "
+            >
+                <div style="
+                    display:flex;
+                    justify-content:space-between;
+                    margin-bottom:7px;
+                    font-size:13px;
+                    color:#555;
+                ">
+                    <span>Asl summa:</span>
+                    <span id="cartOriginalTotal">0 so'm</span>
+                </div>
+
+                <div
+                    id="cartProductDiscountRow"
+                    style="
+                        display:none;
+                        justify-content:space-between;
+                        margin-bottom:7px;
+                        font-size:13px;
+                        color:#e53935;
+                    "
+                >
+                    <span>Mahsulot chegirmasi:</span>
+                    <span id="cartProductDiscount">-0 so'm</span>
+                </div>
+
+                <div
+                    id="cartCouponDiscountRow"
+                    style="
+                        display:none;
+                        justify-content:space-between;
+                        margin-bottom:7px;
+                        font-size:13px;
+                        color:#e53935;
+                    "
+                >
+                    <span>Kupon chegirmasi:</span>
+                    <span id="cartCouponDiscount">-0 so'm</span>
+                </div>
+
+                <div style="
+                    border-top:1px solid #eee;
+                    padding-top:9px;
+                    margin-top:5px;
+                    display:flex;
+                    justify-content:space-between;
+                    align-items:center;
+                ">
+                    <span style="font-weight:800; font-size:14px;">
+                        To‘lov summasi:
+                    </span>
+                    <span
+                        id="cartFinalTotal"
+                        style="
+                            font-weight:800;
+                            font-size:17px;
+                            color:#007aff;
+                        "
+                    >
+                        0 so'm
+                    </span>
+                </div>
+            </div>
+
+            <div
                 id="cartCouponsSection"
                 style="
                     margin:12px 0;
@@ -620,6 +720,163 @@ async function applyCoupon() {
         console.error("COUPON APPLY XATOSI:", error);
         result.textContent = "❌ Server bilan bog‘lanishda xatolik";
         result.style.color = "#d00";
+    }
+}
+
+
+// MIJOZ UCHUN AKSIYALARNI YUKLASH
+async function loadPublicPromotions() {
+    try {
+        const response = await fetch("/api/promotions");
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            return;
+        }
+
+        const promotions = data.promotions || [];
+
+        const daily = promotions.find(
+            item => item.type === "daily_offer"
+        );
+
+        const special = promotions.find(
+            item => item.type === "special_offer"
+        );
+
+        const dailyBox = document.getElementById("dailyOfferPublic");
+        const specialBox = document.getElementById("specialOfferPublic");
+
+        if (dailyBox) {
+            if (daily) {
+                dailyBox.innerHTML = `
+                    ${daily.image_url ? `
+                        <img
+                            src="${daily.image_url}"
+                            alt=""
+                            style="
+                                width:100%;
+                                max-height:150px;
+                                object-fit:cover;
+                                border-radius:9px;
+                                margin-bottom:6px;
+                            "
+                        >
+                    ` : ""}
+                    <div style="
+                        font-size:12px;
+                        font-weight:700;
+                        color:#d92f68;
+                    ">
+                        ${daily.title || "Bugungi aksiya"}
+                    </div>
+
+                    ${daily.description ? `
+                        <div style="
+                            font-size:10px;
+                            color:#666;
+                            margin-top:2px;
+                        ">
+                            ${daily.description}
+                        </div>
+                    ` : ""}
+                `;
+            } else {
+                dailyBox.innerHTML = `
+                    <div style="
+                        font-size:12px;
+                        font-weight:700;
+                        color:#d92f68;
+                    ">
+                        Bugungi aksiya
+                    </div>
+                    <div style="
+                        font-size:10px;
+                        color:#666;
+                        margin-top:2px;
+                    ">
+                        Hozircha aksiya mavjud emas
+                    </div>
+                `;
+            }
+        }
+
+        if (specialBox) {
+            if (special) {
+                specialBox.innerHTML = `
+                    ${special.image_url ? `
+                        <img
+                            src="${special.image_url}"
+                            alt=""
+                            style="
+                                width:100%;
+                                max-height:150px;
+                                object-fit:cover;
+                                border-radius:9px;
+                                margin-bottom:6px;
+                            "
+                        >
+                    ` : ""}
+                    <div style="
+                        font-size:12px;
+                        font-weight:700;
+                        color:#6d43c5;
+                    ">
+                        ${special.title || "Maxsus taklif"}
+                    </div>
+
+                    ${special.description ? `
+                        <div style="
+                            font-size:10px;
+                            color:#666;
+                            margin-top:2px;
+                        ">
+                            ${special.description}
+                        </div>
+                    ` : ""}
+
+                    ${special.coupon_code ? `
+                        <button
+                            type="button"
+                            onclick="downloadCoupon('${special.coupon_code}')"
+                            style="
+                                margin-top:6px;
+                                padding:6px 10px;
+                                border:none;
+                                border-radius:8px;
+                                background:#6d43c5;
+                                color:#fff;
+                                font-size:10px;
+                                font-weight:700;
+                                cursor:pointer;
+                            "
+                        >
+                            🎟️ Kuponni yuklab olish
+                        </button>
+                    ` : ""}
+                `;
+            } else {
+                specialBox.innerHTML = `
+                    <div style="
+                        font-size:12px;
+                        font-weight:700;
+                        color:#6d43c5;
+                    ">
+                        Maxsus taklif
+                    </div>
+                    <div style="
+                        font-size:10px;
+                        color:#666;
+                        margin-top:2px;
+                    ">
+                        Hozircha maxsus taklif mavjud emas
+                    </div>
+                `;
+            }
+        }
+
+    } catch (error) {
+        console.error("PUBLIC PROMOTIONS LOAD XATOSI:", error);
     }
 }
 
@@ -2023,22 +2280,101 @@ function changeQty(id, delta) {
 }
 
 function updateCartBar() {
+            let originalTotal = 0;
+            let productDiscountAmount = 0;
             let total = 0;
             let count = 0;
+
             for (let id in cart) {
                 const p = products.find(prod => prod.id == id);
-                const finalPrice = p.discountActive && p.discountPercent > 0
-                    ? Math.round(Number(p.price) * (1 - Number(p.discountPercent) / 100))
-                    : Number(p.price);
-                total += finalPrice * cart[id];
-                count += cart[id];
+
+                if (!p) continue;
+
+                const quantity = Number(cart[id]) || 0;
+                const originalPrice = Number(p.price) || 0;
+
+                originalTotal += originalPrice * quantity;
+
+                const finalPrice =
+                    p.discountActive && Number(p.discountPercent) > 0
+                        ? Math.round(
+                            originalPrice *
+                            (1 - Number(p.discountPercent) / 100)
+                        )
+                        : originalPrice;
+
+                total += finalPrice * quantity;
+                productDiscountAmount +=
+                    (originalPrice - finalPrice) * quantity;
+
+                count += quantity;
             }
 
             if (appliedCoupon && Number(appliedCoupon.discountPercent) > 0) {
-                couponDiscountAmount = Math.round(total * Number(appliedCoupon.discountPercent) / 100);
-                total = Math.max(0, total - couponDiscountAmount);
+                couponDiscountAmount = Math.round(
+                    total *
+                    Number(appliedCoupon.discountPercent) /
+                    100
+                );
+
+                total = Math.max(
+                    0,
+                    total - couponDiscountAmount
+                );
             } else {
                 couponDiscountAmount = 0;
+            }
+
+            const originalEl =
+                document.getElementById("cartOriginalTotal");
+
+            const productDiscountRow =
+                document.getElementById("cartProductDiscountRow");
+
+            const productDiscountEl =
+                document.getElementById("cartProductDiscount");
+
+            const couponDiscountRow =
+                document.getElementById("cartCouponDiscountRow");
+
+            const couponDiscountEl =
+                document.getElementById("cartCouponDiscount");
+
+            const finalTotalEl =
+                document.getElementById("cartFinalTotal");
+
+            if (originalEl) {
+                originalEl.textContent =
+                    originalTotal.toLocaleString() + " so'm";
+            }
+
+            if (productDiscountRow && productDiscountEl) {
+                if (productDiscountAmount > 0) {
+                    productDiscountRow.style.display = "flex";
+                    productDiscountEl.textContent =
+                        "-" +
+                        productDiscountAmount.toLocaleString() +
+                        " so'm";
+                } else {
+                    productDiscountRow.style.display = "none";
+                }
+            }
+
+            if (couponDiscountRow && couponDiscountEl) {
+                if (couponDiscountAmount > 0) {
+                    couponDiscountRow.style.display = "flex";
+                    couponDiscountEl.textContent =
+                        "-" +
+                        couponDiscountAmount.toLocaleString() +
+                        " so'm";
+                } else {
+                    couponDiscountRow.style.display = "none";
+                }
+            }
+
+            if (finalTotalEl) {
+                finalTotalEl.textContent =
+                    total.toLocaleString() + " so'm";
             }
 
             const bar = document.getElementById('cartBar');
@@ -2049,6 +2385,171 @@ function updateCartBar() {
 
             document.getElementById('cartBarTotal').innerText =
                 `${total.toLocaleString()} so'm (${count} ta)`;
+        }
+
+        async function openCouponOffers() {
+            try {
+                const response = await fetch("/api/coupons/available");
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    alert("❌ Kuponlarni yuklab bo‘lmadi");
+                    return;
+                }
+
+                const coupons = data.coupons || [];
+
+                if (!coupons.length) {
+                    alert("ℹ️ Hozircha mavjud kuponlar yo‘q");
+                    return;
+                }
+
+                let modal = document.getElementById("couponOffersModal");
+
+                if (!modal) {
+                    modal = document.createElement("div");
+                    modal.id = "couponOffersModal";
+                    modal.className = "modal";
+                    document.body.appendChild(modal);
+                }
+
+                modal.innerHTML = `
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <span>🎟️ Maxsus kuponlar</span>
+                            <span class="close-btn"
+                                  onclick="closeCouponOffers()">✕</span>
+                        </div>
+
+                        <div id="couponOffersList"></div>
+                    </div>
+                `;
+
+                const list = document.getElementById("couponOffersList");
+
+                list.innerHTML = coupons.map(coupon => `
+                    <div style="
+                        padding:12px;
+                        margin-bottom:10px;
+                        border:1px solid #e4d8ff;
+                        border-radius:12px;
+                        background:#faf8ff;
+                    ">
+                        <div style="
+                            display:flex;
+                            justify-content:space-between;
+                            align-items:center;
+                            gap:10px;
+                        ">
+                            <div>
+                                <div style="
+                                    font-size:14px;
+                                    font-weight:800;
+                                    color:#6d43c5;
+                                ">
+                                    🎟️ ${coupon.code}
+                                </div>
+
+                                <div style="
+                                    margin-top:4px;
+                                    font-size:12px;
+                                    color:#555;
+                                ">
+                                    ${Number(coupon.discountPercent || 0)}% chegirma
+                                </div>
+
+                                ${
+                                    Number(coupon.minOrderAmount || 0) > 0
+                                    ? `
+                                        <div style="
+                                            margin-top:3px;
+                                            font-size:10px;
+                                            color:#888;
+                                        ">
+                                            Minimal summa:
+                                            ${Number(coupon.minOrderAmount).toLocaleString()} so'm
+                                        </div>
+                                    `
+                                    : ""
+                                }
+                            </div>
+
+                            <button
+                                type="button"
+                                onclick="downloadCoupon('${coupon.code}')"
+                                style="
+                                    padding:8px 11px;
+                                    border:none;
+                                    border-radius:9px;
+                                    background:#6d43c5;
+                                    color:#fff;
+                                    font-size:11px;
+                                    font-weight:700;
+                                    cursor:pointer;
+                                    white-space:nowrap;
+                                "
+                            >
+                                🎟️ Yuklab olish
+                            </button>
+                        </div>
+                    </div>
+                `).join("");
+
+                modal.style.display = "flex";
+
+            } catch (error) {
+                console.error("COUPON OFFERS XATOSI:", error);
+                alert("❌ Kuponlarni yuklashda xatolik");
+            }
+        }
+
+        function closeCouponOffers() {
+            const modal = document.getElementById("couponOffersModal");
+            if (modal) {
+                modal.style.display = "none";
+            }
+        }
+
+        async function downloadCoupon(code) {
+            const couponCode = String(code || "").trim().toUpperCase();
+
+            if (!couponCode) {
+                return;
+            }
+
+            if (!telegramUserId) {
+                alert("❌ Telegram foydalanuvchisi aniqlanmadi");
+                return;
+            }
+
+            try {
+                const response = await fetch("/api/coupons/save", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        userId: String(telegramUserId),
+                        code: couponCode
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    alert(
+                        "❌ " +
+                        (data.message || "Kuponni saqlab bo‘lmadi")
+                    );
+                    return;
+                }
+
+                alert("✅ " + couponCode + " kuponi saqlandi");
+
+            } catch (error) {
+                console.error("COUPON SAVE XATOSI:", error);
+                alert("❌ Server bilan bog‘lanishda xatolik");
+            }
         }
 
         function openCartModal() {
@@ -2531,6 +3032,7 @@ function showOrderDetails(order) {
 
 loadCategories();
 loadProducts();
+loadPublicPromotions();
 
 
 
