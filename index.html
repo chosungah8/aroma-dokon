@@ -479,24 +479,37 @@
 
             <div id="cartItemsList"></div>
 
-            <div style="margin:12px 0; padding:12px; background:#f8f8f8; border-radius:12px;">
-                <div style="font-weight:700; margin-bottom:8px;">🎟️ Kupon kodi</div>
-                <div style="display:flex; gap:8px;">
-                    <input
-                        type="text"
-                        id="couponCodeInput"
-                        placeholder="Masalan: AROMA20"
-                        style="flex:1; margin:0; text-transform:uppercase;"
-                    >
-                    <button
-                        type="button"
-                        onclick="applyCoupon()"
-                        style="padding:10px 14px; border:none; border-radius:10px; background:#111; color:#fff; font-weight:700;"
-                    >
-                        Qo‘llash
-                    </button>
+            <div
+                id="cartCouponsSection"
+                style="
+                    margin:12px 0;
+                    padding:12px;
+                    background:#f8f8f8;
+                    border-radius:12px;
+                "
+            >
+                <div style="
+                    font-weight:700;
+                    margin-bottom:10px;
+                    font-size:15px;
+                ">
+                    🎟️ Kuponlar
                 </div>
-                <div id="couponResult" style="margin-top:8px; font-size:13px;"></div>
+
+                <div
+                    id="cartCouponsList"
+                    style="display:flex; flex-direction:column; gap:8px;"
+                >
+                    Kuponlar yuklanmoqda...
+                </div>
+
+                <div
+                    id="couponResult"
+                    style="
+                        margin-top:8px;
+                        font-size:13px;
+                    "
+                ></div>
             </div>
 
             <div class="form-group" id="phoneForm">
@@ -608,6 +621,178 @@ async function applyCoupon() {
         result.textContent = "❌ Server bilan bog‘lanishda xatolik";
         result.style.color = "#d00";
     }
+}
+
+
+async function loadAvailableCoupons() {
+    const list = document.getElementById("cartCouponsList");
+    if (!list) return;
+
+    try {
+        const response = await fetch("/api/coupons/available");
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            list.innerHTML = `
+                <div style="color:#d00; font-size:13px;">
+                    Kuponlarni yuklab bo‘lmadi
+                </div>
+            `;
+            return;
+        }
+
+        const coupons = data.coupons || [];
+
+        if (!coupons.length) {
+            list.innerHTML = `
+                <div style="color:#777; font-size:13px;">
+                    Hozircha mavjud kuponlar yo‘q
+                </div>
+            `;
+            return;
+        }
+
+        const orderAmount = calculateCartSubtotal();
+
+        const suitableCoupons = coupons.filter(coupon =>
+            orderAmount >= Number(coupon.minOrderAmount || 0)
+        );
+
+        if (suitableCoupons.length) {
+            suitableCoupons.sort(
+                (a, b) =>
+                    Number(b.discountPercent || 0) -
+                    Number(a.discountPercent || 0)
+            );
+
+            const bestCoupon = suitableCoupons[0];
+
+            appliedCoupon = bestCoupon;
+            couponDiscountAmount = Math.round(
+                orderAmount * Number(bestCoupon.discountPercent || 0) / 100
+            );
+
+            const result = document.getElementById("couponResult");
+
+            if (result) {
+                result.textContent =
+                    "✅ " + bestCoupon.code +
+                    " avtomatik qo‘llandi: -" +
+                    Number(bestCoupon.discountPercent || 0) +
+                    "% (" +
+                    couponDiscountAmount.toLocaleString() +
+                    " so‘m)";
+                result.style.color = "#16803c";
+            }
+
+            updateCartBar();
+        } else {
+            appliedCoupon = null;
+            couponDiscountAmount = 0;
+
+            const result = document.getElementById("couponResult");
+
+            if (result) {
+                result.textContent = "";
+            }
+
+            updateCartBar();
+        }
+
+        list.innerHTML = coupons.map(coupon => {
+            const minAmount = Number(coupon.minOrderAmount || 0);
+            const canUse = orderAmount >= minAmount;
+            const isApplied =
+                appliedCoupon &&
+                appliedCoupon.code === coupon.code;
+
+            return `
+                <div style="
+                    padding:10px;
+                    border:1px solid ${isApplied ? "#16803c" : "#e5e5e5"};
+                    border-radius:10px;
+                    background:${isApplied ? "#f0fff5" : "#fff"};
+                ">
+                    <div style="
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        gap:8px;
+                    ">
+                        <div style="font-weight:800;">
+                            🎟️ ${coupon.code}
+                        </div>
+
+                        <div style="
+                            color:#e53935;
+                            font-weight:800;
+                        ">
+                            -${Number(coupon.discountPercent || 0)}%
+                        </div>
+                    </div>
+
+                    <div style="
+                        margin-top:5px;
+                        font-size:12px;
+                        color:#777;
+                    ">
+                        Minimal summa:
+                        ${minAmount.toLocaleString()} so‘m
+                    </div>
+
+                    <div style="
+                        margin-top:5px;
+                        font-size:12px;
+                        color:${canUse ? "#16803c" : "#999"};
+                        font-weight:600;
+                    ">
+                        ${
+                            isApplied
+                                ? "✅ Avtomatik qo‘llandi"
+                                : canUse
+                                    ? "✅ Foydalanish mumkin"
+                                    : "🔒 Minimal summaga yetmagan"
+                        }
+                    </div>
+                </div>
+            `;
+        }).join("");
+
+    } catch (error) {
+        console.error("AVAILABLE COUPONS XATOSI:", error);
+
+        list.innerHTML = `
+            <div style="color:#d00; font-size:13px;">
+                Server bilan bog‘lanishda xatolik
+            </div>
+        `;
+    }
+}
+
+
+function calculateCartSubtotal() {
+    let total = 0;
+
+    for (const id in cart) {
+        const product = products.find(
+            p => String(p.id) === String(id)
+        );
+
+        if (!product) continue;
+
+        const finalPrice =
+            product.discountActive &&
+            Number(product.discountPercent) > 0
+                ? Math.round(
+                    Number(product.price) *
+                    (1 - Number(product.discountPercent) / 100)
+                )
+                : Number(product.price);
+
+        total += finalPrice * Number(cart[id] || 0);
+    }
+
+    return total;
 }
 
 
@@ -1760,6 +1945,7 @@ if (Array.isArray(product.variants) && product.variants.length > 0 && !variant) 
 
     updateCartBar();
     renderProducts();
+    loadAvailableCoupons();
 }
 
 function changeQty(id, delta) {
@@ -1821,6 +2007,7 @@ function changeQty(id, delta) {
     updateCartBar();
     renderCartItems();
     renderProducts();
+    loadAvailableCoupons();
 }
         function removeFromCart(id) {
     delete cart[id];
@@ -1832,6 +2019,7 @@ function changeQty(id, delta) {
     updateCartBar();
     renderCartItems();
     renderProducts();
+    loadAvailableCoupons();
 }
 
 function updateCartBar() {
@@ -1865,6 +2053,7 @@ function updateCartBar() {
 
         function openCartModal() {
             renderCartItems();
+            loadAvailableCoupons();
             document.getElementById('cartModal').style.display = 'flex';
 
             const bottomOrdersNav = document.getElementById('bottomOrdersNav');
