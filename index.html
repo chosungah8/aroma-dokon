@@ -634,7 +634,8 @@ const telegramUser = tg.initDataUnsafe?.user;
 console.log("TELEGRAM USER:", tg.initDataUnsafe?.user);
 console.log("TELEGRAM USER:", tg.initDataUnsafe?.user);
 
-const telegramUserId = telegramUser?.id || null;
+const urlUserId = new URLSearchParams(window.location.search).get('userId');
+const telegramUserId = telegramUser?.id || urlUserId || null;
 
 let products = [];
 let cart = {};
@@ -2827,8 +2828,7 @@ async function showMyOrders() {
     box.style.display = "block";
     list.innerHTML = "⏳ Buyurtmalar yuklanmoqda...";
 
-const userId =
-    new URLSearchParams(window.location.search).get("userId");
+const userId = telegramUserId;
 
 if (!userId) {
     list.innerHTML = `
