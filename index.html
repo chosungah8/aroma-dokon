@@ -25,87 +25,105 @@
         .header p { display: none; }
 
         .search-input { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 10px; font-size: 13px; }
+
 .categories {
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    width: 100% !important;
-    box-sizing: border-box;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    white-space: nowrap !important;
-    margin-bottom: 12px;
-    padding: 2px 2px 6px 2px;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
+    display:flex !important;
+    flex-direction:row !important;
+    flex-wrap:nowrap !important;
+    align-items:flex-start !important;
+    justify-content:flex-start !important;
+    width:100% !important;
+    height:76px !important;
+    box-sizing:border-box;
+    overflow-x:auto !important;
+    overflow-y:hidden !important;
+    white-space:nowrap !important;
+    margin:6px 0 0 0 !important;
+    padding:0 !important;
+    gap:0 !important;
+    background:transparent !important;
+    border:none !important;
+    box-shadow:none !important;
+    scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
 }
 
 .categories::-webkit-scrollbar {
-    display: none;
+    display:none;
 }
 
 .category-group {
-    display: inline-block !important;
-    width: auto !important;
-    box-sizing: border-box;
-    padding: 0;
-    margin: 0 6px 0 0;
-    background: transparent;
-    border: none;
-    border-radius: 0;
+    display:inline-flex !important;
+    flex:0 0 auto !important;
+    width:70px !important;
+    box-sizing:border-box;
+    padding:0 !important;
+    margin:0 !important;
+    background:transparent !important;
+    border:none !important;
+    border-radius:0 !important;
 }
 
 .category-main-row {
-    display: inline-block !important;
-    width: auto !important;
+    display:flex !important;
+    width:70px !important;
+    justify-content:center !important;
 }
 
 .subcategory-list {
-    display: inline-block !important;
-    margin: 0;
-    padding: 0;
-    border: none;
-    white-space: nowrap;
+    display:inline-flex !important;
+    margin:0;
+    padding:0;
+    border:none;
+    white-space:nowrap;
 }
 
 .category-btn {
-    display: inline-block !important;
-    width: auto !important;
-    min-width: 0 !important;
-    max-width: none !important;
-    flex: none !important;
-    box-sizing: border-box;
-    white-space: nowrap !important;
-    vertical-align: middle;
-    margin-right: 6px;
-    padding: 5px 9px !important;
-    font-size: 11px !important;
-    font-weight: 600;
-    border-radius: 18px;
-    border: 1px solid #dedede;
-    background: #ffffff;
-    color: #333;
-    transition: .15s ease;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    justify-content:flex-start !important;
+    width:70px !important;
+    min-width:70px !important;
+    height:76px !important;
+    padding:0 !important;
+    flex:none !important;
+    box-sizing:border-box;
+    white-space:normal !important;
+    margin:0 !important;
+    border:none !important;
+    outline:none !important;
+    box-shadow:none !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    color:#333 !important;
+    font-size:11px !important;
+    font-weight:600;
 }
 
 .subcategory-list .category-btn {
-    display: inline-block !important;
-    width: auto !important;
-    white-space: nowrap !important;
-    margin-right: 6px;
-    padding: 9px 13px;
-    font-size: 13px;
+    width:82px !important;
+    min-width:82px !important;
+    height:88px !important;
+    padding:0 !important;
+    margin:0 !important;
+    border:none !important;
+    background:transparent !important;
 }
 
 .category-btn.active {
-    background: #e83e73 !important;
-    color: #ffffff !important;
-    border-color: #e83e73 !important;
-    box-shadow: 0 3px 10px rgba(232,62,115,0.30) !important;
-    font-weight: 700 !important;
+    width:60px !important;
+    min-width:60px !important;
+    height:60px !important;
+    background:#fff5f8 !important;
+    color:#d94b78 !important;
+    border:none !important;
+    box-shadow:none !important;
+    border-radius:8px !important;
+    font-weight:700 !important;
+    margin:0 auto !important;
 }
+
         .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
         .card {
             background: #fff;
@@ -273,7 +291,7 @@
     onclick="openFindProductModal()"
     style="
         width:100%;
-        margin:7px 0 10px 0;
+        margin:12px 0 10px 0;
         padding:8px 10px;
         box-sizing:border-box;
         background:linear-gradient(135deg, #fff0f5, #ffe4ed);
@@ -1056,7 +1074,7 @@ function calculateCartSubtotal() {
 
 async function loadProducts() {
     try {
-        const response = await fetch("/api/products");
+        const response = await fetch("/api/products?ts=" + Date.now(), { cache: "no-store" });
 
         if (!response.ok) {
             throw new Error("products.json yuklanmadi");
@@ -1104,26 +1122,27 @@ function getCategoryVisual(category) {
     if (category && category.image) {
         return `<img src="${String(category.image).replace(/"/g, '&quot;')}"
             style="
-                width:38px;
-                height:38px;
+                width:50px;
+                height:50px;
                 object-fit:cover;
-                border-radius:9px;
+                border-radius:10px;
                 display:block;
+                margin:0 auto;
             "
             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-            <span style="display:none;font-size:20px;">
+            <span style="display:none;font-size:24px;">
                 ${getCategoryIcon(category.name)}
             </span>`;
     }
 
-    return `<span style="font-size:20px;">
+    return `<span style="font-size:24px;">
         ${getCategoryIcon(category ? category.name : '')}
     </span>`;
 }
 
 async function loadCategories(selectedMainId = null) {
     try {
-        const response = await fetch("/api/categories");
+        const response = await fetch("/api/categories?ts=" + Date.now(), { cache: "no-store" });
 
         if (!response.ok) {
             throw new Error("Kategoriyalar yuklanmadi");
@@ -1207,42 +1226,51 @@ async function loadCategories(selectedMainId = null) {
                 }
 
                 subButton.innerHTML = `
-                    <span style="
-                        display:block;
-                        font-size:20px;
-                        line-height:22px;
-                        margin-bottom:4px;
-                    ">
-                        ${getCategoryVisual(child)}
-                    </span>
-                    <span style="
-                        display:block;
-                        font-size:11px;
-                        line-height:14px;
-                        max-width:62px;
-                        overflow:hidden;
-                        text-overflow:ellipsis;
-                        white-space:nowrap;
-                    ">
-                        ${child.name}
-                    </span>
+
+<span style="
+    display:block;
+    width:82px;
+    height:54px;
+    line-height:0;
+    margin:0;
+    padding:0;
+">
+    ${getCategoryVisual(child)}
+</span>
+
+<span style="
+    display:block;
+    font-size:10px;
+    line-height:12px;
+    width:82px;
+    max-width:82px;
+    overflow:visible;
+    text-overflow:clip;
+    white-space:normal;
+    text-align:center;
+">
+    ${child.name}
+</span>
                 `;
 
-                subButton.style.cssText = `
-                    display:flex !important;
-                    flex-direction:column !important;
-                    align-items:center !important;
-                    justify-content:center !important;
-                    width:58px !important;
-                    min-width:58px !important;
-                    height:58px !important;
-                    padding:4px 3px !important;
-                    flex:none !important;
-                    white-space:normal !important;
-                    margin-right:5px;
-                    background:#f7f7f7;
-                    border-radius:12px !important;
-                `;
+subButton.style.cssText = `
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    justify-content:flex-start !important;
+    width:82px !important;
+    min-width:82px !important;
+    height:88px !important;
+    padding:0 !important;
+    flex:none !important;
+    white-space:normal !important;
+    margin:0 !important;
+    background:transparent !important;
+    border:none !important;
+    outline:none !important;
+    box-shadow:none !important;
+    border-radius:0 !important;
+`;
 
                 subButton.onclick = function () {
                     selectedCategory = child.name;
@@ -1285,20 +1313,24 @@ async function loadCategories(selectedMainId = null) {
             ">Barchasi</span>
         `;
 
-        allButton.style.cssText = `
-            display:flex !important;
-            flex-direction:column !important;
-            align-items:center !important;
-            justify-content:center !important;
-            width:58px !important;
-            min-width:58px !important;
-            height:58px !important;
-            padding:4px 3px !important;
-            flex:none !important;
-            white-space:normal !important;
-            margin-right:5px;
-            border-radius:12px !important;
-        `;
+allButton.style.cssText = `
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    justify-content:flex-start !important;
+    width:82px !important;
+    min-width:82px !important;
+    height:88px !important;
+    padding:0 !important;
+    flex:none !important;
+    white-space:normal !important;
+    margin:0 !important;
+    border:none !important;
+    outline:none !important;
+    box-shadow:none !important;
+    background:transparent !important;
+    border-radius:0 !important;
+`;
 
         allButton.onclick = function () {
             selectedCategory = "all";
@@ -1345,15 +1377,19 @@ async function loadCategories(selectedMainId = null) {
                 display:flex !important;
                 flex-direction:column !important;
                 align-items:center !important;
-                justify-content:center !important;
-                width:72px !important;
-                min-width:72px !important;
-                height:58px !important;
-                padding:4px 3px !important;
+                justify-content:flex-start !important;
+                width:82px !important;
+                min-width:82px !important;
+                height:88px !important;
+                padding:0 !important;
                 flex:none !important;
                 white-space:normal !important;
-                margin-right:5px;
-                border-radius:12px !important;
+                margin-right:0px !important;
+                border:none !important;
+                outline:none !important;
+                box-shadow:none !important;
+                background:transparent !important;
+                border-radius:0 !important;
             `;
 
             // Oldindan tanlangan asosiy kategoriyani rang bilan ko‘rsatish
@@ -1363,21 +1399,7 @@ async function loadCategories(selectedMainId = null) {
             ) {
                 button.classList.add("active");
 
-                button.style.setProperty(
-                    "background",
-                    "#e83e73",
-                    "important"
-                );
-                button.style.setProperty(
-                    "color",
-                    "#ffffff",
-                    "important"
-                );
-                button.style.setProperty(
-                    "border-color",
-                    "#e83e73",
-                    "important"
-                );
+
             }
 
             button.onclick = function () {
@@ -1397,29 +1419,9 @@ async function loadCategories(selectedMainId = null) {
                     btn.style.removeProperty("box-shadow");
                 });
 
-                // Bosilgan kategoriya pushti bo‘ladi
+// Tanlangan kategoriyani ko‘rsatish
                 button.classList.add("active");
 
-                button.style.setProperty(
-                    "background",
-                    "#e83e73",
-                    "important"
-                );
-                button.style.setProperty(
-                    "color",
-                    "#ffffff",
-                    "important"
-                );
-                button.style.setProperty(
-                    "border-color",
-                    "#e83e73",
-                    "important"
-                );
-                button.style.setProperty(
-                    "box-shadow",
-                    "0 3px 10px rgba(232,62,115,0.30)",
-                    "important"
-                );
 
                 // Ichki kategoriyalar mavjud bo‘lsa, ularning oynasini ochamiz
                 if (children.length > 0) {
