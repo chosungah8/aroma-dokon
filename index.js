@@ -105,7 +105,7 @@ variants: Array.isArray(product.variants) ? product.variants : []
 
     if (req.url === '/api/webhook-info' && req.method === 'GET') {
     try {
-        const setupKey = req.headers.authorization?.replace(/^Bearer\\s+/i, '');
+        const setupKey = req.headers.authorization?.replace(/^Bearer\s+/i, '');
         const expectedKey = process.env.ADMIN_PASSWORD;
         if (!setupKey || setupKey !== expectedKey) {
             res.statusCode = 401;
