@@ -103,7 +103,34 @@ variants: Array.isArray(product.variants) ? product.variants : []
         }
     }
 
-    if (req.url === '/api/setup-webhook' && req.method === 'GET') {
+    if (req.url === '/api/webhook-info' && req.method === 'GET') {
+    try {
+        const setupKey = req.headers.authorization?.replace(/^Bearer\\s+/i, '');
+        const expectedKey = process.env.ADMIN_PASSWORD;
+        if (!setupKey || setupKey !== expectedKey) {
+            res.statusCode = 401;
+            res.setHeader('Content-Type', 'application/json');
+            return res.end(JSON.stringify({ok:false,error:'Unauthorized'}));
+        }
+        const info = await bot.telegram.getWebhookInfo();
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        return res.end(JSON.stringify({
+            ok: true,
+            url: info.url,
+            pending_update_count: info.pending_update_count,
+            last_error_date: info.last_error_date || null,
+            last_error_message: info.last_error_message || null,
+            ip_address: info.ip_address || null
+        }));
+    } catch (error) {
+        res.statusCode = 500;
+        res.setHeader('Content-Type', 'application/json');
+        return res.end(JSON.stringify({ok:false,error:error.message}));
+    }
+}
+
+if (req.url === '/api/setup-webhook' && req.method === 'GET') {
         try {
             const setupKey = req.headers.authorization?.replace(/^Bearer\s+/i, '');
             const expectedKey = process.env.ADMIN_PASSWORD;
