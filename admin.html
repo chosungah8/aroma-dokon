@@ -2286,7 +2286,7 @@ async function changeCategoryImage(id, input) {
                         body: JSON.stringify({
                             name: category.name,
                             parent_id: category.parent_id,
-                            image: uploadData.imageUrl || uploadData.url || ''
+                            image: uploadData.imageUrl || uploadData.url || uploadData.path || ''
                         })
                     }
                 );
