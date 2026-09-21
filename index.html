@@ -29,9 +29,10 @@
 .categories {
     display:grid !important;
     grid-template-columns:repeat(5,minmax(0,1fr)) !important;
-    grid-template-rows:repeat(2,70px) !important;
+    grid-auto-rows:70px !important;
     width:100% !important;
-    height:140px !important;
+    height:auto !important;
+    min-height:70px !important;
     box-sizing:border-box;
     overflow:hidden !important;
     margin:6px 0 0 0 !important;
@@ -83,7 +84,7 @@
     padding:0 !important;
     flex:none !important;
     box-sizing:border-box;
-    white-space:normal !important;
+    white-space:nowrap !important;
     margin:0 !important;
     border:none !important;
     outline:none !important;
@@ -1253,7 +1254,7 @@ async function loadCategories(selectedMainId = null) {
     max-width:100%;
     overflow:visible;
     text-overflow:clip;
-    white-space:normal;
+    white-space:nowrap;
     text-align:center;
 ">
     ${child.name}
@@ -1373,7 +1374,7 @@ allButton.style.cssText = `
                     max-width:100%;
                     overflow:visible;
                     text-overflow:clip;
-                    white-space:normal;
+                    white-space:nowrap;
                     text-align:center;
                 ">
                     ${mainCategory.name}
