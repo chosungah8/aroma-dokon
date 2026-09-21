@@ -103,6 +103,38 @@ variants: Array.isArray(product.variants) ? product.variants : []
         }
     }
 
+    if (req.url === '/api/setup-webhook' && req.method === 'GET') {
+        try {
+            const setupKey = req.headers.authorization?.replace(/^Bearer\s+/i, '');
+            const expectedKey = process.env.ADMIN_PASSWORD;
+
+            if (!setupKey || setupKey !== expectedKey) {
+                res.statusCode = 401;
+                res.setHeader('Content-Type', 'application/json');
+                return res.end(JSON.stringify({ ok: false, error: 'Unauthorized' }));
+            }
+
+            const webhookUrl = `${process.env.WEB_APP_URL}/api/telegram`;
+            const result = await bot.telegram.setWebhook(webhookUrl);
+
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            return res.end(JSON.stringify({
+                ok: true,
+                webhookUrl,
+                telegramResult: result
+            }));
+        } catch (error) {
+            console.error('SET WEBHOOK ERROR:', error);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            return res.end(JSON.stringify({
+                ok: false,
+                error: error.message
+            }));
+        }
+    }
+
     if (req.url === '/api/telegram' && req.method === 'POST') {
         try {
             const update = req.body || await readBody(req);
