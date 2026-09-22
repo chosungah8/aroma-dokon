@@ -289,9 +289,7 @@
 </div>
 
     </button>
-<div class="categories" id="categories">
-    <button class="category-btn active" onclick="selectCategory('all', this)">Barchasi</button>
-</div>
+<div class="categories" id="categories"></div>
 
 <!-- MAHSULOT TOPIB BERAMIZ BANNER -->
 <div
@@ -665,7 +663,7 @@ const telegramUserId = telegramUser?.id || urlUserId || null;
 
 let products = [];
 let cart = {};
-let selectedCategory = "all";
+let selectedCategory = null;
 let allCategories = [];
 
 let appliedCoupon = null;
@@ -1192,7 +1190,7 @@ async function loadCategories(selectedMainId = null) {
             `;
 
             backButton.onclick = function () {
-                selectedCategory = "all";
+                selectedCategory = null;
                 loadCategories(null);
                 renderProducts();
             };
@@ -1299,55 +1297,6 @@ subButton.style.cssText = `
         }
 
         // Asosiy kategoriyalar qatori
-        const allButton = document.createElement("button");
-
-        allButton.className = "category-btn";
-
-        if (selectedCategory === "all") {
-            allButton.classList.add("active");
-        }
-
-        allButton.innerHTML = `
-            <span style="
-                display:block;
-                font-size:20px;
-                line-height:22px;
-                margin-bottom:4px;
-            ">▦</span>
-            <span style="
-                display:block;
-                font-size:11px;
-                line-height:14px;
-            ">Barchasi</span>
-        `;
-
-allButton.style.cssText = `
-    display:flex !important;
-    flex-direction:column !important;
-    align-items:center !important;
-    justify-content:flex-start !important;
-    width:100% !important;
-    min-width:0 !important;
-    height:70px !important;
-    padding:0 !important;
-    flex:none !important;
-    white-space:normal !important;
-    margin:0 !important;
-    border:none !important;
-    outline:none !important;
-    box-shadow:none !important;
-    background:transparent !important;
-    border-radius:0 !important;
-`;
-
-        allButton.onclick = function () {
-            selectedCategory = "all";
-            loadCategories(null);
-            renderProducts();
-        };
-
-        container.appendChild(allButton);
-
         const mainCategories = allCategories.filter(
             category => category.parent_id === null
         );
@@ -1594,20 +1543,23 @@ if (!grid) {
     grid.innerHTML = "";
 
 
-    const filtered = products.filter(p => {
+    let filtered = products.filter(p => {
         const searchText = search.trim();
+
         const matchesSearch =
             !searchText ||
             String(p.name || "").toLowerCase().includes(searchText) ||
             String(p.desc || "").toLowerCase().includes(searchText) ||
             String(p.category || "").toLowerCase().includes(searchText);
 
-        let categoryNames = [];
+        let matchesCategory = true;
 
-        if (selectedCategory !== "all") {
+        if (selectedCategory) {
             const selected = allCategories.find(
                 category => category.name === selectedCategory
             );
+
+            let categoryNames = [];
 
             if (selected) {
                 categoryNames.push(selected.name);
@@ -1627,14 +1579,15 @@ if (!grid) {
             } else {
                 categoryNames.push(selectedCategory);
             }
-        }
 
-        const matchesCategory =
-            selectedCategory === "all" ||
-            categoryNames.includes(p.category);
+            matchesCategory = categoryNames.includes(p.category);
+        }
 
         return matchesSearch && matchesCategory;
     });
+
+    // Har safar mahsulotlarni random tartibda chiqarish
+    filtered = filtered.sort(() => Math.random() - 0.5);
 
 
 console.log("PRODUCTS:", products);
