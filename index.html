@@ -1782,15 +1782,7 @@ const variantOptions = Array.isArray(p.variants) && p.variants.length
                 </div>
 
 
-<div
-    class="desc"
-    onclick="showProductDetails(${p.id})"
-    style="cursor:pointer;"
->
-    ${String(p.desc || "")
-    .replace(/\[IMAGE:[^\]]+\]/g, "")
-    .trim()}
-</div>
+
 
 ${variantOptions}
 
@@ -1957,7 +1949,7 @@ function showProductDetails(id) {
                 width:100%;
                 max-width:520px;
                 max-height:88vh;
-                overflow-y:auto;
+                overflow:hidden;
                 overflow-x:hidden;
                 overscroll-behavior:contain;
                 -webkit-overflow-scrolling:touch;
@@ -2013,6 +2005,10 @@ function showProductDetails(id) {
             </div>
 
             <div style="
+                flex:1;
+                min-height:0;
+                overflow-y:auto;
+                -webkit-overflow-scrolling:touch;
                 font-size:14px;
                 line-height:1.6;
                 color:#555;
@@ -2023,12 +2019,17 @@ function showProductDetails(id) {
             </div>
 
             <div style="
+                position:absolute;
+                left:16px;
+                right:16px;
+                bottom:16px;
                 display:flex;
                 justify-content:space-between;
                 align-items:center;
                 gap:10px;
                 padding-top:10px;
                 border-top:1px solid #eee;
+                background:#fff;
             ">
                 <div style="
                     font-size:17px;
@@ -2040,6 +2041,46 @@ function showProductDetails(id) {
                            <span style="color:#e53935;font-size:18px;font-weight:800;">${Math.round(Number(product.price) * (1 - Number(product.discountPercent) / 100)).toLocaleString()} so'm</span>
                            <span style="color:#e53935;font-size:11px;">-${Number(product.discountPercent)}%</span>`
                         : `${Number(product.price).toLocaleString()} so'm`}
+                </div>
+
+                <div style="
+                    display:flex;
+                    align-items:center;
+                    gap:8px;
+                ">
+                    <button
+                        onclick="changeQty(${product.id}, -1); showProductDetails(${product.id})"
+                        style="
+                            width:36px;
+                            height:36px;
+                            border:none;
+                            border-radius:10px;
+                            background:#f1f1f1;
+                            font-size:22px;
+                            cursor:pointer;
+                        "
+                    >−</button>
+
+                    <span style="
+                        min-width:24px;
+                        text-align:center;
+                        font-size:16px;
+                        font-weight:700;
+                    ">${cart[product.id] || 0}</span>
+
+                    <button
+                        onclick="changeQty(${product.id}, 1); showProductDetails(${product.id})"
+                        style="
+                            width:36px;
+                            height:36px;
+                            border:none;
+                            border-radius:10px;
+                            background:#007aff;
+                            color:#fff;
+                            font-size:22px;
+                            cursor:pointer;
+                        "
+                    >+</button>
                 </div>
             </div>
         </div>
