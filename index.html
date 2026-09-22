@@ -2854,6 +2854,8 @@ function sendOrder() {
     }
 
     const orderItems = [];
+    let originalTotal = 0;
+    let productDiscountAmount = 0;
     let total = 0;
 
     for (let id in cart) {
@@ -2874,10 +2876,13 @@ console.log("BUYURTMAGA KETAYOTGAN:", {
     variant: window.selectedVariants?.[id] || "",
     count: cart[id]
 });
+            const originalPrice = Number(p.price) || 0;
+            originalTotal += originalPrice * cart[id];
             const finalPrice = p.discountActive && p.discountPercent > 0
                 ? Math.round(Number(p.price) * (1 - Number(p.discountPercent) / 100))
                 : Number(p.price);
             total += finalPrice * cart[id];
+            productDiscountAmount += (originalPrice - finalPrice) * cart[id];
         }
     }
 
@@ -2897,6 +2902,8 @@ console.log("BUYURTMAGA KETAYOTGAN:", {
 
 const orderData = {
     items: orderItems,
+    originalTotal: originalTotal,
+    productDiscountAmount: productDiscountAmount,
     total: total,
     couponCode: appliedCoupon?.code || null,
     couponDiscountPercent: appliedCoupon ? Number(appliedCoupon.discountPercent) || 0 : 0,
