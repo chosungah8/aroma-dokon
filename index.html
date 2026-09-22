@@ -791,6 +791,17 @@ async function loadPublicPromotions() {
         const specialBox = document.getElementById("specialOfferPublic");
 
         if (dailyBox) {
+            dailyBox.style.cssText = `
+                position:relative;
+                width:100%;
+                padding:0;
+                margin:0;
+                overflow:hidden;
+                border-radius:12px;
+                box-sizing:border-box;
+                background:#f5f5f5;
+            `;
+
             if (daily) {
                 dailyBox.innerHTML = `
                     ${daily.image_url ? `
@@ -798,53 +809,85 @@ async function loadPublicPromotions() {
                             src="${daily.image_url}"
                             alt=""
                             style="
+                                display:block;
                                 width:100%;
-                                max-height:150px;
-                                object-fit:cover;
-                                border-radius:9px;
-                                margin-bottom:6px;
+                                height:auto;
+                                object-fit:contain;
+                                border-radius:12px;
                             "
                         >
-                    ` : ""}
-                    <div style="
-                        font-size:12px;
-                        font-weight:700;
-                        color:#d92f68;
-                    ">
-                        ${daily.title || "Bugungi aksiya"}
-                    </div>
-
-                    ${daily.description ? `
+                    ` : `
                         <div style="
-                            font-size:10px;
-                            color:#666;
-                            margin-top:2px;
+                            width:100%;
+                            min-height:80px;
+                            background:linear-gradient(135deg,#fff0f5,#ffe4ed);
+                            border-radius:12px;
+                        "></div>
+                    `}
+
+                    <div style="
+                        position:absolute;
+                        top:10px;
+                        left:12px;
+                        right:12px;
+                        z-index:2;
+                        text-align:left;
+                        color:#222;
+                    ">
+                        <div style="
+                            font-size:16px;
+                            line-height:20px;
+                            font-weight:800;
                         ">
-                            ${daily.description}
+                            ${daily.title || "Bugungi aksiya"}
                         </div>
-                    ` : ""}
+
+                        ${daily.description ? `
+                            <div style="
+                                margin-top:3px;
+                                font-size:11px;
+                                line-height:15px;
+                                color:#555;
+                                max-width:65%;
+                            ">
+                                ${daily.description}
+                            </div>
+                        ` : ""}
+                    </div>
                 `;
             } else {
                 dailyBox.innerHTML = `
                     <div style="
-                        font-size:12px;
-                        font-weight:700;
-                        color:#d92f68;
+                        width:100%;
+                        min-height:80px;
+                        padding:12px;
+                        box-sizing:border-box;
+                        background:linear-gradient(135deg,#fff0f5,#ffe4ed);
+                        border-radius:12px;
                     ">
-                        Bugungi aksiya
-                    </div>
-                    <div style="
-                        font-size:10px;
-                        color:#666;
-                        margin-top:2px;
-                    ">
-                        Hozircha aksiya mavjud emas
+                        <div style="font-size:16px;font-weight:800;color:#d92f68;">
+                            🎁 Bugungi aksiya
+                        </div>
+                        <div style="font-size:11px;color:#666;margin-top:3px;">
+                            Hozircha aksiya mavjud emas
+                        </div>
                     </div>
                 `;
             }
         }
 
         if (specialBox) {
+            specialBox.style.cssText = `
+                position:relative;
+                width:100%;
+                padding:0;
+                margin:0;
+                overflow:hidden;
+                border-radius:12px;
+                box-sizing:border-box;
+                background:#f5f5f5;
+            `;
+
             if (special) {
                 specialBox.innerHTML = `
                     ${special.image_url ? `
@@ -852,67 +895,88 @@ async function loadPublicPromotions() {
                             src="${special.image_url}"
                             alt=""
                             style="
+                                display:block;
                                 width:100%;
-                                max-height:150px;
-                                object-fit:cover;
-                                border-radius:9px;
-                                margin-bottom:6px;
+                                height:auto;
+                                object-fit:contain;
+                                border-radius:12px;
                             "
                         >
-                    ` : ""}
-                    <div style="
-                        font-size:12px;
-                        font-weight:700;
-                        color:#6d43c5;
-                    ">
-                        ${special.title || "Maxsus taklif"}
-                    </div>
-
-                    ${special.description ? `
+                    ` : `
                         <div style="
-                            font-size:10px;
-                            color:#666;
-                            margin-top:2px;
-                        ">
-                            ${special.description}
-                        </div>
-                    ` : ""}
+                            width:100%;
+                            min-height:80px;
+                            background:linear-gradient(135deg,#f5f0ff,#ebe2ff);
+                            border-radius:12px;
+                        "></div>
+                    `}
 
-                    ${special.coupon_code ? `
-                        <button
-                            type="button"
-                            onclick="downloadCoupon('${special.coupon_code}')"
-                            style="
-                                margin-top:6px;
-                                padding:6px 10px;
-                                border:none;
-                                border-radius:8px;
-                                background:#6d43c5;
-                                color:#fff;
-                                font-size:10px;
-                                font-weight:700;
-                                cursor:pointer;
-                            "
-                        >
-                            🎟️ Kuponni yuklab olish
-                        </button>
-                    ` : ""}
+                    <div style="
+                        position:absolute;
+                        top:10px;
+                        left:12px;
+                        right:12px;
+                        z-index:2;
+                        text-align:left;
+                        color:#222;
+                    ">
+                        <div style="
+                            font-size:16px;
+                            line-height:20px;
+                            font-weight:800;
+                        ">
+                            ${special.title || "Maxsus taklif"}
+                        </div>
+
+                        ${special.description ? `
+                            <div style="
+                                margin-top:3px;
+                                font-size:11px;
+                                line-height:15px;
+                                color:#555;
+                                max-width:65%;
+                            ">
+                                ${special.description}
+                            </div>
+                        ` : ""}
+
+                        ${special.coupon_code ? `
+                            <button
+                                type="button"
+                                onclick="event.stopPropagation(); downloadCoupon('${special.coupon_code}')"
+                                style="
+                                    margin-top:8px;
+                                    padding:7px 11px;
+                                    border:none;
+                                    border-radius:9px;
+                                    background:#6d43c5;
+                                    color:#fff;
+                                    font-size:10px;
+                                    font-weight:700;
+                                    cursor:pointer;
+                                "
+                            >
+                                🎟️ Kuponni yuklab olish
+                            </button>
+                        ` : ""}
+                    </div>
                 `;
             } else {
                 specialBox.innerHTML = `
                     <div style="
-                        font-size:12px;
-                        font-weight:700;
-                        color:#6d43c5;
+                        width:100%;
+                        min-height:80px;
+                        padding:12px;
+                        box-sizing:border-box;
+                        background:linear-gradient(135deg,#f5f0ff,#ebe2ff);
+                        border-radius:12px;
                     ">
-                        Maxsus taklif
-                    </div>
-                    <div style="
-                        font-size:10px;
-                        color:#666;
-                        margin-top:2px;
-                    ">
-                        Hozircha maxsus taklif mavjud emas
+                        <div style="font-size:16px;font-weight:800;color:#6d43c5;">
+                            🏷️ Maxsus taklif
+                        </div>
+                        <div style="font-size:11px;color:#666;margin-top:3px;">
+                            Hozircha maxsus taklif mavjud emas
+                        </div>
                     </div>
                 `;
             }
