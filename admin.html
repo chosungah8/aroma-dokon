@@ -1549,11 +1549,14 @@ async function loadOrders() {
     const filter = document.createElement("div");
     filter.id = "orderPeriodFilter";
     filter.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;";
+    const activeStyle = "flex:1;background:#111;color:#fff;border:none;font-weight:bold;";
+    const normalStyle = "flex:1;background:#f3f3f3;color:#333;border:1px solid #ddd;";
+
     filter.innerHTML = `
-        <button onclick="setOrderPeriod('all')" style="flex:1;">📦 Barchasi</button>
-        <button onclick="setOrderPeriod('day')" style="flex:1;">📅 Bugun</button>
-        <button onclick="setOrderPeriod('month')" style="flex:1;">📆 Shu oy</button>
-        <button onclick="setOrderPeriod('year')" style="flex:1;">📊 Shu yil</button>
+        <button onclick="setOrderPeriod('all')" style="${orderPeriod === 'all' ? activeStyle : normalStyle}">📦 Barchasi</button>
+        <button onclick="setOrderPeriod('day')" style="${orderPeriod === 'day' ? activeStyle : normalStyle}">📅 Bugun</button>
+        <button onclick="setOrderPeriod('month')" style="${orderPeriod === 'month' ? activeStyle : normalStyle}">📆 Shu oy</button>
+        <button onclick="setOrderPeriod('year')" style="${orderPeriod === 'year' ? activeStyle : normalStyle}">📊 Shu yil</button>
     `;
     list.parentNode.insertBefore(filter, list);
 
@@ -1574,19 +1577,52 @@ async function loadOrders() {
 
         const orders = await response.json();
         const now = new Date();
+
+        const parseOrderDate = (value) => {
+            if (!value) return null;
+
+            const text = String(value).trim();
+
+            // DD.MM.YYYY yoki DD/MM/YYYY format
+            const match = text.match(/^(\\d{1,2})[.\\/-](\\d{1,2})[.\\/-](\\d{4})/);
+
+            if (match) {
+                return new Date(
+                    Number(match[3]),
+                    Number(match[2]) - 1,
+                    Number(match[1])
+                );
+            }
+
+            const parsed = new Date(text);
+            return isNaN(parsed.getTime()) ? null : parsed;
+        };
+
         const filteredOrders = orders.filter(order => {
             if (orderPeriod === "all") return true;
-            const d = new Date(order.date);
-            if (isNaN(d.getTime())) return false;
+
+            const d = parseOrderDate(order.date);
+            if (!d) return false;
+
             if (orderPeriod === "day") {
-                return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+                return (
+                    d.getFullYear() === now.getFullYear() &&
+                    d.getMonth() === now.getMonth() &&
+                    d.getDate() === now.getDate()
+                );
             }
+
             if (orderPeriod === "month") {
-                return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+                return (
+                    d.getFullYear() === now.getFullYear() &&
+                    d.getMonth() === now.getMonth()
+                );
             }
+
             if (orderPeriod === "year") {
                 return d.getFullYear() === now.getFullYear();
             }
+
             return true;
         });
 
