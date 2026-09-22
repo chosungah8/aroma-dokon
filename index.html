@@ -32,7 +32,6 @@
     grid-auto-rows:85px !important;
     width:100% !important;
     height:auto !important;
-    min-height:85px !important;
     box-sizing:border-box;
     overflow:hidden !important;
     margin:6px 0 0 0 !important;
@@ -1319,6 +1318,8 @@ subButton.style.cssText = `
         const mainCategories = allCategories.filter(
             category => category.parent_id === null
         );
+
+        container.style.height = Math.ceil(mainCategories.length / 5) * 85 + "px";
 
         mainCategories.forEach(mainCategory => {
             const button = document.createElement("button");
