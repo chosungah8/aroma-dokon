@@ -1536,8 +1536,26 @@ async function uploadInlineDescriptionImage() {
     }
 }
 
+let orderPeriod = "all";
+function setOrderPeriod(period) {
+    orderPeriod = period;
+    loadOrders();
+}
 async function loadOrders() {
     const list = document.getElementById("orderList");
+    const filterBox = document.getElementById("orderPeriodFilter");
+    if (filterBox) filterBox.remove();
+
+    const filter = document.createElement("div");
+    filter.id = "orderPeriodFilter";
+    filter.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;";
+    filter.innerHTML = `
+        <button onclick="setOrderPeriod('all')" style="flex:1;">📦 Barchasi</button>
+        <button onclick="setOrderPeriod('day')" style="flex:1;">📅 Bugun</button>
+        <button onclick="setOrderPeriod('month')" style="flex:1;">📆 Shu oy</button>
+        <button onclick="setOrderPeriod('year')" style="flex:1;">📊 Shu yil</button>
+    `;
+    list.parentNode.insertBefore(filter, list);
 
     try {
         const response = await fetch(
@@ -1555,15 +1573,31 @@ async function loadOrders() {
         }
 
         const orders = await response.json();
+        const now = new Date();
+        const filteredOrders = orders.filter(order => {
+            if (orderPeriod === "all") return true;
+            const d = new Date(order.date);
+            if (isNaN(d.getTime())) return false;
+            if (orderPeriod === "day") {
+                return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+            }
+            if (orderPeriod === "month") {
+                return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+            }
+            if (orderPeriod === "year") {
+                return d.getFullYear() === now.getFullYear();
+            }
+            return true;
+        });
 
         list.innerHTML = "";
 
-        if (!orders.length) {
+        if (!filteredOrders.length) {
             list.innerHTML = "<p>Hozircha buyurtmalar yo‘q.</p>";
             return;
         }
 
-        orders.slice().reverse().forEach(order => {
+        filteredOrders.slice().reverse().forEach(order => {
             const item = document.createElement("div");
 
             item.style.cssText = `
