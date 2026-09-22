@@ -1788,23 +1788,34 @@ ${variantOptions}
 
 ${stockMessage}
 
-                <div class="price">
-                    ${p.discountActive && p.discountPercent > 0
-                        ? `<span style="text-decoration:line-through;color:#999;font-size:10px;">${Number(p.price).toLocaleString()} so'm</span>
-                           <span style="color:#e53935;font-weight:800;">${Math.round(Number(p.price) * (1 - Number(p.discountPercent) / 100)).toLocaleString()} so'm</span>
-                           <span style="color:#e53935;font-size:9px;">-${Number(p.discountPercent)}%</span>`
-                        : `${Number(p.price).toLocaleString()} so'm`}
-                </div>
-            </div>
-
-            <div>
-
                 <div style="
                     display:flex;
-                    gap:6px;
                     align-items:center;
-                    justify-content:center;
+                    justify-content:space-between;
+                    gap:6px;
+                    margin-top:4px;
                 ">
+                    <div class="price" style="
+                        display:flex;
+                        align-items:center;
+                        gap:4px;
+                        flex-wrap:wrap;
+                        line-height:1.1;
+                        margin:0;
+                    ">
+                        ${p.discountActive && p.discountPercent > 0
+                            ? `<span style="text-decoration:line-through;color:#999;font-size:9px;">${Number(p.price).toLocaleString()} so'm</span>
+                               <span style="color:#e53935;font-weight:800;font-size:12px;">${Math.round(Number(p.price) * (1 - Number(p.discountPercent) / 100)).toLocaleString()} so'm</span>
+                               <span style="color:#e53935;font-size:8px;">-${Number(p.discountPercent)}%</span>`
+                            : `<span style="font-size:12px;">${Number(p.price).toLocaleString()} so'm</span>`}
+                    </div>
+
+                    <div style="
+                        display:flex;
+                        gap:4px;
+                        align-items:center;
+                        flex-shrink:0;
+                    ">
 
                     <button
                         class="qty-btn"
