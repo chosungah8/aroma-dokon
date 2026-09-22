@@ -2918,12 +2918,13 @@ const orderData = {
 if (window.Telegram && window.Telegram.WebApp) {
 
 
+    Telegram.WebApp.sendData(JSON.stringify(orderData));
+    alert("✅ Buyurtmangiz qabul qilindi!");
+
     cart = {};
     updateCartBar();
     renderCartItems();
     renderProducts();
-
-    Telegram.WebApp.sendData(JSON.stringify(orderData));
 
 }
 
