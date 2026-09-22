@@ -1765,7 +1765,7 @@ const variantOptions = Array.isArray(p.variants) && p.variants.length
     : "";
 
         card.innerHTML = `
-            <div style="display:flex; flex-direction:column;">
+            <div style="display:flex; flex-direction:column; flex:1; min-width:0;">
                 <img
                     src="${p.img}"
                     alt="${p.name}"
@@ -1809,7 +1809,8 @@ ${stockMessage}
                     align-items:center;
                     justify-content:center;
                     width:100%;
-                    margin-top:8px; margin-bottom:0;
+                    margin-top:auto;
+                    margin-bottom:0;
                 ">
 
                     <button
