@@ -29,10 +29,10 @@
 .categories {
     display:grid !important;
     grid-template-columns:repeat(5,minmax(0,1fr)) !important;
-    grid-auto-rows:70px !important;
+    grid-auto-rows:85px !important;
     width:100% !important;
     height:auto !important;
-    min-height:70px !important;
+    min-height:85px !important;
     box-sizing:border-box;
     overflow:hidden !important;
     margin:6px 0 0 0 !important;
@@ -80,12 +80,13 @@
     justify-content:flex-start !important;
     width:100% !important;
     min-width:0 !important;
-    height:70px !important;
+    height:85px !important;
     padding:0 !important;
-    flex:none !important;
-    box-sizing:border-box;
-    white-space:nowrap !important;
     margin:0 !important;
+    box-sizing:border-box;
+    flex:none !important;
+    white-space:normal !important;
+    overflow:visible !important;
     border:none !important;
     outline:none !important;
     box-shadow:none !important;
@@ -99,32 +100,33 @@
 .subcategory-list .category-btn {
     width:100% !important;
     min-width:0 !important;
-    height:70px !important;
-    padding:0 !important;
-    margin:0 !important;
-    border:none !important;
-    background:transparent !important;
+    height:85px !important;
 }
 
 .category-btn.active {
     width:100% !important;
     min-width:0 !important;
-    height:70px !important;
+    height:85px !important;
     background:transparent !important;
     color:#d94b78 !important;
-    border:none !important;
-    box-shadow:none !important;
 }
 
-.category-btn.active > span:first-child {
-    width:40px !important;
-    height:40px !important;
-    margin:0 auto !important;
-    background:#fff5f8 !important;
-    border-radius:8px !important;
+.category-btn > span:first-child {
+    width:48px !important;
+    height:48px !important;
+    margin:0 auto 2px !important;
     display:flex !important;
     align-items:center !important;
     justify-content:center !important;
+    flex:none !important;
+    line-height:0 !important;
+}
+
+.category-btn.active > span:first-child {
+    width:48px !important;
+    height:48px !important;
+    background:#fff5f8 !important;
+    border-radius:8px !important;
 }
 
 .category-btn > span:first-child img {
@@ -132,7 +134,22 @@
     height:44px !important;
 }
 
-        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.category-btn > span:nth-child(2) {
+    display:block !important;
+    width:100% !important;
+    max-width:100% !important;
+    height:28px !important;
+    line-height:14px !important;
+    font-size:10px !important;
+    white-space:normal !important;
+    overflow:hidden !important;
+    text-overflow:clip !important;
+    text-align:center !important;
+    word-break:break-word !important;
+    overflow-wrap:anywhere !important;
+}
+
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
         .card {
             background: #fff;
             border-radius: 11px;
