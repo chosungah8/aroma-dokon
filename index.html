@@ -128,8 +128,8 @@
 }
 
 .category-btn > span:first-child img {
-    width:36px !important;
-    height:36px !important;
+    width:44px !important;
+    height:44px !important;
 }
 
         .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
@@ -1252,7 +1252,9 @@ async function loadCategories(selectedMainId = null) {
     max-width:100%;
     overflow:visible;
     text-overflow:clip;
-    white-space:nowrap;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    word-break:break-word;
     text-align:center;
 ">
     ${child.name}
