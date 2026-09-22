@@ -155,11 +155,11 @@
             background: #fff;
             border-radius: 11px;
             padding: 8px;
-            min-height: 285px;
+            min-height: auto;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            justify-content: flex-start;
         }
         .card img {
     width: 100%;
@@ -1765,7 +1765,7 @@ const variantOptions = Array.isArray(p.variants) && p.variants.length
     : "";
 
         card.innerHTML = `
-            <div>
+            <div style="display:flex; flex-direction:column;">
                 <img
                     src="${p.img}"
                     alt="${p.name}"
@@ -1809,7 +1809,7 @@ ${stockMessage}
                     align-items:center;
                     justify-content:center;
                     width:100%;
-                    margin-top:2px;
+                    margin-top:8px; margin-bottom:0;
                 ">
 
                     <button
