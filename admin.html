@@ -325,6 +325,12 @@
             placeholder="Narxi"
         >
 
+        <input
+            type="text"
+            id="size"
+            placeholder="Hajmi (masalan: 100 ml, 50 g)"
+        >
+
 <textarea
     id="variants"
     placeholder="Variantlar (har birini alohida qatorda yozing)&#10;Masalan:&#10;Qizil&#10;Pushti&#10;Ko‘k"
@@ -502,6 +508,11 @@
         type="number"
         placeholder="Narxi"
     >
+<input
+    id="editSize"
+    type="text"
+    placeholder="Hajmi (masalan: 100 ml, 50 g)"
+>
 
 <input
     id="editStock"
@@ -983,6 +994,7 @@ const stock =
     const img =
         document.getElementById("img").value.trim();
 
+const size = document.getElementById("size").value.trim();
 const variantsText =
     document.getElementById("variants").value.trim();
 
@@ -1034,8 +1046,10 @@ const discountActive =
                     stock,
                     img,
                     variants,
+                    size,
                     discountPercent,
-                    discountActive
+                    discountActive,
+    size
                 })
             }
         );
@@ -1236,9 +1250,8 @@ const discountPercent =
 const discountActive =
     document.getElementById("editDiscountActive").checked;
 
-    const img =
-        document.getElementById("editImg").value.trim();
-
+    const img = document.getElementById("editImg").value.trim();
+    const size = document.getElementById("editSize").value.trim();
     const message =
         document.getElementById("editMessage");
 
@@ -1277,7 +1290,8 @@ body: JSON.stringify({
     stock,
     img,
     discountPercent,
-    discountActive
+    discountActive,
+    size
 })
             }
         );
@@ -2942,11 +2956,6 @@ async function savePromotion(type) {
             : "specialOfferMessage"
     );
 
-    if (!title) {
-        message.style.color = "#d00";
-        message.textContent = "❌ Sarlavha kiriting";
-        return;
-    }
 
     message.style.color = "#666";
     message.textContent = "Saqlanmoqda...";

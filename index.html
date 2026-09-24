@@ -405,7 +405,7 @@
             width:100%;
             max-width:500px;
             max-height:90vh;
-            overflow-y:auto;
+
             background:#fff;
             border-radius:18px;
             padding:20px;
@@ -418,7 +418,6 @@
         <button
             onclick="closeFindProductModal()"
             style="
-                position:absolute;
                 right:14px;
                 top:12px;
                 width:34px;
@@ -826,7 +825,6 @@ async function loadPublicPromotions() {
                     `}
 
                     <div style="
-                        position:absolute;
                         top:10px;
                         left:12px;
                         right:12px;
@@ -912,7 +910,6 @@ async function loadPublicPromotions() {
                     `}
 
                     <div style="
-                        position:absolute;
                         top:10px;
                         left:12px;
                         right:12px;
@@ -947,7 +944,6 @@ async function loadPublicPromotions() {
                             type="button"
                             onclick="event.stopPropagation(); downloadCoupon('${special.coupon_code}')"
                             style="
-                                position:absolute;
                                 left:0;
                                 bottom:0 !important;
                                 margin:0 !important;
@@ -1956,7 +1952,8 @@ function showProductDetails(id) {
                 width:100%;
                 max-width:520px;
                 max-height:88vh;
-                overflow:hidden;
+
+                overflow-y:auto;
                 overflow-x:hidden;
                 overscroll-behavior:contain;
                 -webkit-overflow-scrolling:touch;
@@ -1973,7 +1970,6 @@ function showProductDetails(id) {
             <button
                 onclick="closeProductDetails()"
                 style="
-                    position:absolute;
                     top:10px;
                     right:10px;
                     width:34px;
@@ -2011,13 +2007,14 @@ function showProductDetails(id) {
                 padding-right:38px;
             ">
                 ${product.name}
+                <div style="font-size:14px; color:#555; margin-bottom:10px;"><b>Hajmi:</b> ${product.size || "Ko‘rsatilmagan"}</div>
             </div>
 
             <div style="
                 flex:1;
                 min-height:120px;
-                max-height:calc(88vh - 360px);
-                overflow-y:auto;
+
+
                 -webkit-overflow-scrolling:touch;
                 font-size:14px;
                 line-height:1.6;
@@ -2029,10 +2026,6 @@ function showProductDetails(id) {
             </div>
 
             <div style="
-                position:absolute;
-                left:16px;
-                right:16px;
-                bottom:16px;
                 display:flex;
                 justify-content:space-between;
                 align-items:center;
@@ -3222,7 +3215,7 @@ loadPublicPromotions();
             id="searchResults"
             style="
                 max-height:65vh;
-                overflow-y:auto;
+
                 display:none;
                 margin-top:8px;
             "
