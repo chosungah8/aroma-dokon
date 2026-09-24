@@ -758,6 +758,7 @@ async function loadPublicPromotions() {
                 background:#f5f5f5;
             `;
 
+            dailyBox.style.display = daily ? "block" : "none";
             if (daily) {
                 dailyBox.innerHTML = `
                     ${daily.image_url ? `
@@ -843,6 +844,7 @@ async function loadPublicPromotions() {
                 background:#f5f5f5;
             `;
 
+            specialBox.style.display = special ? "block" : "none";
             if (special) {
                 specialBox.innerHTML = `
                     ${special.image_url ? `
