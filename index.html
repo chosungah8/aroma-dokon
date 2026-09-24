@@ -213,64 +213,7 @@
     border-radius:0;
     overflow:hidden;
 ">
-    <div
-        id="dailyOfferPublic"
-        style="
-            width:100%;
-            box-sizing:border-box;
-            padding:9px 12px;
-            border-top:1px solid #eee;
-            border-radius:0;
-            background:linear-gradient(135deg,#fff0f5,#ffe3ed);
-            border:1px solid #ffd3e1;
-        "
-    >
-        <div style="
-            font-size:12px;
-            font-weight:700;
-            color:#d92f68;
-        ">
-            🎁 Bugungi aksiya
-        </div>
 
-        <div style="
-            font-size:10px;
-            color:#666;
-            margin-top:2px;
-        ">
-            Maxsus narxdagi mahsulotlarni ko‘ring
-        </div>
-    </div>
-
-    <div
-        id="specialOfferPublic"
-        style="
-            width:100%;
-            box-sizing:border-box;
-            padding:9px 12px;
-            border-top:1px solid #eee;
-            border-radius:0;
-            background:linear-gradient(135deg,#f5f0ff,#ebe2ff);
-            border:1px solid #ddd0ff;
-        "
-    >
-        <div style="
-            font-size:12px;
-            font-weight:700;
-            color:#6d43c5;
-        ">
-            🏷️ Maxsus taklif
-        </div>
-
-        <div style="
-            font-size:10px;
-            color:#666;
-            margin-top:2px;
-        ">
-            Yangi mahsulotlar va foydali narxlar
-        </div>
-    </div>
-</div>
 
 <div id="myOrdersBox" style="
     display:none;
@@ -837,7 +780,7 @@ async function loadPublicPromotions() {
                             line-height:20px;
                             font-weight:800;
                         ">
-                            ${daily.title || "Bugungi aksiya"}
+                            ${daily.title || ""}
                         </div>
 
                         ${daily.description ? `
@@ -864,10 +807,10 @@ async function loadPublicPromotions() {
                         border-radius:12px;
                     ">
                         <div style="font-size:16px;font-weight:800;color:#d92f68;">
-                            🎁 Bugungi aksiya
+
                         </div>
                         <div style="font-size:11px;color:#666;margin-top:3px;">
-                            Hozircha aksiya mavjud emas
+
                         </div>
                     </div>
                 `;
@@ -922,7 +865,7 @@ async function loadPublicPromotions() {
                             line-height:20px;
                             font-weight:800;
                         ">
-                            ${special.title || "Maxsus taklif"}
+                            ${special.title || ""}
                         </div>
 
                         ${special.description ? `
@@ -973,10 +916,10 @@ async function loadPublicPromotions() {
                         border-radius:12px;
                     ">
                         <div style="font-size:16px;font-weight:800;color:#6d43c5;">
-                            🏷️ Maxsus taklif
+
                         </div>
                         <div style="font-size:11px;color:#666;margin-top:3px;">
-                            Hozircha maxsus taklif mavjud emas
+
                         </div>
                     </div>
                 `;
@@ -1953,7 +1896,7 @@ function showProductDetails(id) {
                 max-width:520px;
                 max-height:88vh;
 
-                overflow-y:auto;
+                overflow:hidden;
                 overflow-x:hidden;
                 overscroll-behavior:contain;
                 -webkit-overflow-scrolling:touch;
@@ -1985,6 +1928,7 @@ function showProductDetails(id) {
                 ✕
             </button>
 
+            <div style="flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; touch-action:pan-y;">
             <img
                 src="${product.img || ''}"
                 alt="${product.name}"
@@ -2024,8 +1968,10 @@ function showProductDetails(id) {
             ">
                 ${renderProductDescription(product.desc)}
             </div>
+            </div>
 
             <div style="
+                flex-shrink:0;
                 display:flex;
                 justify-content:space-between;
                 align-items:center;
