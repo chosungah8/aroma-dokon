@@ -1758,6 +1758,10 @@ const variantOptions = Array.isArray(p.variants) && p.variants.length
                     style="cursor:pointer;"
                 >
                     ${p.name}
+                    <div style="font-size:11px; color:#777; margin-top:3px; margin-bottom:4px;">
+                        ${p.size ? p.size : ""}
+                        ${p.country ? `<span style="margin-left:6px;">· ${p.country.flag} ${p.country.name}</span>` : ""}
+                    </div>
                 </div>
 
 
