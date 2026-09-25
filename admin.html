@@ -330,6 +330,41 @@
             id="size"
             placeholder="Hajmi (masalan: 100 ml, 50 g)"
         >
+        
+        <select id="country">
+            <option value="">Davlatni tanlang</option>
+        
+        <script>
+        async function loadCountries() {
+            try {
+                const res = await fetch("/api/countries");
+                const countries = await res.json();
+                const selects = [
+                    document.getElementById("country"),
+                    document.getElementById("editCountry")
+                ].filter(Boolean);
+
+                if (!selects.length || !Array.isArray(countries)) return;
+
+                selects.forEach(select => {
+                    select.innerHTML = '<option value="">Davlatni tanlang</option>';
+
+                    countries.forEach(country => {
+                        const option = document.createElement("option");
+                        option.value = country.id;
+                        option.textContent = `${country.flag} ${country.name}`;
+                        select.appendChild(option);
+                    });
+                });
+            } catch (error) {
+                console.error("COUNTRIES XATOSI:", error);
+            }
+        }
+
+        loadCountries();
+        </script>
+
+        </select>
 
 <textarea
     id="variants"
@@ -513,6 +548,10 @@
     type="text"
     placeholder="Hajmi (masalan: 100 ml, 50 g)"
 >
+
+<select id="editCountry">
+    <option value="">Davlatni tanlang</option>
+</select>
 
 <input
     id="editStock"
@@ -995,6 +1034,9 @@ const stock =
         document.getElementById("img").value.trim();
 
 const size = document.getElementById("size").value.trim();
+const countryId = document.getElementById("country").value
+    ? Number(document.getElementById("country").value)
+    : null;
 const variantsText =
     document.getElementById("variants").value.trim();
 
@@ -1047,9 +1089,9 @@ const discountActive =
                     img,
                     variants,
                     size,
+                    countryId,
                     discountPercent,
-                    discountActive,
-    size
+                    discountActive
                 })
             }
         );
@@ -1083,6 +1125,11 @@ const discountActive =
         document.getElementById("price").value = "";
         document.getElementById("img").value = "";
 document.getElementById("stock").value = "";
+        document.getElementById("size").value = "";
+        document.getElementById("variants").value = "";
+        document.getElementById("country").value = "";
+        document.getElementById("discountPercent").value = "";
+        document.getElementById("discountActive").checked = false;
         loadProducts();
 
     } catch (error) {
@@ -1182,6 +1229,12 @@ async function editProduct(id) {
 
         document.getElementById("editPrice").value =
             product.price;
+
+        document.getElementById("editSize").value =
+            product.size || "";
+
+        document.getElementById("editCountry").value =
+            product.country_id || "";
 document.getElementById("editStock").value =
     Number(product.stock) || 0;
 
@@ -1252,6 +1305,9 @@ const discountActive =
 
     const img = document.getElementById("editImg").value.trim();
     const size = document.getElementById("editSize").value.trim();
+const countryId = document.getElementById("editCountry").value
+    ? Number(document.getElementById("editCountry").value)
+    : null;
     const message =
         document.getElementById("editMessage");
 

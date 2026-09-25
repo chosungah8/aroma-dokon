@@ -1130,6 +1130,28 @@ async function loadProducts() {
 
         products = await response.json();
 
+        const countryResponse = await fetch("/api/countries?ts=" + Date.now(), {
+            cache: "no-store"
+        });
+
+        const countries = countryResponse.ok
+            ? await countryResponse.json()
+            : [];
+
+        const countryMap = new Map(
+            countries.map(country => [
+                Number(country.id),
+                country
+            ])
+        );
+
+        products = products.map(product => ({
+            ...product,
+            country: product.country_id
+                ? countryMap.get(Number(product.country_id)) || null
+                : null
+        }));
+
         renderProducts();
         updateCartBar();
     } catch (error) {
@@ -1560,6 +1582,8 @@ function renderSearchResults() {
                     margin-bottom:4px;
                 ">
                     ${p.category || ''}
+                    ${p.size ? `<span style="margin-left:6px;color:#777;">· ${p.size}</span>` : ''}
+                    ${p.country ? `<span style="margin-left:6px;color:#777;">· ${p.country.flag} ${p.country.name}</span>` : ''}
                 </div>
 
                 <div style="
@@ -1968,6 +1992,7 @@ function showProductDetails(id) {
             ">
                 ${product.name}
                 <div style="font-size:14px; color:#555; margin-bottom:10px;"><b>Hajmi:</b> ${product.size || "Ko‘rsatilmagan"}</div>
+                ${product.country ? `<div style="font-size:14px; color:#555; margin-bottom:10px;">${product.country.flag} ${product.country.name}</div>` : ""}
             </div>
 
             <div style="
