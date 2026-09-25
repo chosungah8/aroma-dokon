@@ -1115,6 +1115,7 @@ const discountActive =
             return;
         }
 
+        const currentScroll = window.scrollY;
         message.className = "success";
 
         message.innerText =
@@ -1130,6 +1131,7 @@ document.getElementById("stock").value = "";
         document.getElementById("country").value = "";
         document.getElementById("discountPercent").value = "";
         document.getElementById("discountActive").checked = false;
+        window.scrollTo(0, currentScroll);
 
     } catch (error) {
 
