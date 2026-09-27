@@ -147,7 +147,7 @@
         </button>
     </div>
 
-    <details id="categorySection" open style="margin-bottom:15px;">
+    <details id="categorySection" style="margin-bottom:15px;">
         <summary style="
             font-size:18px;
             font-weight:bold;
@@ -199,7 +199,7 @@
     </details>
 
 
-<details id="couponSection" open style="margin-bottom:15px;">
+<details id="couponSection" style="margin-bottom:15px;">
     <summary style="
         font-size:18px;
         font-weight:bold;
@@ -286,7 +286,7 @@
 </details>
 
 
-<details id="newProductSection" open style="margin-bottom:15px;">
+<details id="newProductSection" style="margin-bottom:15px;">
     <summary style="
         font-size:18px;
         font-weight:bold;
@@ -610,7 +610,7 @@
 
 <hr>
 
-<details id="orderSection" open style="margin-bottom:15px;">
+<details id="orderSection" style="margin-bottom:15px;">
     <summary style="
         font-size:18px;
         font-weight:bold;
@@ -631,7 +631,7 @@
 </details>
 
 
-<details id="promotionSection" open style="margin-bottom:15px;">
+<details id="promotionSection" style="margin-bottom:15px;">
     <summary style="
         font-size:18px;
         font-weight:bold;
@@ -795,7 +795,7 @@
     </div>
 </details>
 
-<details id="productSection" open style="margin-bottom:15px;">
+<details id="productSection" style="margin-bottom:15px;">
     <summary style="
         font-size:18px;
         font-weight:bold;
@@ -941,7 +941,8 @@ async function loadProducts() {
 
         const products =
             await response.json();
-
+        const categoryResponse = await fetch("/api/admin/categories", { headers: { "Authorization": "Bearer " + adminToken } });
+        const categories = categoryResponse.ok ? await categoryResponse.json() : [];
         list.innerHTML = "";
 
         if (!products.length) {
@@ -949,10 +950,13 @@ async function loadProducts() {
             list.innerHTML =
                 "<p>Mahsulotlar yo‘q.</p>";
 
-            return;
         }
 
-        products.forEach(product => {
+        const groupedProducts = products.reduce((g, p) => { (g[p.category] ||= []).push(p); return g; }, {});
+        Object.entries(groupedProducts).forEach(([category, categoryProducts]) => {
+
+            const categoryBox = document.createElement("details"); categoryBox.style.marginBottom = "10px"; categoryBox.innerHTML = `<summary style="padding:12px;cursor:pointer;font-weight:700;background:#f7f7f7;border-radius:10px;">📁 ${category} (${categoryProducts.length})</summary>`;
+            categoryProducts.forEach(product => {
 
             const item =
                 document.createElement("div");
@@ -994,9 +998,11 @@ async function loadProducts() {
 </div>
             `;
 
-            list.appendChild(item);
+            categoryBox.appendChild(item);
         });
+            list.appendChild(categoryBox);
 
+        });
     } catch (error) {
 
         console.error(error);
