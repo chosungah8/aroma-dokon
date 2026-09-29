@@ -611,7 +611,7 @@
 <hr>
 
 <details id="orderSection" style="margin-bottom:15px;">
-    <summary onclick="setTimeout(() => this.parentElement.scrollIntoView({behavior:'smooth', block:'start'}), 50)" style="
+    <summary style="
         font-size:18px;
         font-weight:bold;
         cursor:pointer;
@@ -1659,9 +1659,7 @@ async function loadOrders() {
             if (!value) return null;
 
             const text = String(value).trim();
-
-            // DD.MM.YYYY yoki DD/MM/YYYY format
-            const match = text.match(/^(\\d{1,2})[.\\/-](\\d{1,2})[.\\/-](\\d{4})/);
+            const match = text.match(/^([0-9]{1,2})[./-]([0-9]{1,2})[./-]([0-9]{4})/);
 
             if (match) {
                 return new Date(
@@ -1710,7 +1708,7 @@ async function loadOrders() {
             return;
         }
 
-        filteredOrders.slice().reverse().forEach(order => {
+        filteredOrders.forEach(order => {
             const item = document.createElement("div");
 
             item.style.cssText = `
