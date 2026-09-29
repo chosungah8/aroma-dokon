@@ -2621,10 +2621,10 @@ function updateCartBar() {
                 const response = await fetch("/api/coupons/save", {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        "X-Telegram-Init-Data": tg.initData
                     },
                     body: JSON.stringify({
-                        userId: String(telegramUserId),
                         code: couponCode
                     })
                 });
