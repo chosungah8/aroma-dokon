@@ -2942,7 +2942,12 @@ if (!userId) {
 
     try {
         const response = await fetch(
-            "/api/my-orders?userId=" + encodeURIComponent(userId)
+            "/api/my-orders?userId=" + encodeURIComponent(userId),
+            {
+                headers: {
+                    "X-Telegram-Init-Data": tg.initData
+                }
+            }
         );
 
         const orders = await response.json();
