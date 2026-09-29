@@ -7,3 +7,5 @@ orders.json
 index.backup.html
 .vercel
 .env*
+
+.venv/
