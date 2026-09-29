@@ -2852,6 +2852,7 @@ function sendOrder() {
 
         if (p && cart[id] > 0) {
 orderItems.push({
+    id: p.id,
     name: p.name,
     variant: window.selectedVariants?.[id] || "",
     count: cart[id],
