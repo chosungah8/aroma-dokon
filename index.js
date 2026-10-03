@@ -48,6 +48,8 @@ if (req.url === '/api/products' && req.method === 'GET') {
             desc: product.description || '',
             price: Number(product.price) || 0,
             img: product.image || '',
+            discountActive: product.discountActive !== false,
+            discountPercent: Number(product.discountPercent) || 0,
             active: product.active !== false,
 stock: Number(product.stock) || 0,
 variants: Array.isArray(product.variants) ? product.variants : []
