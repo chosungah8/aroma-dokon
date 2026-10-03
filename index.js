@@ -41,6 +41,16 @@ if (req.url === '/api/products' && req.method === 'GET') {
             throw error;
         }
 
+const { data: categories } = await supabase
+    .from('categories')
+    .select('name, discount_percent, discount_active');
+const categoryDiscounts = new Map(
+    (categories || []).map(c => [
+        String(c.name).trim(),
+        { percent: Number(c.discount_percent) || 0, active: c.discount_active === true }
+    ])
+);
+
         const products = (data || []).map(product => ({
             id: product.id,
             name: product.name,
@@ -48,8 +58,10 @@ if (req.url === '/api/products' && req.method === 'GET') {
             desc: product.description || '',
             price: Number(product.price) || 0,
             img: product.image || '',
-            discountActive: product.discountActive !== false,
-            discountPercent: Number(product.discountPercent) || 0,
+            discountActive: product.discount_active === true || categoryDiscounts.get(String(product.category).trim())?.active === true,
+            discountPercent: product.discount_active === true
+                ? Number(product.discount_percent) || 0
+                : (categoryDiscounts.get(String(product.category).trim())?.percent || 0),
             active: product.active !== false,
 stock: Number(product.stock) || 0,
 variants: Array.isArray(product.variants) ? product.variants : []
