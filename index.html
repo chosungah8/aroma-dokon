@@ -1736,7 +1736,7 @@ ${p.variants.map(v => {
     const price = typeof v === "object" ? Number(v.price) || 0 : 0;
 
     return `
-        <option value="${name}">
+        <option value="${name}" ${window.selectedVariants?.[p.id] === name ? "selected" : ""}>
             ${name}${price > 0 ? ` — ${price.toLocaleString()} so'm` : ""}
         </option>
     `;
@@ -1882,16 +1882,15 @@ function selectVariant(id, value) {
 
     const variantPrice = getVariantPrice(product, value);
 
-const priceEl = document.querySelector(`[data-price-id="${id}"]`);
+    const priceEl = document.querySelector(`[data-price-id="${id}"]`);
 
-if (priceEl) {
-    priceEl.innerHTML = product.discountActive && product.discountPercent > 0
-        ? `<span style="text-decoration:line-through;color:#999;font-size:9px;">${Number(variantPrice).toLocaleString()} so'm</span>
-           <span style="color:#e53935;font-weight:800;font-size:12px;">${Math.round(Number(variantPrice) * (1 - Number(product.discountPercent) / 100)).toLocaleString()} so'm</span>
-           <span style="color:#e53935;font-size:8px;">-${Number(product.discountPercent)}%</span>`
-        : `<span style="font-size:12px;">${Number(variantPrice).toLocaleString()} so'm</span>`;
-}
-
+    if (priceEl) {
+        priceEl.innerHTML = product.discountActive && product.discountPercent > 0
+            ? `<span style="text-decoration:line-through;color:#999;font-size:9px;">${Number(variantPrice).toLocaleString()} so'm</span>
+               <span style="color:#e53935;font-weight:800;font-size:12px;">${Math.round(Number(variantPrice) * (1 - Number(product.discountPercent) / 100)).toLocaleString()} so'm</span>
+               <span style="color:#e53935;font-size:8px;">-${Number(product.discountPercent)}%</span>`
+            : `<span style="font-size:12px;">${Number(variantPrice).toLocaleString()} so'm</span>`;
+    }
 }
 
 function renderProductDescription(desc) {
@@ -2339,6 +2338,12 @@ async function sendFindProductRequest() {
     }
 }
 
+function getCartKey(id, variant = "") {
+    return variant
+        ? `${id}__${encodeURIComponent(variant)}`
+        : String(id);
+}
+
 function addToCart(id) {
     const product = products.find(
         p => Number(p.id) === Number(id)
@@ -2349,25 +2354,27 @@ function addToCart(id) {
     }
 
     const stock = Number(product.stock) || 0;
-    const currentQty = cart[id] || 0;
+    const variant = window.selectedVariants?.[id] || "";
 
     if (stock <= 0) {
         alert("Bu mahsulot tugagan.");
         return;
     }
 
-    if (currentQty >= stock) {
-        alert("Bu mahsulotning mavjud qismi savatchaga qo‘shilgan.");
+    if (Array.isArray(product.variants) && product.variants.length > 0 && !variant) {
+        alert("Avval variantni tanlang.");
         return;
     }
 
-const variant = window.selectedVariants?.[id] || "";
+    const cartKey = getCartKey(id, variant);
+    const currentQty = Number(cart[cartKey] || 0);
 
-if (Array.isArray(product.variants) && product.variants.length > 0 && !variant)  {
-    alert("Avval variantni tanlang.");
-    return;
-}
-   cart[id] = currentQty + 1;
+    if (currentQty >= stock) {
+        alert("Bu mahsulotning mavjud qismidan ko‘p tanlab bo‘lmaydi.");
+        return;
+    }
+
+    cart[cartKey] = currentQty + 1;
 
     updateCartBar();
     renderProducts();
@@ -2383,7 +2390,9 @@ function changeQty(id, delta) {
         return;
     }
 
-    const currentQty = cart[id] || 0;
+    const variant = window.selectedVariants?.[id] || "";
+    const cartKey = getCartKey(id, variant);
+    const currentQty = Number(cart[cartKey] || 0);
     const newQty = currentQty + delta;
     const stock = Number(product.stock) || 0;
 
@@ -2393,9 +2402,9 @@ function changeQty(id, delta) {
     }
 
     if (newQty <= 0) {
-        delete cart[id];
+        delete cart[cartKey];
     } else {
-        cart[id] = newQty;
+        cart[cartKey] = newQty;
     }
 
     updateCartBar();
@@ -2403,8 +2412,11 @@ function changeQty(id, delta) {
     renderProducts();
     loadAvailableCoupons();
 }
-        function removeFromCart(id) {
-    delete cart[id];
+function removeFromCart(id) {
+    const variant = window.selectedVariants?.[id] || "";
+    const cartKey = getCartKey(id, variant);
+
+    delete cart[cartKey];
 
     if (window.selectedVariants) {
         delete window.selectedVariants[id];
@@ -2422,13 +2434,21 @@ function updateCartBar() {
             let total = 0;
             let count = 0;
 
-            for (let id in cart) {
-                const p = products.find(prod => prod.id == id);
+            for (let cartKey in cart) {
+                const parts = cartKey.split('__');
+                const productId = parts[0];
+                const variant = parts.length > 1
+                    ? decodeURIComponent(parts.slice(1).join('__'))
+                    : "";
+
+                const p = products.find(
+                    prod => Number(prod.id) === Number(productId)
+                );
 
                 if (!p) continue;
 
-                const quantity = Number(cart[id]) || 0;
-                const originalPrice = Number(p.price) || 0;
+                const quantity = Number(cart[cartKey]) || 0;
+                const originalPrice = getVariantPrice(p, variant);
 
                 originalTotal += originalPrice * quantity;
 
@@ -2441,6 +2461,7 @@ function updateCartBar() {
                         : originalPrice;
 
                 total += finalPrice * quantity;
+
                 productDiscountAmount +=
                     (originalPrice - finalPrice) * quantity;
 
@@ -2450,8 +2471,7 @@ function updateCartBar() {
             if (appliedCoupon && Number(appliedCoupon.discountPercent) > 0) {
                 couponDiscountAmount = Math.round(
                     total *
-                    Number(appliedCoupon.discountPercent) /
-                    100
+                    Number(appliedCoupon.discountPercent) / 100
                 );
 
                 total = Math.max(
@@ -2462,230 +2482,16 @@ function updateCartBar() {
                 couponDiscountAmount = 0;
             }
 
-            const originalEl =
-                document.getElementById("cartOriginalTotal");
-
-            const productDiscountRow =
-                document.getElementById("cartProductDiscountRow");
-
-            const productDiscountEl =
-                document.getElementById("cartProductDiscount");
-
-            const couponDiscountRow =
-                document.getElementById("cartCouponDiscountRow");
-
-            const couponDiscountEl =
-                document.getElementById("cartCouponDiscount");
-
-            const finalTotalEl =
-                document.getElementById("cartFinalTotal");
-
-            if (originalEl) {
-                originalEl.textContent =
-                    originalTotal.toLocaleString() + " so'm";
-            }
-
-            if (productDiscountRow && productDiscountEl) {
-                if (productDiscountAmount > 0) {
-                    productDiscountRow.style.display = "flex";
-                    productDiscountEl.textContent =
-                        "-" +
-                        productDiscountAmount.toLocaleString() +
-                        " so'm";
-                } else {
-                    productDiscountRow.style.display = "none";
-                }
-            }
-
-            if (couponDiscountRow && couponDiscountEl) {
-                if (couponDiscountAmount > 0) {
-                    couponDiscountRow.style.display = "flex";
-                    couponDiscountEl.textContent =
-                        "-" +
-                        couponDiscountAmount.toLocaleString() +
-                        " so'm";
-                } else {
-                    couponDiscountRow.style.display = "none";
-                }
-            }
-
-            if (finalTotalEl) {
-                finalTotalEl.textContent =
-                    total.toLocaleString() + " so'm";
-            }
-
             const bar = document.getElementById('cartBar');
-            const badge = document.getElementById('cartCountBadge');
 
-            bar.style.display = 'flex';
-            badge.innerText = count > 99 ? '99+' : count;
+            if (count > 0) {
+                bar.style.display = 'flex';
 
-            document.getElementById('cartBarTotal').innerText =
-                `${total.toLocaleString()} so'm (${count} ta)`;
-        }
-
-        async function openCouponOffers() {
-            try {
-                const response = await fetch("/api/coupons/available");
-                const data = await response.json();
-
-                if (!response.ok || !data.success) {
-                    alert("❌ Kuponlarni yuklab bo‘lmadi");
-                    return;
-                }
-
-                const coupons = data.coupons || [];
-
-                if (!coupons.length) {
-                    alert("ℹ️ Hozircha mavjud kuponlar yo‘q");
-                    return;
-                }
-
-                let modal = document.getElementById("couponOffersModal");
-
-                if (!modal) {
-                    modal = document.createElement("div");
-                    modal.id = "couponOffersModal";
-                    modal.className = "modal";
-                    document.body.appendChild(modal);
-                }
-
-                modal.innerHTML = `
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <span>🎟️ Maxsus kuponlar</span>
-                            <span class="close-btn"
-                                  onclick="closeCouponOffers()">✕</span>
-                        </div>
-
-                        <div id="couponOffersList"></div>
-                    </div>
-                `;
-
-                const list = document.getElementById("couponOffersList");
-
-                list.innerHTML = coupons.map(coupon => `
-                    <div style="
-                        padding:12px;
-                        margin-bottom:10px;
-                        border:1px solid #e4d8ff;
-                        border-radius:12px;
-                        background:#faf8ff;
-                    ">
-                        <div style="
-                            display:flex;
-                            justify-content:space-between;
-                            align-items:center;
-                            gap:10px;
-                        ">
-                            <div>
-                                <div style="
-                                    font-size:14px;
-                                    font-weight:800;
-                                    color:#6d43c5;
-                                ">
-                                    🎟️ ${coupon.code}
-                                </div>
-
-                                <div style="
-                                    margin-top:4px;
-                                    font-size:12px;
-                                    color:#555;
-                                ">
-                                    ${Number(coupon.discountPercent || 0)}% chegirma
-                                </div>
-
-                                ${
-                                    Number(coupon.minOrderAmount || 0) > 0
-                                    ? `
-                                        <div style="
-                                            margin-top:3px;
-                                            font-size:10px;
-                                            color:#888;
-                                        ">
-                                            Minimal summa:
-                                            ${Number(coupon.minOrderAmount).toLocaleString()} so'm
-                                        </div>
-                                    `
-                                    : ""
-                                }
-                            </div>
-
-                            <button
-                                type="button"
-                                onclick="downloadCoupon('${coupon.code}')"
-                                style="
-                                    padding:8px 11px;
-                                    border:none;
-                                    border-radius:9px;
-                                    background:#6d43c5;
-                                    color:#fff;
-                                    font-size:11px;
-                                    font-weight:700;
-                                    cursor:pointer;
-                                    white-space:nowrap;
-                                "
-                            >
-                                🎟️ Yuklab olish
-                            </button>
-                        </div>
-                    </div>
-                `).join("");
-
-                modal.style.display = "flex";
-
-            } catch (error) {
-                console.error("COUPON OFFERS XATOSI:", error);
-                alert("❌ Kuponlarni yuklashda xatolik");
-            }
-        }
-
-        function closeCouponOffers() {
-            const modal = document.getElementById("couponOffersModal");
-            if (modal) {
-                modal.style.display = "none";
-            }
-        }
-
-        async function downloadCoupon(code) {
-            const couponCode = String(code || "").trim().toUpperCase();
-
-            if (!couponCode) {
-                return;
-            }
-
-            if (!telegramUserId) {
-                alert("❌ Telegram foydalanuvchisi aniqlanmadi");
-                return;
-            }
-
-            try {
-                const response = await fetch("/api/coupons/save", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-Telegram-Init-Data": tg.initData
-                    },
-                    body: JSON.stringify({
-                        code: couponCode
-                    })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok || !data.success) {
-                    alert(
-                        "❌ " +
-                        (data.message || "Kuponni saqlab bo‘lmadi")
-                    );
-                    return;
-                }
-
-                alert("✅ " + couponCode + " kuponi saqlandi");
-
-            } catch (error) {
-                console.error("COUPON SAVE XATOSI:", error);
-                alert("❌ Server bilan bog‘lanishda xatolik");
+                document.getElementById('cartBarTotal').innerText =
+                    `${total.toLocaleString()} so'm (${count} ta)`;
+            } else {
+                bar.style.display = 'none';
+                closeCartModal();
             }
         }
 
@@ -2714,11 +2520,28 @@ function updateCartBar() {
             const submitOrderBtn = document.getElementById('submitOrderBtn');
 
             let hasItems = false;
-            for (let id in cart) {
+
+            for (let cartKey in cart) {
+                const parts = cartKey.split('__');
+                const productId = parts[0];
+                const variant = parts.length > 1
+                    ? decodeURIComponent(parts.slice(1).join('__'))
+                    : "";
+
+                const p = products.find(
+                    prod => Number(prod.id) === Number(productId)
+                );
+
+                if (!p) continue;
+
+                const quantity = Number(cart[cartKey]) || 0;
+                const variantPrice = getVariantPrice(p, variant);
+
                 hasItems = true;
-                const p = products.find(prod => prod.id == id);
+
                 const itemDiv = document.createElement('div');
                 itemDiv.className = 'cart-item';
+
                 itemDiv.innerHTML = `
                     <div style="
                         display:flex;
@@ -2751,14 +2574,14 @@ function updateCartBar() {
                                 ${p.name}
                             </div>
 
-                            ${window.selectedVariants?.[id]
+                            ${variant
                                 ? `
                                     <div style="
                                         color:#71717a;
                                         font-size:11px;
                                         margin-bottom:3px;
                                     ">
-                                        Variant: ${window.selectedVariants[id]}
+                                        Variant: ${variant}
                                     </div>
                                 `
                                 : ""
@@ -2769,7 +2592,7 @@ function updateCartBar() {
                                 font-size:11px;
                                 font-weight:600;
                             ">
-                                ${p.price.toLocaleString()} so'm
+                                ${Number(variantPrice).toLocaleString()} so'm
                             </div>
                         </div>
                     </div>
@@ -2782,7 +2605,7 @@ function updateCartBar() {
                     ">
                         <button
                             class="qty-btn"
-                            onclick="changeQty(${id}, -1)"
+                            onclick="changeCartItemQty('${cartKey.replace(/'/g, "\\'")}', -1)"
                         >
                             −
                         </button>
@@ -2792,18 +2615,18 @@ function updateCartBar() {
                             text-align:center;
                             font-weight:bold;
                         ">
-                            ${cart[id]}
+                            ${quantity}
                         </span>
 
                         <button
                             class="qty-btn"
-                            onclick="changeQty(${id}, 1)"
+                            onclick="changeCartItemQty('${cartKey.replace(/'/g, "\\'")}', 1)"
                         >
                             +
                         </button>
 
                         <button
-                            onclick="removeFromCart(${id})"
+                            onclick="removeCartItem('${cartKey.replace(/'/g, "\\'")}')"
                             style="
                                 width:32px;
                                 height:32px;
@@ -2821,6 +2644,7 @@ function updateCartBar() {
                         </button>
                     </div>
                 `;
+
                 list.appendChild(itemDiv);
             }
 
@@ -2868,6 +2692,46 @@ function updateCartBar() {
                     </div>
                 `;
             }
+        }
+
+        function changeCartItemQty(cartKey, delta) {
+            const parts = cartKey.split('__');
+            const productId = parts[0];
+
+            const product = products.find(
+                p => Number(p.id) === Number(productId)
+            );
+
+            if (!product) return;
+
+            const currentQty = Number(cart[cartKey] || 0);
+            const newQty = currentQty + delta;
+            const stock = Number(product.stock) || 0;
+
+            if (newQty > stock) {
+                alert("Mahsulotning mavjud qismidan ko‘p tanlab bo‘lmaydi.");
+                return;
+            }
+
+            if (newQty <= 0) {
+                delete cart[cartKey];
+            } else {
+                cart[cartKey] = newQty;
+            }
+
+            updateCartBar();
+            renderCartItems();
+            renderProducts();
+            loadAvailableCoupons();
+        }
+
+        function removeCartItem(cartKey) {
+            delete cart[cartKey];
+
+            updateCartBar();
+            renderCartItems();
+            renderProducts();
+            loadAvailableCoupons();
         }
 
 function sendOrder() {
