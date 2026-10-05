@@ -1676,6 +1676,8 @@ console.log("FILTERED:", filtered);
 
         const stock = Number(p.stock) || 0;
         const currentQty = cart[p.id] || 0;
+        const selectedVariant = window.selectedVariants?.[p.id] || "";
+        const variantPrice = getVariantPrice(p, selectedVariant);
 
         let stockMessage = "";
 
