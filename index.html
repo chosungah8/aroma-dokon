@@ -1666,6 +1666,7 @@ if (!grid) {
 
 console.log("PRODUCTS:", products);
 console.log("FILTERED:", filtered);
+    console.log("VARIANTLAR:", products.map(p => ({id: p.id, name: p.name, variants: p.variants})));
 
     if (filtered.length === 0) {
         grid.innerHTML = `
