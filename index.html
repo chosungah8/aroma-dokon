@@ -2767,34 +2767,36 @@ function sendOrder() {
     let productDiscountAmount = 0;
     let total = 0;
 
-    for (let id in cart) {
-        const p = products.find(prod => prod.id == id);
+    for (let cartKey in cart) {
+        const parts = cartKey.split('__');
+        const productId = parts[0];
+        const selectedVariant = parts.length > 1
+            ? decodeURIComponent(parts.slice(1).join('__'))
+            : "";
 
-        if (p && cart[id] > 0) {
+        const p = products.find(prod => Number(prod.id) === Number(productId));
+        const quantity = Number(cart[cartKey]) || 0;
 
-const selectedVariant = window.selectedVariants?.[id] || "";
-const variantPrice = getVariantPrice(p, selectedVariant);
+        if (p && quantity > 0) {
+            const variantPrice = getVariantPrice(p, selectedVariant);
 
-orderItems.push({
-    id: p.id,
-    name: p.name,
-    variant: selectedVariant,
-    count: cart[id],
-    price: p.discountActive && p.discountPercent > 0
-        ? Math.round(Number(variantPrice) * (1 - Number(p.discountPercent) / 100))
-        : Number(variantPrice)
-});
+            const finalPrice = p.discountActive && p.discountPercent > 0
+                ? Math.round(Number(variantPrice) * (1 - Number(p.discountPercent) / 100))
+                : Number(variantPrice);
 
-const originalPrice = Number(variantPrice) || 0;
-originalTotal += originalPrice * cart[id];
+            orderItems.push({
+                id: p.id,
+                name: p.name,
+                variant: selectedVariant,
+                count: quantity,
+                price: finalPrice
+            });
 
-const finalPrice = p.discountActive && p.discountPercent > 0
-    ? Math.round(originalPrice * (1 - Number(p.discountPercent) / 100))
-    : originalPrice;
+            const originalPrice = Number(variantPrice) || 0;
 
-total += finalPrice * cart[id];
-productDiscountAmount += (originalPrice - finalPrice) * cart[id];
-
+            originalTotal += originalPrice * quantity;
+            total += finalPrice * quantity;
+            productDiscountAmount += (originalPrice - finalPrice) * quantity;
         }
     }
 
