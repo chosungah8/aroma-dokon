@@ -1675,7 +1675,7 @@ console.log("FILTERED:", filtered);
         card.className = "card";
 
         const stock = Number(p.stock) || 0;
-        const currentQty = cart[p.id] || 0;
+        const currentQty = getProductCartQty(p.id);
         const selectedVariant = window.selectedVariants?.[p.id] || "";
         const variantPrice = getVariantPrice(p, selectedVariant);
 
@@ -2138,7 +2138,7 @@ ${detailVariantOptions}
                         text-align:center;
                         font-size:16px;
                         font-weight:700;
-                    ">${cart[product.id] || 0}</span>
+                    ">${getProductCartQty(product.id)}</span>
 
                     <button
                         onclick="addToCart(${product.id}); showProductDetails(${product.id})"
@@ -2342,6 +2342,20 @@ function getCartKey(id, variant = "") {
     return variant
         ? `${id}__${encodeURIComponent(variant)}`
         : String(id);
+}
+
+function getProductCartQty(id) {
+    let total = 0;
+
+    for (const cartKey in cart) {
+        const productId = String(cartKey).split("__")[0];
+
+        if (productId === String(id)) {
+            total += Number(cart[cartKey]) || 0;
+        }
+    }
+
+    return total;
 }
 
 function addToCart(id) {
