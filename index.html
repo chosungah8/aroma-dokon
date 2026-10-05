@@ -1918,6 +1918,41 @@ function showProductDetails(id) {
 
     if (!product) return;
 
+    const detailVariantOptions = Array.isArray(product.variants) && product.variants.length
+        ? `
+            <div style="margin:8px 0 12px;">
+                <label style="
+                    display:block;
+                    font-size:13px;
+                    font-weight:600;
+                    margin-bottom:4px;
+                ">
+                    Variant:
+                </label>
+                <select
+                    id="detail-variant-${product.id}"
+                    onchange="selectVariant(${product.id}, this.value)"
+                    style="
+                        width:100%;
+                        height:34px;
+                        padding:5px 8px;
+                        font-size:13px;
+                        border:1px solid #ddd;
+                        border-radius:6px;
+                        box-sizing:border-box;
+                    "
+                >
+                    <option value="">Variantni tanlang</option>
+                    ${product.variants.map(v => `
+                        <option value="${v}" ${window.selectedVariants?.[product.id] === v ? "selected" : ""}>
+                            ${v}
+                        </option>
+                    `).join("")}
+                </select>
+            </div>
+        `
+        : "";
+
     let modal = document.getElementById("productDetailModal");
 
     if (!modal) {
@@ -2005,7 +2040,8 @@ function showProductDetails(id) {
                 ${product.name}
                 <div style="font-size:14px; color:#555; margin-bottom:10px;"><b>Hajmi:</b> ${product.size || "Ko‘rsatilmagan"}</div>
                 ${product.country ? `<div style="font-size:14px; color:#555; margin-bottom:10px;">${product.country.flag} ${product.country.name}</div>` : ""}
-            </div>
+${detailVariantOptions}           
+ </div>
 
             <div style="
                 flex:1;
