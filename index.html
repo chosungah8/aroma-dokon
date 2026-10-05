@@ -2501,10 +2501,14 @@ function updateCartBar() {
             if (count > 0) {
                 bar.style.display = 'flex';
 
+                document.getElementById('cartCountBadge').innerText = count;
+
                 document.getElementById('cartBarTotal').innerText =
                     `${total.toLocaleString()} so'm (${count} ta)`;
             } else {
-                bar.style.display = 'none';
+                bar.style.display = 'flex';
+                document.getElementById('cartCountBadge').innerText = '0';
+                document.getElementById('cartBarTotal').innerText = '0 so\'m';
                 closeCartModal();
             }
         }
