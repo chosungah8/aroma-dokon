@@ -368,7 +368,7 @@
 
 <textarea
     id="variants"
-    placeholder="Variantlar (har birini alohida qatorda yozing)&#10;Masalan:&#10;Qizil&#10;Pushti&#10;Ko‘k"
+    placeholder="Variantlar (har birini alohida qatorda yozing)&#10;Format: Variant | Narx&#10;Masalan:&#10;Qizil | 25000&#10;Pushti | 28000&#10;Ko‘k | 30000"
 ></textarea>
 
         <input
@@ -1052,8 +1052,22 @@ const variants = variantsText
         .split("\n")
         .map(v => v.trim())
         .filter(Boolean)
-    : [];
+        .map(v => {
+            const [name, price] = v.split("|").map(x => x.trim());
 
+            if (!name) return null;
+
+            if (!price) {
+                return name;
+            }
+
+            return {
+                name,
+                price: Number(price) || 0
+            };
+        })
+        .filter(Boolean)
+    : [];
 
 const discountPercent =
     Number(document.getElementById("discountPercent").value) || 0;
@@ -1317,8 +1331,29 @@ const discountActive =
 
     const img = document.getElementById("editImg").value.trim();
     const size = document.getElementById("editSize").value.trim();
-    const variantsText = document.getElementById("editVariants").value.trim();
-    const variants = variantsText ? variantsText.split("\n").map(v => v.trim()).filter(Boolean) : [];
+const variantsText = document.getElementById("editVariants").value.trim();
+
+const variants = variantsText
+    ? variantsText
+        .split("\n")
+        .map(v => v.trim())
+        .filter(Boolean)
+        .map(v => {
+            const [name, price] = v.split("|").map(x => x.trim());
+
+            if (!name) return null;
+
+            if (!price) {
+                return name;
+            }
+
+            return {
+                name,
+                price: Number(price) || 0
+            };
+        })
+        .filter(Boolean)
+    : [];
 const countryId = document.getElementById("editCountry").value
     ? Number(document.getElementById("editCountry").value)
     : null;

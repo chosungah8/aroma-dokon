@@ -227,7 +227,6 @@
         overflow:hidden;
     "></div>
 
-
 <div id="myOrdersBox" style="
     display:none;
     position:fixed;
@@ -345,7 +344,6 @@
         So‘rov yuborish →
     </div>
 </div>
-
 
 <!-- MAHSULOT TOPIB BERISH OYNASI -->
 <div
@@ -728,7 +726,6 @@ async function applyCoupon() {
     }
 }
 
-
 // MIJOZ UCHUN AKSIYALARNI YUKLASH
 async function loadPublicPromotions() {
     try {
@@ -953,7 +950,6 @@ async function loadPublicPromotions() {
     }
 }
 
-
 async function loadAvailableCoupons() {
     const list = document.getElementById("cartCouponsList");
     if (!list) return;
@@ -1099,7 +1095,6 @@ async function loadAvailableCoupons() {
     }
 }
 
-
 function calculateCartSubtotal() {
     let total = 0;
 
@@ -1124,7 +1119,6 @@ function calculateCartSubtotal() {
 
     return total;
 }
-
 
 async function loadProducts() {
     try {
@@ -1430,7 +1424,6 @@ subButton.style.cssText = `
             ) {
                 button.classList.add("active");
 
-
             }
 
             button.onclick = function () {
@@ -1452,7 +1445,6 @@ subButton.style.cssText = `
 
 // Tanlangan kategoriyani ko‘rsatish
                 button.classList.add("active");
-
 
                 // Ichki kategoriyalar mavjud bo‘lsa, ularning oynasini ochamiz
                 if (children.length > 0) {
@@ -1618,7 +1610,6 @@ if (!grid) {
 
     grid.innerHTML = "";
 
-
     let filtered = products.filter(p => {
         const searchText = search.trim();
 
@@ -1661,8 +1652,6 @@ if (!grid) {
 
         return matchesSearch && matchesCategory;
     });
-
-
 
 console.log("PRODUCTS:", products);
 console.log("FILTERED:", filtered);
@@ -1740,11 +1729,16 @@ const variantOptions = Array.isArray(p.variants) && p.variants.length
             >
                 <option value="">Variantni tanlang</option>
 
-                ${p.variants.map(v => `
-                    <option value="${v}">
-                        ${v}
-                    </option>
-                `).join("")}
+${p.variants.map(v => {
+    const name = typeof v === "string" ? v : v.name;
+    const price = typeof v === "object" ? Number(v.price) || 0 : 0;
+
+    return `
+        <option value="${name}">
+            ${name}${price > 0 ? ` — ${price.toLocaleString()} so'm` : ""}
+        </option>
+    `;
+}).join("")}
             </select>
         </div>
       `
@@ -1772,14 +1766,11 @@ const variantOptions = Array.isArray(p.variants) && p.variants.length
                     ${p.country ? `<span style="margin-left:4px;">· ${p.country.flag} ${p.country.name}</span>` : ''}
                 </div>
 
-
-
-
 ${variantOptions}
 
 ${stockMessage}
 
-                <div class="price" style="
+<div class="price" data-price-id="${p.id}" style="
                     display:flex;
                     align-items:center;
                     gap:4px;
@@ -1787,11 +1778,11 @@ ${stockMessage}
                     line-height:1.1;
                     margin:4px 0 5px;
                 ">
-                    ${p.discountActive && p.discountPercent > 0
-                        ? `<span style="text-decoration:line-through;color:#999;font-size:9px;">${Number(p.price).toLocaleString()} so'm</span>
-                           <span style="color:#e53935;font-weight:800;font-size:12px;">${Math.round(Number(p.price) * (1 - Number(p.discountPercent) / 100)).toLocaleString()} so'm</span>
-                           <span style="color:#e53935;font-size:8px;">-${Number(p.discountPercent)}%</span>`
-                        : `<span style="font-size:12px;">${Number(p.price).toLocaleString()} so'm</span>`}
+${p.discountActive && p.discountPercent > 0
+    ? `<span style="text-decoration:line-through;color:#999;font-size:9px;">${Number(variantPrice).toLocaleString()} so'm</span>
+       <span style="color:#e53935;font-weight:800;font-size:12px;">${Math.round(Number(variantPrice) * (1 - Number(p.discountPercent) / 100)).toLocaleString()} so'm</span>
+       <span style="color:#e53935;font-size:8px;">-${Number(p.discountPercent)}%</span>`
+    : `<span style="font-size:12px;">${Number(variantPrice).toLocaleString()} so'm</span>`}
                 </div>
 
                 <div style="
@@ -1857,12 +1848,48 @@ ${stockMessage}
     });
 }
 
+function getVariantPrice(product, variantName) {
+    if (!product || !variantName) {
+        return Number(product?.price) || 0;
+    }
+
+    const variant = Array.isArray(product.variants)
+        ? product.variants.find(v =>
+            typeof v === "string"
+                ? v === variantName
+                : v && v.name === variantName
+        )
+        : null;
+
+    if (variant && typeof variant === "object" && Number(variant.price) > 0) {
+        return Number(variant.price);
+    }
+
+    return Number(product.price) || 0;
+}
+
 function selectVariant(id, value) {
     if (!window.selectedVariants) {
         window.selectedVariants = {};
     }
 
     window.selectedVariants[id] = value;
+
+    const product = products.find(p => Number(p.id) === Number(id));
+    if (!product) return;
+
+    const variantPrice = getVariantPrice(product, value);
+
+const priceEl = document.querySelector(`[data-price-id="${id}"]`);
+
+if (priceEl) {
+    priceEl.innerHTML = product.discountActive && product.discountPercent > 0
+        ? `<span style="text-decoration:line-through;color:#999;font-size:9px;">${Number(variantPrice).toLocaleString()} so'm</span>
+           <span style="color:#e53935;font-weight:800;font-size:12px;">${Math.round(Number(variantPrice) * (1 - Number(product.discountPercent) / 100)).toLocaleString()} so'm</span>
+           <span style="color:#e53935;font-size:8px;">-${Number(product.discountPercent)}%</span>`
+        : `<span style="font-size:12px;">${Number(variantPrice).toLocaleString()} so'm</span>`;
+}
+
 }
 
 function renderProductDescription(desc) {
@@ -1943,11 +1970,18 @@ function showProductDetails(id) {
                     "
                 >
                     <option value="">Variantni tanlang</option>
-                    ${product.variants.map(v => `
-                        <option value="${v}" ${window.selectedVariants?.[product.id] === v ? "selected" : ""}>
-                            ${v}
-                        </option>
-                    `).join("")}
+
+${product.variants.map(v => {
+    const name = typeof v === "string" ? v : v.name;
+    const price = typeof v === "object" ? Number(v.price) || 0 : 0;
+
+    return `
+        <option value="${name}" ${window.selectedVariants?.[product.id] === name ? "selected" : ""}>
+            ${name}${price > 0 ? ` — ${price.toLocaleString()} so'm` : ""}
+        </option>
+    `;
+}).join("")}
+
                 </select>
             </div>
         `
@@ -2040,13 +2074,12 @@ function showProductDetails(id) {
                 ${product.name}
                 <div style="font-size:14px; color:#555; margin-bottom:10px;"><b>Hajmi:</b> ${product.size || "Ko‘rsatilmagan"}</div>
                 ${product.country ? `<div style="font-size:14px; color:#555; margin-bottom:10px;">${product.country.flag} ${product.country.name}</div>` : ""}
-${detailVariantOptions}           
+${detailVariantOptions}
  </div>
 
             <div style="
                 flex:1;
                 min-height:120px;
-
 
                 -webkit-overflow-scrolling:touch;
                 font-size:14px;
@@ -2348,37 +2381,6 @@ function changeQty(id, delta) {
         return;
     }
 
-    const stock = Number(product.stock) || 0;
-    const currentQty = cart[id] || 0;
-    const newQty = currentQty + delta;
-
-    if (newQty > stock) {
-        alert("Mahsulotning mavjud qismidan ko‘p tanlab bo‘lmaydi.");
-        return;
-    }
-
-    if (newQty <= 0) {
-        delete cart[id];
-    } else {
-        cart[id] = newQty;
-    }
-
-    updateCartBar();
-    renderCartItems();
-    renderProducts();
-}
-
-
-
-function changeQty(id, delta) {
-    const product = products.find(
-        p => Number(p.id) === Number(id)
-    );
-
-    if (!product) {
-        return;
-    }
-
     const currentQty = cart[id] || 0;
     const newQty = currentQty + delta;
     const stock = Number(product.stock) || 0;
@@ -2393,7 +2395,6 @@ function changeQty(id, delta) {
     } else {
         cart[id] = newQty;
     }
-
 
     updateCartBar();
     renderCartItems();
@@ -2890,28 +2891,30 @@ function sendOrder() {
         const p = products.find(prod => prod.id == id);
 
         if (p && cart[id] > 0) {
+
+const selectedVariant = window.selectedVariants?.[id] || "";
+const variantPrice = getVariantPrice(p, selectedVariant);
+
 orderItems.push({
     id: p.id,
     name: p.name,
-    variant: window.selectedVariants?.[id] || "",
+    variant: selectedVariant,
     count: cart[id],
     price: p.discountActive && p.discountPercent > 0
-        ? Math.round(Number(p.price) * (1 - Number(p.discountPercent) / 100))
-        : Number(p.price)
+        ? Math.round(Number(variantPrice) * (1 - Number(p.discountPercent) / 100))
+        : Number(variantPrice)
 });
 
-console.log("BUYURTMAGA KETAYOTGAN:", {
-    name: p.name,
-    variant: window.selectedVariants?.[id] || "",
-    count: cart[id]
-});
-            const originalPrice = Number(p.price) || 0;
-            originalTotal += originalPrice * cart[id];
-            const finalPrice = p.discountActive && p.discountPercent > 0
-                ? Math.round(Number(p.price) * (1 - Number(p.discountPercent) / 100))
-                : Number(p.price);
-            total += finalPrice * cart[id];
-            productDiscountAmount += (originalPrice - finalPrice) * cart[id];
+const originalPrice = Number(variantPrice) || 0;
+originalTotal += originalPrice * cart[id];
+
+const finalPrice = p.discountActive && p.discountPercent > 0
+    ? Math.round(originalPrice * (1 - Number(p.discountPercent) / 100))
+    : originalPrice;
+
+total += finalPrice * cart[id];
+productDiscountAmount += (originalPrice - finalPrice) * cart[id];
+
         }
     }
 
@@ -2945,7 +2948,6 @@ const orderData = {
     console.log('Yuborilayotgan buyurtma:', orderData);
 
 if (window.Telegram && window.Telegram.WebApp) {
-
 
     Telegram.WebApp.sendData(JSON.stringify(orderData));
     alert("✅ Buyurtmangiz qabul qilindi!");
@@ -3078,7 +3080,6 @@ function closeMyOrders() {
     document.getElementById("myOrdersBox").style.display = "none";
 }
 
-
 function showOrderDetails(order) {
     const box = document.getElementById("myOrdersBox");
     const list = document.getElementById("myOrdersList");
@@ -3175,17 +3176,11 @@ function showOrderDetails(order) {
     });
 }
 
-
 loadCategories();
 loadProducts();
 loadPublicPromotions();
 
-
-
-
-
     </script>
-
 
 <!-- QIDIRUV OYNASI -->
 <div id="searchModal" style="
@@ -3299,7 +3294,6 @@ loadPublicPromotions();
         <span>Buyurtmalarim</span>
     </button>
 </div>
-
 
 </body>
 </html>
