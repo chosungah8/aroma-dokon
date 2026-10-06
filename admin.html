@@ -286,6 +286,63 @@
 </details>
 
 
+<details id="deliverySettingsSection" style="margin-bottom:15px;">
+    <summary style="
+        font-size:18px;
+        font-weight:bold;
+        cursor:pointer;
+        padding:12px;
+        background:#f5f5f5;
+        border-radius:10px;
+    ">
+        🚚 Yetkazib berish
+    </summary>
+
+    <div style="padding-top:12px;">
+
+        <label style="display:block; margin-bottom:8px; font-weight:600;">
+            Bepul yetkazib berish
+        </label>
+
+        <label style="
+            display:flex;
+            align-items:center;
+            gap:8px;
+            margin-bottom:14px;
+            cursor:pointer;
+        ">
+            <input
+                id="freeDeliveryEnabled"
+                type="checkbox"
+            >
+            Minimal summaga yetganda bepul yetkazib berish
+        </label>
+
+        <input
+            id="freeDeliveryMinAmount"
+            type="number"
+            min="0"
+            step="1000"
+            placeholder="Minimal summa (so‘m)"
+        >
+
+        <button
+            class="primary"
+            onclick="saveDeliverySettings()"
+            style="width:auto; padding:10px 14px; margin-top:8px;"
+        >
+            💾 Saqlash
+        </button>
+
+        <div
+            id="deliverySettingsMessage"
+            style="margin-top:10px;"
+        ></div>
+
+    </div>
+</details>
+
+
 <details id="newProductSection" style="margin-bottom:15px;">
     <summary style="
         font-size:18px;
@@ -897,6 +954,7 @@ loadCategories();
 loadCoupons();
 loadPromotions();
 loadPromotionCoupons();
+loadDeliverySettings();
 }
 
 
@@ -1961,6 +2019,109 @@ async function deleteOrder(orderId) {
     } catch (error) {
         console.error("BUYURTMA O‘CHIRISH XATOSI:", error);
         alert("Server bilan bog‘lanishda xatolik.");
+    }
+}
+
+
+async function loadDeliverySettings() {
+    try {
+        const response = await fetch(
+            "/api/admin/shop-settings",
+            {
+                headers: {
+                    "Authorization": "Bearer " + adminToken
+                }
+            }
+        );
+
+        const result = await response.json();
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
+
+        if (!response.ok || !result.success) {
+            console.error(
+                result.message ||
+                "Yetkazib berish sozlamasini yuklab bo‘lmadi."
+            );
+            return;
+        }
+
+        const settings = result.settings || {};
+
+        document.getElementById("freeDeliveryEnabled").checked =
+            settings.free_delivery_enabled === true;
+
+        document.getElementById("freeDeliveryMinAmount").value =
+            Number(settings.free_delivery_min_amount) || 0;
+
+    } catch (error) {
+        console.error("DELIVERY SETTINGS GET XATOSI:", error);
+    }
+}
+
+
+async function saveDeliverySettings() {
+    const enabled =
+        document.getElementById("freeDeliveryEnabled").checked;
+
+    const minAmount = Math.max(
+        0,
+        Math.round(
+            Number(
+                document.getElementById("freeDeliveryMinAmount").value
+            ) || 0
+        )
+    );
+
+    const message =
+        document.getElementById("deliverySettingsMessage");
+
+    message.innerText = "";
+
+    try {
+        const response = await fetch(
+            "/api/admin/shop-settings",
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + adminToken
+                },
+                body: JSON.stringify({
+                    freeDeliveryEnabled: enabled,
+                    freeDeliveryMinAmount: minAmount
+                })
+            }
+        );
+
+        const result = await response.json();
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
+
+        if (!response.ok || !result.success) {
+            message.style.color = "#d00";
+            message.innerText =
+                result.message ||
+                "Yetkazib berish sozlamasini saqlab bo‘lmadi.";
+            return;
+        }
+
+        message.style.color = "#198754";
+        message.innerText =
+            "Yetkazib berish sozlamalari saqlandi.";
+
+    } catch (error) {
+        console.error("DELIVERY SETTINGS SAVE XATOSI:", error);
+
+        message.style.color = "#d00";
+        message.innerText =
+            "Server bilan bog‘lanishda xatolik.";
     }
 }
 
