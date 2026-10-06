@@ -2157,11 +2157,19 @@ async function savePromotionSettings() {
     const enabled =
         document.getElementById("promotionEnabled").checked;
 
-    const startAt =
+    const startAtValue =
         document.getElementById("promotionStartAt").value;
 
-    const endAt =
+    const endAtValue =
         document.getElementById("promotionEndAt").value;
+
+    const startAt = startAtValue
+        ? new Date(startAtValue).toISOString()
+        : null;
+
+    const endAt = endAtValue
+        ? new Date(endAtValue).toISOString()
+        : null;
 
     const minNumber = Math.max(
         1,
