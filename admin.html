@@ -420,6 +420,22 @@
             id="promotionSettingsMessage"
             style="margin-top:8px;font-size:13px;"
         ></div>
+        <hr style="margin:20px 0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <h3>Aksiyalar ro‘yxati</h3>
+            <button type="button" onclick="loadPromotionGames()">↻ Yangilash</button>
+        </div>
+        <div id="promotionGamesMessage" role="status" style="margin:8px 0;"></div>
+        <div id="promotionGamesList"></div>
+        <div id="promotionGamesPages" style="display:flex;gap:10px;margin-top:12px;"></div>
+        <section id="gameParticipantsPanel" hidden style="margin-top:20px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                <h3 id="gameParticipantsTitle"></h3>
+                <button type="button" onclick="closeGameParticipants()">Yopish</button>
+            </div>
+            <div id="gameParticipantsContent" style="overflow-x:auto;"></div>
+            <div id="gameParticipantsPages" style="display:flex;gap:10px;margin-top:12px;"></div>
+        </section>
 
     </div>
 </details>
@@ -960,6 +976,11 @@
 <script>
 
 let adminToken = sessionStorage.getItem("aroma_admin_token");
+let gameListPage = 1;
+let gameListRequest = 0;
+let gameParticipantsRequest = 0;
+let selectedGameId = null;
+
 
 
 async function login() {
@@ -1038,6 +1059,7 @@ loadPromotions();
 loadPromotionCoupons();
 loadDeliverySettings();
 loadPromotionSettings();
+loadPromotionGames();
 }
 
 
@@ -2106,6 +2128,169 @@ async function deleteOrder(orderId) {
 }
 
 
+
+function gameLocalInputDate(value) {
+    const date = new Date(value);
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+function gameDate(value) {
+    return value ? new Date(value).toLocaleString('uz-UZ') : 'Belgilanmagan';
+}
+function gameElement(tag, text) {
+    const el = document.createElement(tag);
+    if (text !== undefined) el.textContent = text;
+    return el;
+}
+function gameButton(label, handler) {
+    const button = gameElement('button', label);
+    button.type = 'button';
+    button.onclick = async () => {
+        button.disabled = true;
+        try { await handler(button); } finally { button.disabled = false; }
+    };
+    return button;
+}
+async function gameFetch(path, options = {}) {
+    const response = await fetch('/api/admin/promotion-games' + path, {
+        ...options, headers: { Authorization: 'Bearer ' + adminToken }
+    });
+    if (response.status === 401) {
+        closeGameParticipants();
+        document.getElementById('promotionGamesList').replaceChildren();
+        logout();
+        throw new Error('Admin sessiyasi tugadi. Qayta kiring.');
+    }
+    if (!response.ok) {
+        const result = await response.json().catch(() => ({}));
+        throw new Error(result.message || 'So‘rov bajarilmadi.');
+    }
+    return response;
+}
+function gamePager(target, page, pageSize, total, callback) {
+    target.replaceChildren();
+    if (total <= pageSize) return;
+    if (page > 1) target.append(gameButton('← Oldingi', () => callback(page - 1)));
+    target.append(gameElement('span', `${page} / ${Math.ceil(total / pageSize)}`));
+    if (page * pageSize < total) target.append(gameButton('Keyingi →', () => callback(page + 1)));
+}
+async function loadPromotionGames(page = gameListPage) {
+    const request = ++gameListRequest;
+    const list = document.getElementById('promotionGamesList');
+    const pages = document.getElementById('promotionGamesPages');
+    list.textContent = 'Aksiyalar yuklanmoqda…';
+    pages.replaceChildren();
+    try {
+        const result = await (await gameFetch('?page=' + page)).json();
+        if (request !== gameListRequest || !adminToken) return;
+        if (!result.games.length && page > 1) return loadPromotionGames(page - 1);
+        gameListPage = page;
+        list.replaceChildren();
+        if (!result.games.length) list.textContent = 'Hozircha aksiya yaratilmagan.';
+        for (const game of result.games) {
+            const card = gameElement('div');
+            card.style.cssText = 'border:1px solid #ddd;border-radius:10px;padding:14px;margin:10px 0;';
+            const latest = String(game.id) === String(result.latestId);
+            const now = Date.now();
+            const status = !latest ? 'Arxiv' : !game.enabled ? 'O‘chirilgan'
+                : game.end_at && now > new Date(game.end_at).getTime() ? 'Tugagan'
+                : game.start_at && now < new Date(game.start_at).getTime() ? 'Rejalashtirilgan' : 'Faol';
+            card.append(gameElement('strong', `Aksiya #${game.id} — ${status}`));
+            card.append(gameElement('p', 'Yaratilgan: ' + gameDate(game.created_at)));
+            card.append(gameElement('p', `Boshlanish: ${gameDate(game.start_at)} • Tugash: ${gameDate(game.end_at)}`));
+            card.append(gameElement('p', `Raqamlar: ${game.min_number}–${game.max_number}`));
+            const actions = gameElement('div');
+            actions.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;';
+            actions.append(
+                gameButton('👥 Ishtirokchilar', () => loadGameParticipants(game.id, 1)),
+                gameButton('📥 Excel', () => downloadGameExcel(game.id)),
+                gameButton('🗑 O‘chirish', () => deletePromotionGame(game.id, latest))
+            );
+            card.append(actions);
+            list.append(card);
+        }
+        gamePager(pages, page, result.pageSize, result.total, loadPromotionGames);
+    } catch (error) {
+        if (request === gameListRequest) list.textContent = error.message;
+    }
+}
+function closeGameParticipants() {
+    ++gameParticipantsRequest;
+    selectedGameId = null;
+    document.getElementById('gameParticipantsPanel').hidden = true;
+    document.getElementById('gameParticipantsContent').replaceChildren();
+}
+async function loadGameParticipants(id, page = 1) {
+    const request = ++gameParticipantsRequest;
+    selectedGameId = String(id);
+    const panel = document.getElementById('gameParticipantsPanel');
+    const content = document.getElementById('gameParticipantsContent');
+    const pages = document.getElementById('gameParticipantsPages');
+    panel.hidden = false;
+    document.getElementById('gameParticipantsTitle').textContent = `Aksiya #${id} — Ishtirokchilar`;
+    content.textContent = 'Yuklanmoqda…';
+    pages.replaceChildren();
+    try {
+        const result = await (await gameFetch(`/${id}/participants?page=${page}`)).json();
+        if (request !== gameParticipantsRequest || !adminToken) return;
+        document.getElementById('gameParticipantsTitle').textContent = `Aksiya #${id} — ${result.total} ishtirokchi`;
+        content.replaceChildren();
+        if (!result.participants.length) content.textContent = 'Hozircha ishtirokchi yo‘q.';
+        else {
+            const table = gameElement('table');
+            table.style.cssText = 'width:100%;border-collapse:collapse;text-align:left;';
+            const header = gameElement('tr');
+            for (const title of ['Raqam', 'Telefon', 'Ism', 'Username', 'Qo‘shilgan sana']) header.append(gameElement('th', title));
+            const head = gameElement('thead');
+            head.append(header);
+            const body = gameElement('tbody');
+            for (const p of result.participants) {
+                const row = gameElement('tr');
+                for (const value of [p.participant_number, p.phone || '—', p.customer_name || '—', p.customer_username || '—', gameDate(p.created_at)]) {
+                    const cell = gameElement('td', String(value));
+                    cell.style.cssText = 'padding:10px 8px;border-bottom:1px solid #eee;white-space:nowrap;';
+                    row.append(cell);
+                }
+                body.append(row);
+            }
+            table.append(head, body);
+            content.append(table);
+        }
+        gamePager(pages, page, result.pageSize, result.total, next => loadGameParticipants(id, next));
+    } catch (error) {
+        if (request === gameParticipantsRequest) content.textContent = error.message;
+    }
+}
+async function downloadGameExcel(id) {
+    const message = document.getElementById('promotionGamesMessage');
+    message.textContent = `Aksiya #${id}: Excel tayyorlanmoqda…`;
+    try {
+        const response = await gameFetch(`/${id}/excel`);
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const link = gameElement('a');
+        link.href = objectUrl;
+        link.download = `aksiya-${id}.xlsx`;
+        document.body.append(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+        message.textContent = `Aksiya #${id}: Excel yuklab olish boshlandi.`;
+    } catch (error) { message.textContent = error.message; }
+}
+async function deletePromotionGame(id, latest) {
+    const note = latest ? '\nBu eng so‘nggi aksiya. O‘chirilgach, undan oldingi aksiya sozlamasi joriy bo‘ladi; u yoqilgan bo‘lsa, yana ishlashi mumkin.' : '';
+    if (!confirm(`Aksiya #${id}, uning barcha ishtirokchilari va Excel fayli o‘chirilsinmi? Bu amalni qaytarib bo‘lmaydi.${note}`)) return;
+    const message = document.getElementById('promotionGamesMessage');
+    message.textContent = 'O‘chirilmoqda…';
+    try {
+        const result = await (await gameFetch('/' + id, { method: 'DELETE' })).json();
+        if (selectedGameId === String(id)) closeGameParticipants();
+        message.textContent = result.warning || `Aksiya #${id} o‘chirildi.`;
+    } catch (error) { message.textContent = error.message; }
+    await loadPromotionGames();
+    await loadPromotionSettings();
+}
+
 async function loadPromotionSettings() {
     try {
         const response = await fetch("/api/admin/promotion-settings", {
@@ -2133,12 +2318,12 @@ async function loadPromotionSettings() {
 
         document.getElementById("promotionStartAt").value =
             settings.start_at
-                ? new Date(settings.start_at).toISOString().slice(0, 16)
+                ? gameLocalInputDate(settings.start_at)
                 : "";
 
         document.getElementById("promotionEndAt").value =
             settings.end_at
-                ? new Date(settings.end_at).toISOString().slice(0, 16)
+                ? gameLocalInputDate(settings.end_at)
                 : "";
 
         document.getElementById("promotionMinNumber").value =
@@ -2223,6 +2408,7 @@ async function savePromotionSettings() {
         message.style.color = "#198754";
         message.innerText =
             "🎉 Yangi aksiya yaratildi! Excel fayli avtomatik yaratildi.";
+        await loadPromotionGames(1);
 
     } catch (error) {
         console.error("Aksiya sozlamasi saqlash xatosi:", error);
