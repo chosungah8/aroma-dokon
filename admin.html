@@ -147,6 +147,13 @@
         </button>
     </div>
 
+    <details style="margin-bottom:15px;">
+        <summary style="cursor:pointer;font-weight:bold;padding:12px;">Telegram ulanishi</summary>
+        <p style="padding:8px 0;">Yangilanishdan keyin bot ulanishini bir marta sozlang.</p>
+        <button type="button" onclick="setupTelegramWebhook(this)">Telegram ulanishini sozlash</button>
+        <div id="telegramWebhookMessage" role="status" style="padding:8px 0;"></div>
+    </details>
+
     <details id="categorySection" style="margin-bottom:15px;">
         <summary style="
             font-size:18px;
@@ -1042,6 +1049,22 @@ method: "POST",
 }
 
 
+async function setupTelegramWebhook(button) {
+    const message = document.getElementById('telegramWebhookMessage');
+    button.disabled = true;
+    message.textContent = 'Telegram ulanishi sozlanmoqda…';
+    try {
+        const response = await fetch('/api/admin/telegram-webhook', {
+            method: 'POST', headers: { Authorization: 'Bearer ' + adminToken }
+        });
+        const result = await response.json();
+        if (response.status === 401) { logout(); throw new Error('Qayta admin panelga kiring.'); }
+        if (!response.ok || !result.ok) throw new Error(result.message || 'Ulanishni sozlab bo‘lmadi.');
+        message.textContent = result.message;
+    } catch (error) { message.textContent = error.message; }
+    finally { button.disabled = false; }
+}
+
 function showAdmin() {
 
     document
@@ -1929,17 +1952,17 @@ async function loadOrders() {
 
             const itemsText = (order.items || [])
                 .map(product =>
-                    `• ${product.name} — ${product.count} ta × ${Number(product.price).toLocaleString()} so'm`
+                    `• ${escapeHtml(product.name)} — ${Number(product.count) || 0} ta × ${Number(product.price).toLocaleString()} so'm`
                 )
                 .join("<br>");
 
             item.innerHTML = `
                 <div style="font-weight:bold; font-size:16px;">
-                    🛍 ${order.id}
+                    🛍 ${escapeHtml(order.id)}
                 </div>
 
                 <div style="font-size:12px; color:#777; margin-top:5px;">
-                    🕒 ${order.date}
+                    🕒 ${escapeHtml(order.date)}
                 </div>
 
                 <hr>
@@ -1955,14 +1978,14 @@ async function loadOrders() {
                 </p>
 
                 <p>
-                    📞 <b>Telefon:</b> ${order.phone || "—"}<br>
-                    📍 <b>Manzil:</b> ${order.address || "—"}
+                    📞 <b>Telefon:</b> ${escapeHtml(order.phone || "—")}<br>
+                    📍 <b>Manzil:</b> ${escapeHtml(order.address || "—")}
                 </p>
 
                 <p>
                     👤 <b>Mijoz:</b>
-                    ${order.customer?.name || "—"}
-                    ${order.customer?.username ? " (@" + order.customer.username + ")" : ""}
+                    ${escapeHtml(order.customer?.name || "—")}
+                    ${order.customer?.username ? " (@" + escapeHtml(order.customer.username) + ")" : ""}
                 </p>
 
 <div style="
@@ -2003,41 +2026,45 @@ async function loadOrders() {
 ">
     <button
         style="background:#e7f3ff;"
-        onclick="updateOrderStatus('${order.id}', 'Qabul qilindi')"
+        data-order-status="Qabul qilindi"
     >
         ✅ Qabul qilindi
     </button>
 
     <button
         style="background:#fff3cd;"
-        onclick="updateOrderStatus('${order.id}', 'Tayyorlanmoqda')"
+        data-order-status="Tayyorlanmoqda"
     >
         🔄 Tayyorlanmoqda
     </button>
 
     <button
         style="background:#e8f5e9;"
-        onclick="updateOrderStatus('${order.id}', 'Yetkazilmoqda')"
+        data-order-status="Yetkazilmoqda"
     >
         🚚 Yetkazilmoqda
     </button>
 
     <button
         style="background:#d4edda;"
-        onclick="updateOrderStatus('${order.id}', 'Yakunlandi')"
+        data-order-status="Yakunlandi"
     >
         ✅ Yakunlandi
     </button>
 
     <button
         style="background:#ffe5e5;color:#d00;"
-        onclick="deleteOrder('${order.id}')"
+        data-delete-order
     >
         🗑 O‘chirish
     </button>
 </div>
             `;
 
+            item.querySelectorAll('[data-order-status]').forEach(button => {
+                button.onclick = () => updateOrderStatus(order.id, button.dataset.orderStatus);
+            });
+            item.querySelector('[data-delete-order]').onclick = () => deleteOrder(order.id);
             list.appendChild(item);
         });
 
@@ -3178,10 +3205,11 @@ async function deleteCategory(id, name) {
 
 
 function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    return String(text ?? '').replace(/[&<>"']/g, character => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[character]);
 }
+
 
 
 function escapeJs(text) {

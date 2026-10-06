@@ -1,4 +1,5 @@
 const { bot, webServer } = require('./lib/server.js');
+const { safeEqual, adminTokenIsValid, telegramWebhookSecret } = require('./lib/security.js');
 
 function readBody(req) {
     return new Promise((resolve, reject) => {
@@ -22,163 +23,71 @@ function readBody(req) {
 
 module.exports = async function handler(req, res) {
 
-if (req.url === '/api/products' && req.method === 'GET') {
-    try {
-        const { createClient } = require('@supabase/supabase-js');
+    const pathname = new URL(req.url, 'http://localhost').pathname;
+    const setupToken = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    const isSetupAdmin = adminTokenIsValid(setupToken, process.env.ADMIN_PASSWORD);
+    res.setHeader('Cache-Control', 'no-store');
 
-        const supabase = createClient(
-            process.env.SUPABASE_URL,
-            process.env.SUPABASE_SERVICE_ROLE_KEY
-        );
-
-        const { data, error } = await supabase
-            .from('products')
-            .select('*')
-            .eq('active', true)
-            .order('id', { ascending: true });
-
-        if (error) {
-            throw error;
-        }
-
-const { data: categories } = await supabase
-    .from('categories')
-    .select('name, discount_percent, discount_active');
-const categoryDiscounts = new Map(
-    (categories || []).map(c => [
-        String(c.name).trim(),
-        { percent: Number(c.discount_percent) || 0, active: c.discount_active === true }
-    ])
-);
-
-        const products = (data || []).map(product => ({
-            id: product.id,
-            name: product.name,
-            category: product.category,
-            desc: product.description || '',
-            price: Number(product.price) || 0,
-            img: product.image || '',
-            discountActive: product.discount_active === true || categoryDiscounts.get(String(product.category).trim())?.active === true,
-            discountPercent: product.discount_active === true
-                ? Number(product.discount_percent) || 0
-                : (categoryDiscounts.get(String(product.category).trim())?.percent || 0),
-            active: product.active !== false,
-stock: Number(product.stock) || 0,
-variants: Array.isArray(product.variants) ? product.variants : []
-        }));
-
-        res.statusCode = 200;
-        res.setHeader('Content-Type', 'application/json; charset=utf-8');
-        return res.end(JSON.stringify(products));
-
-    } catch (error) {
-        console.error('PUBLIC PRODUCTS XATOSI:', error);
-
-        res.statusCode = 500;
-        res.setHeader('Content-Type', 'application/json; charset=utf-8');
-        return res.end(JSON.stringify({
-            success: false,
-            message: 'Mahsulotlarni yuklab bo‘lmadi'
-        }));
-    }
-}
-
-    if (req.url === '/api/categories' && req.method === 'GET') {
-        try {
-            const { createClient } = require('@supabase/supabase-js');
-
-            const supabase = createClient(
-                process.env.SUPABASE_URL,
-                process.env.SUPABASE_SERVICE_ROLE_KEY
-            );
-
-            const { data, error } = await supabase
-                .from('categories')
-                .select('id, name, parent_id')
-                .order('id', { ascending: true });
-
-            if (error) {
-                throw error;
-            }
-
-            res.statusCode = 200;
-            res.setHeader('Content-Type', 'application/json; charset=utf-8');
-            return res.end(JSON.stringify(data || []));
-
-        } catch (error) {
-            console.error('PUBLIC CATEGORIES XATOSI:', error);
-
-            res.statusCode = 500;
-            res.setHeader('Content-Type', 'application/json; charset=utf-8');
-            return res.end(JSON.stringify({
-                success: false,
-                message: 'Kategoriyalarni yuklab bo‘lmadi'
-            }));
-        }
-    }
-
-    if (req.url === '/api/webhook-info' && req.method === 'GET') {
-    try {
-        const setupKey = req.headers.authorization?.replace(/^Bearer\s+/i, '');
-        const expectedKey = process.env.ADMIN_PASSWORD;
-        if (!setupKey || setupKey !== expectedKey) {
+    if (pathname === '/api/webhook-info' && req.method === 'GET') {
+        if (!isSetupAdmin) {
             res.statusCode = 401;
-            res.setHeader('Content-Type', 'application/json');
-            return res.end(JSON.stringify({ok:false,error:'Unauthorized'}));
+            return res.end(JSON.stringify({ ok: false, message: 'Ruxsat yo‘q' }));
         }
-        const info = await bot.telegram.getWebhookInfo();
-        res.statusCode = 200;
-        res.setHeader('Content-Type', 'application/json');
-        return res.end(JSON.stringify({
-            ok: true,
-            url: info.url,
-            pending_update_count: info.pending_update_count,
-            last_error_date: info.last_error_date || null,
-            last_error_message: info.last_error_message || null,
-            ip_address: info.ip_address || null
-        }));
-    } catch (error) {
-        res.statusCode = 500;
-        res.setHeader('Content-Type', 'application/json');
-        return res.end(JSON.stringify({ok:false,error:error.message}));
-    }
-}
-
-if (req.url === '/api/setup-webhook' && req.method === 'GET') {
         try {
-            const setupKey = req.headers.authorization?.replace(/^Bearer\s+/i, '');
-            const expectedKey = process.env.ADMIN_PASSWORD;
-
-            if (!setupKey || setupKey !== expectedKey) {
-                res.statusCode = 401;
-                res.setHeader('Content-Type', 'application/json');
-                return res.end(JSON.stringify({ ok: false, error: 'Unauthorized' }));
-            }
-
-            const webhookUrl = `${process.env.WEB_APP_URL}/api/telegram`;
-            const result = await bot.telegram.setWebhook(webhookUrl);
-
-            res.statusCode = 200;
-            res.setHeader('Content-Type', 'application/json');
-            return res.end(JSON.stringify({
-                ok: true,
-                webhookUrl,
-                telegramResult: result
-            }));
+            const info = await bot.telegram.getWebhookInfo();
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            return res.end(JSON.stringify({ ok: true, url: info.url,
+                pending_update_count: info.pending_update_count,
+                last_error_message: info.last_error_message || null }));
         } catch (error) {
-            console.error('SET WEBHOOK ERROR:', error);
-            res.statusCode = 500;
-            res.setHeader('Content-Type', 'application/json');
-            return res.end(JSON.stringify({
-                ok: false,
-                error: error.message
-            }));
+            res.statusCode = 502;
+            return res.end(JSON.stringify({ ok: false, message: 'Telegram holatini tekshirib bo‘lmadi' }));
         }
     }
 
-    if (req.url === '/api/telegram' && req.method === 'POST') {
+    if ((pathname === '/api/admin/telegram-webhook' || pathname === '/api/setup-webhook') && req.method === 'POST') {
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        if (!isSetupAdmin) {
+            res.statusCode = 401;
+            return res.end(JSON.stringify({ ok: false, message: 'Ruxsat yo‘q' }));
+        }
         try {
-            const update = req.body || await readBody(req);
+            const secret = telegramWebhookSecret(process.env.BOT_TOKEN);
+            if (!secret) throw new Error('BOT_TOKEN missing');
+            const webhookUrl = new URL('/api/telegram', process.env.WEB_APP_URL);
+            if (webhookUrl.protocol !== 'https:') throw new Error('HTTPS required');
+            await bot.telegram.setWebhook(webhookUrl.toString(), { secret_token: secret });
+            return res.end(JSON.stringify({ ok: true, message: 'Telegram himoyalangan ulanishi sozlandi.' }));
+        } catch (error) {
+            res.statusCode = 502;
+            return res.end(JSON.stringify({ ok: false, message: 'Ulanish sozlanmadi. BOT_TOKEN va WEB_APP_URL sozlamalarini tekshiring.' }));
+        }
+    }
+    if (pathname === '/api/setup-webhook' || pathname === '/api/admin/telegram-webhook') {
+        res.statusCode = 405;
+        res.setHeader('Allow', 'POST');
+        return res.end(JSON.stringify({ ok: false, message: 'POST so‘rovi kerak' }));
+    }
+
+    if (pathname === '/api/telegram' && req.method === 'POST') {
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        const secret = telegramWebhookSecret(process.env.BOT_TOKEN);
+        if (!secret) {
+            res.statusCode = 503;
+            return res.end(JSON.stringify({ ok: false }));
+        }
+        if (!safeEqual(req.headers['x-telegram-bot-api-secret-token'], secret)) {
+            res.statusCode = 403;
+            return res.end(JSON.stringify({ ok: false }));
+        }
+        try {
+            const rawUpdate = req.body !== undefined ? req.body : await readBody(req);
+            const update = typeof rawUpdate === 'string' || Buffer.isBuffer(rawUpdate)
+                ? JSON.parse(rawUpdate.toString()) : rawUpdate;
+            if (!update || !Number.isSafeInteger(update.update_id)) {
+                res.statusCode = 400;
+                return res.end(JSON.stringify({ ok: false }));
+            }
 
             await bot.handleUpdate(update);
 
@@ -186,13 +95,13 @@ if (req.url === '/api/setup-webhook' && req.method === 'GET') {
             res.setHeader('Content-Type', 'application/json');
             return res.end(JSON.stringify({ ok: true }));
         } catch (error) {
-            console.error('Telegram webhook error:', error);
+            console.error('Telegram webhook update failed');
 
             res.statusCode = 500;
             res.setHeader('Content-Type', 'application/json');
             return res.end(JSON.stringify({
                 ok: false,
-                error: error.message
+                error: 'Telegram so‘rovini qayta ishlashda xatolik'
             }));
         }
     }

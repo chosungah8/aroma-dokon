@@ -3055,6 +3055,12 @@ if (window.Telegram && window.Telegram.WebApp) {
     }
 }
 
+function escapeOrderText(value) {
+    return String(value ?? '').replace(/[&<>"']/g, character => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[character]);
+}
+
 async function showMyOrders() {
     const box = document.getElementById("myOrdersBox");
     const list = document.getElementById("myOrdersList");
@@ -3118,7 +3124,7 @@ orderBox.style.cssText = `
 
             const productsText = (order.items || [])
                 .map(item =>
-                    `• ${item.name} — ${item.count} ta`
+                    `• ${escapeOrderText(item.name)} — ${Number(item.count) || 0} ta`
                 )
                 .join("<br>");
 
@@ -3128,11 +3134,11 @@ orderBox.onclick = function() {
 
             orderBox.innerHTML = `
                 <div style="font-weight:bold; font-size:16px;">
-                    🛍 ${order.id}
+                    🛍 ${escapeOrderText(order.id)}
                 </div>
 
                 <div style="font-size:12px; color:#777; margin:5px 0 10px;">
-                    🕒 ${order.date}
+                    🕒 ${escapeOrderText(order.date)}
                 </div>
 
                 <div style="margin-bottom:8px;">
@@ -3149,7 +3155,7 @@ orderBox.onclick = function() {
                     background:#f5f5f5;
                     font-weight:bold;
                 ">
-                    ${statusIcon} Holat: ${status}
+                    ${statusIcon} Holat: ${escapeOrderText(status)}
                 </div>
             `;
 
@@ -3191,10 +3197,10 @@ function showOrderDetails(order) {
                 border-bottom:1px solid #eee;
             ">
                 <div style="font-weight:bold;">
-                    ${item.name}
+                    ${escapeOrderText(item.name)}
                 </div>
                 <div style="color:#666; margin-top:3px;">
-                    ${item.count} ta ×
+                    ${Number(item.count) || 0} ta ×
                     ${Number(item.price).toLocaleString()} so'm
                 </div>
             </div>
@@ -3218,11 +3224,11 @@ function showOrderDetails(order) {
         </div>
 
         <div style="font-size:18px; font-weight:bold; margin-bottom:6px;">
-            🛍 ${order.id}
+            🛍 ${escapeOrderText(order.id)}
         </div>
 
         <div style="font-size:12px; color:#777; margin-bottom:15px;">
-            🕒 ${order.date}
+            🕒 ${escapeOrderText(order.date)}
         </div>
 
         <div style="
@@ -3232,7 +3238,7 @@ function showOrderDetails(order) {
             font-weight:bold;
             margin-bottom:15px;
         ">
-            ${statusIcon} Holat: ${status}
+            ${statusIcon} Holat: ${escapeOrderText(status)}
         </div>
 
         <div style="font-weight:bold; margin-bottom:5px;">
@@ -3254,8 +3260,8 @@ function showOrderDetails(order) {
             padding-top:12px;
             border-top:1px solid #eee;
         ">
-            📞 <b>Telefon:</b> ${order.phone || "—"}<br><br>
-            📍 <b>Manzil:</b> ${order.address || "—"}
+            📞 <b>Telefon:</b> ${escapeOrderText(order.phone || "—")}<br><br>
+            📍 <b>Manzil:</b> ${escapeOrderText(order.address || "—")}
         </div>
     `;
 
