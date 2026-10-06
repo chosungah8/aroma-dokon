@@ -2520,6 +2520,43 @@ function updateCartBar() {
                 couponDiscountAmount = 0;
             }
 
+            const originalTotalEl = document.getElementById('cartOriginalTotal');
+            const productDiscountRow = document.getElementById('cartProductDiscountRow');
+            const productDiscountEl = document.getElementById('cartProductDiscount');
+            const couponDiscountRow = document.getElementById('cartCouponDiscountRow');
+            const couponDiscountEl = document.getElementById('cartCouponDiscount');
+            const finalTotalEl = document.getElementById('cartFinalTotal');
+
+            if (originalTotalEl) {
+                originalTotalEl.innerText =
+                    `${originalTotal.toLocaleString()} so'm`;
+            }
+
+            if (productDiscountRow && productDiscountEl) {
+                if (productDiscountAmount > 0) {
+                    productDiscountRow.style.display = 'flex';
+                    productDiscountEl.innerText =
+                        `-${productDiscountAmount.toLocaleString()} so'm`;
+                } else {
+                    productDiscountRow.style.display = 'none';
+                }
+            }
+
+            if (couponDiscountRow && couponDiscountEl) {
+                if (couponDiscountAmount > 0) {
+                    couponDiscountRow.style.display = 'flex';
+                    couponDiscountEl.innerText =
+                        `-${couponDiscountAmount.toLocaleString()} so'm`;
+                } else {
+                    couponDiscountRow.style.display = 'none';
+                }
+            }
+
+            if (finalTotalEl) {
+                finalTotalEl.innerText =
+                    `${total.toLocaleString()} so'm`;
+            }
+
             const deliveryRow = document.getElementById('freeDeliveryRow');
             const deliveryText = document.getElementById('freeDeliveryText');
 
