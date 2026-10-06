@@ -2529,10 +2529,7 @@ function updateCartBar() {
                 if (total >= freeDeliveryMinAmount) {
                     deliveryText.innerText = 'Bepul yetkazib berish';
                 } else {
-                    const remaining = freeDeliveryMinAmount - total;
-
-                    deliveryText.innerText =
-                        `${remaining.toLocaleString()} so'm qoldi`;
+                    deliveryText.innerText = 'Pullik yetkazib berish';
                 }
             } else if (deliveryRow) {
                 deliveryRow.style.display = 'none';
