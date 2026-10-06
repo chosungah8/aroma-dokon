@@ -644,18 +644,21 @@
     </div>
 
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
+        const tg = window.Telegram?.WebApp || null;
+        try { tg?.expand(); } catch (error) {
+            console.warn('Telegram oynasini kengaytirib bo‘lmadi:', error);
+        }
 
-const telegramUser = tg.initDataUnsafe?.user;
-console.log("TELEGRAM USER:", tg.initDataUnsafe?.user);
-console.log("TELEGRAM USER:", tg.initDataUnsafe?.user);
+const telegramUser = tg?.initDataUnsafe?.user;
+console.log("TELEGRAM USER:", tg?.initDataUnsafe?.user);
+console.log("TELEGRAM USER:", tg?.initDataUnsafe?.user);
 
 const urlUserId = new URLSearchParams(window.location.search).get('userId');
 const telegramUserId = telegramUser?.id || urlUserId || null;
 
 let products = [];
-let cart = {};
+const cartStorageKey = 'aroma_cart_v1:' + (telegramUserId ? String(telegramUserId) : 'guest');
+let cart = restoreSavedCart();
 let selectedCategory = null;
 let allCategories = [];
 
@@ -1144,53 +1147,119 @@ function calculateCartSubtotal() {
     return total;
 }
 
-async function loadProducts() {
-    try {
-        const response = await fetch("/api/products?ts=" + Date.now(), { cache: "no-store" });
-
-        if (!response.ok) {
-            throw new Error("products.json yuklanmadi");
+// Catalog requests can fail while a WebView connects or the server starts.
+// Retry only reads, with a deadline for each complete response (including JSON).
+async function fetchCatalogArray(path, { attempts = 3, timeoutMs = 12000 } = {}) {
+    let lastError;
+    for (let attempt = 0; attempt < attempts; attempt++) {
+        const controller = new AbortController();
+        let timer;
+        try {
+            const timeout = new Promise((_, reject) => {
+                timer = setTimeout(() => {
+                    reject(new Error('So‘rov vaqti tugadi'));
+                    controller.abort();
+                }, timeoutMs);
+            });
+            const request = (async () => {
+                const response = await fetch(path + '?ts=' + Date.now(), {
+                    cache: 'no-store', signal: controller.signal
+                });
+                if (!response.ok) {
+                    const error = new Error('Yuklash xatosi: ' + response.status);
+                    error.retryable = response.status === 408 || response.status === 429 || response.status >= 500;
+                    throw error;
+                }
+                const result = await response.json();
+                if (!Array.isArray(result)) throw new Error('Server javobi ro‘yxat emas');
+                return result;
+            })();
+            return await Promise.race([request, timeout]);
+        } catch (error) {
+            lastError = error;
+            if (error.retryable === false || attempt === attempts - 1) throw error;
+        } finally {
+            clearTimeout(timer);
         }
-
-        products = await response.json();
-
-        const countryResponse = await fetch("/api/countries?ts=" + Date.now(), {
-            cache: "no-store"
-        });
-
-        const countries = countryResponse.ok
-            ? await countryResponse.json()
-            : [];
-
-        const countryMap = new Map(
-            countries.map(country => [
-                Number(country.id),
-                country
-            ])
-        );
-
-        products = products.map(product => ({
-            ...product,
-            country: product.country_id
-                ? countryMap.get(Number(product.country_id)) || null
-                : null
-        }));
-
-        renderProducts();
-        updateCartBar();
-    } catch (error) {
-        console.error("Mahsulotlarni yuklash xatosi:", error);
-
-        const grid = document.getElementById("productGrid");
-
-        if (grid) {
-            grid.innerHTML = `
-                <div style="grid-column:1/-1; text-align:center; padding:30px; color:#d00;">
-                    Mahsulotlarni yuklashda xatolik yuz berdi.
-                </div>
-            `;
-        }
+        await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
     }
+    throw lastError;
+}
+
+function catalogMessage(containerId, text, retry) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const message = document.createElement('div');
+    message.style.cssText = 'grid-column:1/-1;text-align:center;padding:12px;font-size:13px;';
+    message.setAttribute('role', 'status');
+    message.textContent = text;
+    if (retry) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = 'Qayta yuklash';
+        button.style.cssText = 'margin-left:10px;padding:8px 12px;border:0;border-radius:8px;background:#e83e73;color:white;';
+        button.onclick = retry;
+        message.appendChild(button);
+    }
+    container.replaceChildren(message);
+}
+
+let productsLoaded = false;
+let productsRequest = null;
+let categoriesLoaded = false;
+let categoriesRequest = null;
+let categoriesViewId = null;
+
+function loadProducts() {
+    if (productsRequest) return productsRequest;
+    if (!productsLoaded) catalogMessage('productGrid', 'Mahsulotlar yuklanmoqda…');
+    productsRequest = (async () => {
+        try {
+            products = await fetchCatalogArray('/api/products');
+            renderProducts();
+            updateCartBar();
+            productsLoaded = true;
+
+            // Country information is optional; display products before fetching it.
+            try {
+                const countries = await fetchCatalogArray('/api/countries', { attempts: 2, timeoutMs: 8000 });
+                const countryMap = new Map(countries.map(country => [Number(country.id), country]));
+                products = products.map(product => ({
+                    ...product,
+                    country: product.country_id ? countryMap.get(Number(product.country_id)) || null : null
+                }));
+                renderProducts();
+            } catch (error) { console.warn('Davlatlar yuklanmadi:', error); }
+        } catch (error) {
+            console.error('Mahsulotlarni yuklash xatosi:', error);
+            productsLoaded = false;
+            catalogMessage('productGrid', 'Mahsulotlar yuklanmadi. Internet aloqasini tekshiring.', () => loadProducts());
+        } finally { productsRequest = null; }
+    })();
+    return productsRequest;
+}
+
+function loadCategories(selectedMainId = null) {
+    categoriesViewId = selectedMainId;
+    if (categoriesLoaded) {
+        renderCategories(categoriesViewId);
+        return Promise.resolve();
+    }
+    if (categoriesRequest) return categoriesRequest;
+    catalogMessage('categories', 'Kategoriyalar yuklanmoqda…');
+    categoriesRequest = (async () => {
+        try {
+            allCategories = await fetchCatalogArray('/api/categories');
+            categoriesLoaded = true;
+            renderCategories(categoriesViewId);
+            if (productsLoaded) renderProducts();
+        } catch (error) {
+            console.error('Kategoriyalarni yuklash xatosi:', error);
+            catalogMessage('categories', 'Kategoriyalar yuklanmadi. Internet aloqasini tekshiring.',
+                () => loadCategories(categoriesViewId));
+        } finally { categoriesRequest = null; }
+    })();
+    return categoriesRequest;
 }
 
 function getCategoryIcon(name) {
@@ -1234,17 +1303,8 @@ function getCategoryVisual(category) {
     </span>`;
 }
 
-async function loadCategories(selectedMainId = null) {
+function renderCategories(selectedMainId = null) {
     try {
-        const response = await fetch("/api/categories?ts=" + Date.now(), { cache: "no-store" });
-
-        if (!response.ok) {
-            throw new Error("Kategoriyalar yuklanmadi");
-        }
-
-        const categories = await response.json();
-        allCategories = Array.isArray(categories) ? categories : [];
-
         const container = document.getElementById("categories");
 
         if (!container) return;
@@ -1388,8 +1448,13 @@ subButton.style.cssText = `
 
         // Asosiy kategoriyalar qatori
         const mainCategories = allCategories.filter(
-            category => category.parent_id === null
+            category => category.parent_id == null
         );
+
+        if (!mainCategories.length) {
+            catalogMessage('categories', 'Hozircha kategoriya yo‘q.');
+            return;
+        }
 
         container.style.height = Math.ceil(mainCategories.length / 5) * 85 + "px";
 
@@ -2362,6 +2427,34 @@ async function sendFindProductRequest() {
     }
 }
 
+function restoreSavedCart() {
+    const restored = {};
+    try {
+        const saved = JSON.parse(localStorage.getItem(cartStorageKey) || '{}');
+        if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return restored;
+        for (const [key, quantity] of Object.entries(saved)) {
+            if (!/^[1-9]\d*(?:__.*)?$/.test(key) || !Number.isSafeInteger(quantity) || quantity <= 0) continue;
+            const parts = key.split('__');
+            let variant = '';
+            try { variant = decodeURIComponent(parts.slice(1).join('__')); }
+            catch (_) { continue; }
+            restored[key] = quantity;
+            if (variant) {
+                window.selectedVariants = window.selectedVariants || {};
+                window.selectedVariants[parts[0]] = variant;
+            }
+        }
+    } catch (error) { console.warn('Saqlangan savatni o‘qib bo‘lmadi:', error); }
+    return restored;
+}
+
+function persistCart() {
+    try {
+        if (Object.keys(cart).length) localStorage.setItem(cartStorageKey, JSON.stringify(cart));
+        else localStorage.removeItem(cartStorageKey);
+    } catch (error) { console.warn('Savatni qurilmada saqlab bo‘lmadi:', error); }
+}
+
 function getCartKey(id, variant = "") {
     return variant
         ? `${id}__${encodeURIComponent(variant)}`
@@ -2414,6 +2507,7 @@ function addToCart(id) {
 
     cart[cartKey] = currentQty + 1;
 
+    persistCart();
     updateCartBar();
     renderProducts();
     loadAvailableCoupons();
@@ -2445,6 +2539,7 @@ function changeQty(id, delta) {
         cart[cartKey] = newQty;
     }
 
+    persistCart();
     updateCartBar();
     renderCartItems();
     renderProducts();
@@ -2460,6 +2555,7 @@ function removeFromCart(id) {
         delete window.selectedVariants[id];
     }
 
+    persistCart();
     updateCartBar();
     renderCartItems();
     renderProducts();
@@ -2483,7 +2579,10 @@ function updateCartBar() {
                     prod => Number(prod.id) === Number(productId)
                 );
 
-                if (!p) continue;
+                if (!p) {
+                    count += Number(cart[cartKey]) || 0;
+                    continue;
+                }
 
                 const quantity = Number(cart[cartKey]) || 0;
                 const originalPrice = getVariantPrice(p, variant);
@@ -2627,7 +2726,19 @@ function updateCartBar() {
                     prod => Number(prod.id) === Number(productId)
                 );
 
-                if (!p) continue;
+                if (!p) {
+                    hasItems = true;
+                    const unavailable = document.createElement('div');
+                    unavailable.className = 'cart-item';
+                    unavailable.textContent = `Mahsulot #${productId} hozir mavjud emas (${cart[cartKey]} ta). `;
+                    const removeButton = document.createElement('button');
+                    removeButton.type = 'button';
+                    removeButton.textContent = 'Savatdan olib tashlash';
+                    removeButton.onclick = () => removeCartItem(cartKey);
+                    unavailable.appendChild(removeButton);
+                    list.appendChild(unavailable);
+                    continue;
+                }
 
                 const quantity = Number(cart[cartKey]) || 0;
                 const variantPrice = getVariantPrice(p, variant);
@@ -2814,7 +2925,8 @@ function updateCartBar() {
                 cart[cartKey] = newQty;
             }
 
-            updateCartBar();
+            persistCart();
+    updateCartBar();
             renderCartItems();
             renderProducts();
             loadAvailableCoupons();
@@ -2823,7 +2935,8 @@ function updateCartBar() {
         function removeCartItem(cartKey) {
             delete cart[cartKey];
 
-            updateCartBar();
+            persistCart();
+    updateCartBar();
             renderCartItems();
             renderProducts();
             loadAvailableCoupons();
@@ -2858,7 +2971,21 @@ function sendOrder() {
         const p = products.find(prod => Number(prod.id) === Number(productId));
         const quantity = Number(cart[cartKey]) || 0;
 
+        if (quantity > 0 && !p) {
+            alert('Savatdagi ayrim mahsulotlar hozir mavjud emas. Ularni savatdan olib tashlang.');
+            return;
+        }
         if (p && quantity > 0) {
+            if (getProductCartQty(p.id) > (Number(p.stock) || 0)) {
+                alert(`${p.name}: mavjud miqdor ${Number(p.stock) || 0} ta. Savatdagi miqdorni kamaytiring.`);
+                return;
+            }
+            const variants = Array.isArray(p.variants) ? p.variants : [];
+            if ((selectedVariant && !variants.some(v => (typeof v === 'string' ? v : v?.name) === selectedVariant))
+                || (!selectedVariant && variants.length > 0)) {
+                alert(`${p.name}: variant o‘zgargan. Mahsulotni savatdan olib tashlab, variantini qayta tanlang.`);
+                return;
+            }
             const variantPrice = getVariantPrice(p, selectedVariant);
 
             const finalPrice = p.discountActive && p.discountPercent > 0
@@ -2905,7 +3032,7 @@ const orderData = {
     couponDiscountAmount: couponDiscountAmount || 0,
     phone: phone,
     address: address,
-    telegramUserId: tg.initDataUnsafe?.user?.id || null
+    telegramUserId: tg?.initDataUnsafe?.user?.id || null
 };
 
     console.log('Yuborilayotgan buyurtma:', orderData);
@@ -2916,6 +3043,7 @@ if (window.Telegram && window.Telegram.WebApp) {
     alert("✅ Buyurtmangiz qabul qilindi!");
 
     cart = {};
+    persistCart();
     updateCartBar();
     renderCartItems();
     renderProducts();
@@ -2950,7 +3078,7 @@ if (!userId) {
             "/api/my-orders?userId=" + encodeURIComponent(userId),
             {
                 headers: {
-                    "X-Telegram-Init-Data": tg.initData
+                    "X-Telegram-Init-Data": tg?.initData || ""
                 }
             }
         );
@@ -3165,10 +3293,26 @@ async function loadDeliverySettings() {
     }
 }
 
-loadCategories();
-loadProducts();
-loadDeliverySettings();
-loadPublicPromotions();
+let catalogStarted = false;
+function startCatalog() {
+    if (catalogStarted) return;
+    catalogStarted = true;
+    loadCategories();
+    loadProducts();
+    loadDeliverySettings();
+    loadPublicPromotions();
+}
+function recoverCatalog() {
+    if (!catalogStarted || document.visibilityState === 'hidden') return;
+    if (!categoriesLoaded) loadCategories(categoriesViewId);
+    if (!productsLoaded) loadProducts();
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startCatalog, { once: true });
+} else { startCatalog(); }
+window.addEventListener('online', recoverCatalog);
+window.addEventListener('pageshow', recoverCatalog);
+document.addEventListener('visibilitychange', recoverCatalog);
 
     </script>
 
