@@ -38,7 +38,8 @@ function handlerFixture() {
     const marker = "bot.on('web_app_data', async (ctx) => {";
     const body = source.slice(source.indexOf(marker) + marker.length, source.indexOf("const http = require('http');")).trim().replace(/\}\);$/, '');
     const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-    return new AsyncFunction('ctx', 'supabase', 'bot', 'updatePromotionExcel', 'ADMIN_TELEGRAM_ID', 'console', 'placeOrder', 'escapeHtml', body);
+    const shared = source.slice(source.indexOf('async function processOrder('), source.indexOf("// Web App'dan buyurtma"));
+    return new AsyncFunction('ctx', 'supabase', 'bot', 'updatePromotionExcel', 'ADMIN_TELEGRAM_ID', 'console', 'placeOrder', 'escapeHtml', shared + '\n' + body);
 }
 const saved = { order: { id: 'AR-confirmed', order_date: '2026-10-07', items: [{ id: 1, name: 'Actual product', price: 90000, count: 1 }], total: 90000,
     original_total: 100000, product_discount_amount: 10000, coupon_discount_amount: 0, participant_number: 1000, promotion_id: 1, phone: '010', address: 'Test' }, new_participant: true };

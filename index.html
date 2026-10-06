@@ -3023,7 +3023,7 @@ async function checkCheckoutReceipt() {
             return 'rejected';
         }
         if (result.state !== 'pending') throw new Error('Invalid receipt');
-        receiptNotice('Tasdiq kutilmoqda. Savatingiz saqlandi. Botdagi /start javobining do‘kon tugmasidan kirganingizni tekshiring.');
+        receiptNotice('Tasdiq kutilmoqda. Savatingiz saqlandi. Holatni tekshirish yoki avvalgi buyurtmani qayta yuborish mumkin.');
         return 'pending';
     } catch (_) {
         receiptNotice('Buyurtma holatini tekshirib bo‘lmadi. Savatingiz saqlandi. Internet tiklangach qayta tekshiring.');
@@ -3040,13 +3040,13 @@ function resumeCheckoutReceipt() {
     };
     void poll();
 }
-function transmitCheckout(attempt) {
+async function transmitCheckout(attempt) {
     if (!window.Telegram?.WebApp || !tg || tg.platform === 'unknown') {
-        alert('Do‘konni botdagi /start javobining tugmasi orqali oching. Savatingiz saqlandi.');
+        alert('Do‘konni Telegramdagi Open yoki /start tugmasidan oching. Savatingiz saqlandi.');
         return;
     }
     const payload = JSON.stringify(attempt.payload);
-    if (new TextEncoder().encode(payload).length > 4096) {
+    if (new TextEncoder().encode(payload).length > (tg.initData ? 65536 : 4096)) {
         alert('Buyurtma hajmi katta. Savatdagi mahsulotlar sonini kamaytiring.');
         return;
     }
@@ -3063,11 +3063,31 @@ function transmitCheckout(attempt) {
         if (!storedAttempt) localStorage.setItem(cartStorageKey, JSON.stringify(attempt.cart));
         localStorage.setItem(pendingCheckoutKey, JSON.stringify(attempt));
         pendingCheckout = attempt;
-        Telegram.WebApp.sendData(payload);
+        if (tg.initData) {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 25000);
+            try {
+                const response = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': tg.initData },
+                    body: payload, signal: controller.signal
+                });
+                if (response.status === 401) {
+                    receiptNotice('Telegram seansi eskirgan. Do‘konni yopib, Open tugmasidan qayta oching. Savatingiz saqlandi.');
+                    return;
+                }
+                // The receipt is authoritative even if the HTTP response was interrupted.
+                const state = await checkCheckoutReceipt();
+                if (state === 'accepted' || state === 'rejected') return;
+            } finally { clearTimeout(timeout); }
+        } else {
+            Telegram.WebApp.sendData(payload);
+        }
         receiptNotice('Buyurtma yuborildi. Tasdiq kelguncha savatingiz saqlanadi.');
         resumeCheckoutReceipt();
     } catch (_) {
         receiptNotice('Yuborishni tasdiqlab bo‘lmadi. Savatingiz saqlandi. Holatni tekshirib, qayta urinib ko‘ring.');
+        resumeCheckoutReceipt();
     } finally {
         checkoutSubmitting = false;
         if (button) button.disabled = false;

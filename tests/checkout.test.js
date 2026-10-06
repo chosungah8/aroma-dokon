@@ -92,3 +92,34 @@ test('durably rejected RPC outcome is sent as a customer error, not a successful
     await assert.rejects(placeOrder({ rpc: async () => ({ data: { rejected: true, message: 'Qoldiq yetmaydi' } }) }, {},
         { from: { id: 1 }, update: { update_id: 1 } }), err => err.customerMessage === 'Qoldiq yetmaydi');
 });
+
+test('Open checkout posts signed Telegram data, uses receipt and never calls sendData', async () => {
+    const f = fixture('accepted', false);
+    f.ctx.tg.initData = 'signed-session';
+    const requests = [];
+    f.ctx.fetch = async (url, options) => {
+        requests.push({ url, options });
+        return { ok: true, status: 200, json: async () => ({ state: 'accepted', orderId: 'AR-1003' }) };
+    };
+    await f.ctx.transmitCheckout(attempt);
+    assert.equal(f.sent.length, 0);
+    assert.equal(requests[0].url, '/api/orders');
+    assert.equal(requests[0].options.headers['X-Telegram-Init-Data'], 'signed-session');
+    assert.equal(JSON.parse(requests[0].options.body).requestId, id);
+    assert.equal(requests[1].url, '/api/order-receipt');
+    assert.equal(f.store.has('cart'), false);
+});
+test('Open checkout timeout or expired authentication keeps cart and the same pending request', async () => {
+    for (const expired of [false, true]) {
+        const f = fixture('pending', false);
+        f.ctx.tg.initData = 'signed-session';
+        f.ctx.fetch = async () => {
+            if (expired) return { status: 401, ok: false };
+            throw Error('timeout');
+        };
+        await f.ctx.transmitCheckout(attempt);
+        assert.equal(f.sent.length, 0);
+        assert.equal(f.store.get('cart'), JSON.stringify(attempt.cart));
+        assert.equal(JSON.parse(f.store.get('cart:pending')).id, id);
+    }
+});
