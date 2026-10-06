@@ -2942,7 +2942,23 @@ function updateCartBar() {
             loadAvailableCoupons();
         }
 
+let checkoutSubmitting = false;
+let checkoutAttempt = null;
+function checkoutRequestId(payload) {
+    const signature = JSON.stringify(payload);
+    if (!checkoutAttempt || checkoutAttempt.signature !== signature) {
+        const bytes = new Uint8Array(16);
+        window.crypto.getRandomValues(bytes);
+        bytes[6] = (bytes[6] & 15) | 64;
+        bytes[8] = (bytes[8] & 63) | 128;
+        const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+        checkoutAttempt = { signature, id: `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}` };
+    }
+    return checkoutAttempt.id;
+}
+
 function sendOrder() {
+    if (checkoutSubmitting) return;
     const phone = document.getElementById('phoneInput').value.trim();
     const address = document.getElementById('addressInput').value.trim();
 
@@ -3035,18 +3051,28 @@ const orderData = {
     telegramUserId: tg?.initDataUnsafe?.user?.id || null
 };
 
-    console.log('Yuborilayotgan buyurtma:', orderData);
+    orderData.requestId = checkoutRequestId(orderData);
 
 if (window.Telegram && window.Telegram.WebApp) {
 
-    Telegram.WebApp.sendData(JSON.stringify(orderData));
-    alert("✅ Buyurtmangiz qabul qilindi!");
-
-    cart = {};
-    persistCart();
-    updateCartBar();
-    renderCartItems();
-    renderProducts();
+    checkoutSubmitting = true;
+    const submitButton = document.getElementById('submitOrderBtn');
+    if (submitButton) submitButton.disabled = true;
+    try {
+        Telegram.WebApp.sendData(JSON.stringify(orderData));
+        alert("Buyurtma yuborildi. Botning tasdiq xabarini kuting.");
+        cart = {};
+        persistCart();
+        checkoutAttempt = null;
+        updateCartBar();
+        renderCartItems();
+        renderProducts();
+    } catch (error) {
+        alert("Buyurtma yuborilmadi. Qayta urinib ko‘ring.");
+    } finally {
+        checkoutSubmitting = false;
+        if (submitButton) submitButton.disabled = false;
+    }
 
 }
 
