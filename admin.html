@@ -343,6 +343,88 @@
 </details>
 
 
+<details id="promotionSettingsSection" style="margin-bottom:15px;">
+    <summary style="
+        cursor:pointer;
+        font-weight:800;
+        padding:12px 0;
+    ">
+        🎁 Aksiya / O‘yin
+    </summary>
+
+    <div style="padding-top:12px;">
+
+        <label style="
+            display:flex;
+            align-items:center;
+            gap:8px;
+            margin-bottom:12px;
+        ">
+            <input id="promotionEnabled" type="checkbox">
+            Aksiyani yoqish
+        </label>
+
+        <label style="display:block;margin-bottom:6px;">
+            Boshlanish sanasi
+        </label>
+        <input
+            id="promotionStartAt"
+            type="datetime-local"
+            style="width:100%;box-sizing:border-box;margin-bottom:12px;"
+        >
+
+        <label style="display:block;margin-bottom:6px;">
+            Tugash sanasi
+        </label>
+        <input
+            id="promotionEndAt"
+            type="datetime-local"
+            style="width:100%;box-sizing:border-box;margin-bottom:12px;"
+        >
+
+        <label style="display:block;margin-bottom:6px;">
+            Boshlang‘ich raqam
+        </label>
+        <input
+            id="promotionMinNumber"
+            type="number"
+            min="1"
+            step="1"
+            value="1000"
+            placeholder="Masalan: 1000"
+            style="width:100%;box-sizing:border-box;margin-bottom:12px;"
+        >
+
+        <label style="display:block;margin-bottom:6px;">
+            Oxirgi raqam
+        </label>
+        <input
+            id="promotionMaxNumber"
+            type="number"
+            min="1"
+            step="1"
+            value="9999"
+            placeholder="Masalan: 9999"
+            style="width:100%;box-sizing:border-box;margin-bottom:12px;"
+        >
+
+        <button
+            class="primary"
+            onclick="savePromotionSettings()"
+            style="width:100%;"
+        >
+            💾 Saqlash
+        </button>
+
+        <div
+            id="promotionSettingsMessage"
+            style="margin-top:8px;font-size:13px;"
+        ></div>
+
+    </div>
+</details>
+
+
 <details id="newProductSection" style="margin-bottom:15px;">
     <summary style="
         font-size:18px;
@@ -955,6 +1037,7 @@ loadCoupons();
 loadPromotions();
 loadPromotionCoupons();
 loadDeliverySettings();
+loadPromotionSettings();
 }
 
 
@@ -2019,6 +2102,125 @@ async function deleteOrder(orderId) {
     } catch (error) {
         console.error("BUYURTMA O‘CHIRISH XATOSI:", error);
         alert("Server bilan bog‘lanishda xatolik.");
+    }
+}
+
+
+async function loadPromotionSettings() {
+    try {
+        const response = await fetch("/api/admin/promotion-settings", {
+            headers: {
+                "Authorization": "Bearer " + adminToken
+            }
+        });
+
+        const result = await response.json();
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
+
+        if (!response.ok || !result.success) {
+            console.error("Aksiya sozlamasi yuklanmadi:", result.message);
+            return;
+        }
+
+        const settings = result.settings || {};
+
+        document.getElementById("promotionEnabled").checked =
+            settings.enabled === true;
+
+        document.getElementById("promotionStartAt").value =
+            settings.start_at
+                ? new Date(settings.start_at).toISOString().slice(0, 16)
+                : "";
+
+        document.getElementById("promotionEndAt").value =
+            settings.end_at
+                ? new Date(settings.end_at).toISOString().slice(0, 16)
+                : "";
+
+        document.getElementById("promotionMinNumber").value =
+            Number(settings.min_number) || 1000;
+
+        document.getElementById("promotionMaxNumber").value =
+            Number(settings.max_number) || 9999;
+
+    } catch (error) {
+        console.error("Aksiya sozlamasi xatosi:", error);
+    }
+}
+
+
+async function savePromotionSettings() {
+    const enabled =
+        document.getElementById("promotionEnabled").checked;
+
+    const startAt =
+        document.getElementById("promotionStartAt").value;
+
+    const endAt =
+        document.getElementById("promotionEndAt").value;
+
+    const minNumber = Math.max(
+        1,
+        Math.round(
+            Number(document.getElementById("promotionMinNumber").value) || 1
+        )
+    );
+
+    const maxNumber = Math.max(
+        minNumber,
+        Math.round(
+            Number(document.getElementById("promotionMaxNumber").value) || minNumber
+        )
+    );
+
+    const message =
+        document.getElementById("promotionSettingsMessage");
+
+    message.innerText = "";
+
+    try {
+        const response = await fetch("/api/admin/promotion-settings", {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + adminToken
+            },
+            body: JSON.stringify({
+                enabled,
+                startAt,
+                endAt,
+                minNumber,
+                maxNumber
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
+
+        if (!response.ok || !result.success) {
+            message.style.color = "#d00";
+            message.innerText =
+                result.message || "Aksiya sozlamasini saqlab bo‘lmadi.";
+            return;
+        }
+
+        message.style.color = "#198754";
+        message.innerText =
+            "Aksiya sozlamalari saqlandi.";
+
+    } catch (error) {
+        console.error("Aksiya sozlamasi saqlash xatosi:", error);
+        message.style.color = "#d00";
+        message.innerText =
+            "Aksiya sozlamasini saqlab bo‘lmadi.";
     }
 }
 
