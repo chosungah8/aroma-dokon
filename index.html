@@ -639,6 +639,7 @@
                 <input type="text" id="addressInput" placeholder="Toshkent sh., Chilonzor tumani...">
             </div>
 
+            <p id="checkoutStatus" role="status" hidden style="font-size:14px;color:#555;line-height:1.5"></p>
             <button class="submit-btn" id="submitOrderBtn" onclick="sendOrder()">Buyurtmani tasdiqlash</button>
         </div>
     </div>
@@ -2476,6 +2477,7 @@ function getProductCartQty(id) {
 }
 
 function addToCart(id) {
+    if (checkoutCartLocked()) return;
     const product = products.find(
         p => Number(p.id) === Number(id)
     );
@@ -2514,6 +2516,7 @@ function addToCart(id) {
 }
 
 function changeQty(id, delta) {
+    if (checkoutCartLocked()) return;
     const product = products.find(
         p => Number(p.id) === Number(id)
     );
@@ -2546,6 +2549,7 @@ function changeQty(id, delta) {
     loadAvailableCoupons();
 }
 function removeFromCart(id) {
+    if (checkoutCartLocked()) return;
     const variant = window.selectedVariants?.[id] || "";
     const cartKey = getCartKey(id, variant);
 
@@ -2901,6 +2905,7 @@ function updateCartBar() {
         }
 
         function changeCartItemQty(cartKey, delta) {
+    if (checkoutCartLocked()) return;
             const parts = cartKey.split('__');
             const productId = parts[0];
 
@@ -2933,6 +2938,7 @@ function updateCartBar() {
         }
 
         function removeCartItem(cartKey) {
+    if (checkoutCartLocked()) return;
             delete cart[cartKey];
 
             persistCart();
@@ -2941,6 +2947,132 @@ function updateCartBar() {
             renderProducts();
             loadAvailableCoupons();
         }
+
+const pendingCheckoutKey = cartStorageKey + ':pending';
+let pendingCheckout = readPendingCheckout();
+let receiptBusy = false;
+let receiptTimer = null;
+function readPendingCheckout() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(cartStorageKey + ':pending') || 'null');
+        if (saved && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(saved.id)
+            && saved.payload?.requestId === saved.id && saved.cart && typeof saved.cart === 'object') return saved;
+    } catch (_) {}
+    return null;
+}
+function receiptNotice(message) {
+    const node = document.getElementById('checkoutStatus');
+    if (node) { node.textContent = message; node.hidden = !message; }
+    const button = document.getElementById('submitOrderBtn');
+    if (button) button.textContent = pendingCheckout ? 'Holatni tekshirish / qayta yuborish' : 'Buyurtmani tasdiqlash';
+}
+function checkoutCartLocked() {
+    pendingCheckout = readPendingCheckout();
+    if (!pendingCheckout) return false;
+    alert('Buyurtma javobi kutilmoqda. Savatdagi “Holatni tekshirish / qayta yuborish” tugmasini bosing.');
+    void checkCheckoutReceipt();
+    return true;
+}
+function sameCheckoutCart(a, b) {
+    const keys = Object.keys(a);
+    return keys.length === Object.keys(b).length && keys.every(key => a[key] === b[key]);
+}
+async function checkCheckoutReceipt() {
+    if (receiptBusy) return 'busy';
+    pendingCheckout = readPendingCheckout();
+    if (!pendingCheckout) return 'none';
+    receiptBusy = true;
+    const attempt = pendingCheckout;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+        const response = await fetch('/api/order-receipt', {
+            headers: { 'X-Aroma-Receipt': attempt.id }, cache: 'no-store', signal: controller.signal
+        });
+        if (!response.ok) throw new Error('Receipt unavailable');
+        const result = await response.json();
+        // A newer checkout in another window must never be cleared by this response.
+        if (readPendingCheckout()?.id !== attempt.id) return 'changed';
+        if (result.state === 'accepted' && typeof result.orderId === 'string') {
+            const storedCart = restoreSavedCart();
+            const unchanged = sameCheckoutCart(storedCart, attempt.cart);
+            if (unchanged) {
+                // Write the cleared cart before removing its pending receipt; retry is safe.
+                localStorage.removeItem(cartStorageKey);
+                cart = {};
+            } else {
+                cart = storedCart;
+            }
+            localStorage.removeItem(pendingCheckoutKey);
+            pendingCheckout = null;
+            checkoutAttempt = null;
+            appliedCoupon = null;
+            couponDiscountAmount = 0;
+            updateCartBar(); renderCartItems(); renderProducts();
+            receiptNotice('Buyurtma qabul qilindi: ' + result.orderId);
+            alert('Buyurtma qabul qilindi: ' + result.orderId + (unchanged ? '' : '. Savat boshqa oynada o‘zgargani uchun saqlandi; uni tekshiring.'));
+            return 'accepted';
+        }
+        if (result.state === 'rejected') {
+            localStorage.removeItem(pendingCheckoutKey);
+            pendingCheckout = null;
+            checkoutAttempt = null;
+            const message = typeof result.message === 'string' ? result.message : 'Buyurtma qabul qilinmadi.';
+            receiptNotice(message + ' Savatingiz saqlandi.');
+            alert(message + ' Savatingiz saqlandi. Tuzatib, qayta yuborishingiz mumkin.');
+            return 'rejected';
+        }
+        if (result.state !== 'pending') throw new Error('Invalid receipt');
+        receiptNotice('Tasdiq kutilmoqda. Savatingiz saqlandi. Botdagi /start javobining do‘kon tugmasidan kirganingizni tekshiring.');
+        return 'pending';
+    } catch (_) {
+        receiptNotice('Buyurtma holatini tekshirib bo‘lmadi. Savatingiz saqlandi. Internet tiklangach qayta tekshiring.');
+        return 'unavailable';
+    } finally { clearTimeout(timeout); receiptBusy = false; }
+}
+function resumeCheckoutReceipt() {
+    clearTimeout(receiptTimer);
+    let remaining = 12;
+    const poll = async () => {
+        if (document.visibilityState === 'hidden') return;
+        await checkCheckoutReceipt();
+        if (pendingCheckout && --remaining > 0) receiptTimer = setTimeout(poll, 5000);
+    };
+    void poll();
+}
+function transmitCheckout(attempt) {
+    if (!window.Telegram?.WebApp || !tg || tg.platform === 'unknown') {
+        alert('Do‘konni botdagi /start javobining tugmasi orqali oching. Savatingiz saqlandi.');
+        return;
+    }
+    const payload = JSON.stringify(attempt.payload);
+    if (new TextEncoder().encode(payload).length > 4096) {
+        alert('Buyurtma hajmi katta. Savatdagi mahsulotlar sonini kamaytiring.');
+        return;
+    }
+    checkoutSubmitting = true;
+    const button = document.getElementById('submitOrderBtn');
+    if (button) button.disabled = true;
+    try {
+        // Must succeed BEFORE sendData, which can immediately close the web app.
+        const storedAttempt = readPendingCheckout();
+        if (storedAttempt && storedAttempt.id !== attempt.id) {
+            receiptNotice('Boshqa oynadagi buyurtma javobi kutilmoqda.');
+            return;
+        }
+        if (!storedAttempt) localStorage.setItem(cartStorageKey, JSON.stringify(attempt.cart));
+        localStorage.setItem(pendingCheckoutKey, JSON.stringify(attempt));
+        pendingCheckout = attempt;
+        Telegram.WebApp.sendData(payload);
+        receiptNotice('Buyurtma yuborildi. Tasdiq kelguncha savatingiz saqlanadi.');
+        resumeCheckoutReceipt();
+    } catch (_) {
+        receiptNotice('Yuborishni tasdiqlab bo‘lmadi. Savatingiz saqlandi. Holatni tekshirib, qayta urinib ko‘ring.');
+    } finally {
+        checkoutSubmitting = false;
+        if (button) button.disabled = false;
+    }
+}
 
 let checkoutSubmitting = false;
 let checkoutAttempt = null;
@@ -2957,8 +3089,14 @@ function checkoutRequestId(payload) {
     return checkoutAttempt.id;
 }
 
-function sendOrder() {
-    if (checkoutSubmitting) return;
+async function sendOrder() {
+    if (checkoutSubmitting || receiptBusy) return;
+    pendingCheckout = readPendingCheckout();
+    if (pendingCheckout) {
+        const state = await checkCheckoutReceipt();
+        if (state === 'pending' && pendingCheckout && confirm('Tasdiq hali kelmagan. Avvalgi buyurtmani aynan qayta yuborasizmi?')) transmitCheckout(pendingCheckout);
+        return;
+    }
     const phone = document.getElementById('phoneInput').value.trim();
     const address = document.getElementById('addressInput').value.trim();
 
@@ -3053,32 +3191,7 @@ const orderData = {
 
     orderData.requestId = checkoutRequestId(orderData);
 
-if (window.Telegram && window.Telegram.WebApp) {
-
-    checkoutSubmitting = true;
-    const submitButton = document.getElementById('submitOrderBtn');
-    if (submitButton) submitButton.disabled = true;
-    try {
-        Telegram.WebApp.sendData(JSON.stringify(orderData));
-        alert("Buyurtma yuborildi. Botning tasdiq xabarini kuting.");
-        cart = {};
-        persistCart();
-        checkoutAttempt = null;
-        updateCartBar();
-        renderCartItems();
-        renderProducts();
-    } catch (error) {
-        alert("Buyurtma yuborilmadi. Qayta urinib ko‘ring.");
-    } finally {
-        checkoutSubmitting = false;
-        if (submitButton) submitButton.disabled = false;
-    }
-
-}
-
- else {
-        alert('Telegram Web App topilmadi. Iltimos, do‘konni Telegram ichidan oching.');
-    }
+    transmitCheckout({ id: orderData.requestId, payload: orderData, cart: { ...cart } });
 }
 
 function escapeOrderText(value) {
@@ -3333,9 +3446,11 @@ function startCatalog() {
     loadProducts();
     loadDeliverySettings();
     loadPublicPromotions();
+    resumeCheckoutReceipt();
 }
 function recoverCatalog() {
     if (!catalogStarted || document.visibilityState === 'hidden') return;
+    resumeCheckoutReceipt();
     if (!categoriesLoaded) loadCategories(categoriesViewId);
     if (!productsLoaded) loadProducts();
 }

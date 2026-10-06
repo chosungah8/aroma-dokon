@@ -22,7 +22,7 @@ test('order creation is one RPC and uses verified Telegram identity rather than 
     await placeOrder(db, { telegramUserId: '999', items: [{ id: 1, count: 2 }], phone: '010', address: 'Test' },
         { from: { id: 123, first_name: 'User' }, update: { update_id: 42 } });
     assert.equal(calls.length, 1);
-    assert.equal(calls[0].name, 'aroma_place_order_v1');
+    assert.equal(calls[0].name, 'aroma_place_order_v2');
     assert.equal(calls[0].args.p_customer_id, '123');
     assert.equal(calls[0].args.p_request_key, 'telegram:42');
 });
