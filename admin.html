@@ -413,8 +413,9 @@
             onclick="savePromotionSettings()"
             style="width:100%;"
         >
-            💾 Saqlash
+            ➕ Yangi aksiya yaratish
         </button>
+        <p style="font-size:13px;color:#666;">Mavjud aksiyani yoqish yoki to‘xtatish uchun pastdagi ro‘yxat tugmalaridan foydalaning.</p>
 
         <div
             id="promotionSettingsMessage"
@@ -2152,7 +2153,7 @@ function gameButton(label, handler) {
 }
 async function gameFetch(path, options = {}) {
     const response = await fetch('/api/admin/promotion-games' + path, {
-        ...options, headers: { Authorization: 'Bearer ' + adminToken }
+        ...options, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken }
     });
     if (response.status === 401) {
         closeGameParticipants();
@@ -2191,7 +2192,7 @@ async function loadPromotionGames(page = gameListPage) {
             card.style.cssText = 'border:1px solid #ddd;border-radius:10px;padding:14px;margin:10px 0;';
             const latest = String(game.id) === String(result.latestId);
             const now = Date.now();
-            const status = !latest ? 'Arxiv' : !game.enabled ? 'O‘chirilgan'
+            const status = !latest ? 'Arxiv' : !game.enabled ? 'To‘xtatilgan'
                 : game.end_at && now > new Date(game.end_at).getTime() ? 'Tugagan'
                 : game.start_at && now < new Date(game.start_at).getTime() ? 'Rejalashtirilgan' : 'Faol';
             card.append(gameElement('strong', `Aksiya #${game.id} — ${status}`));
@@ -2200,6 +2201,13 @@ async function loadPromotionGames(page = gameListPage) {
             card.append(gameElement('p', `Raqamlar: ${game.min_number}–${game.max_number}`));
             const actions = gameElement('div');
             actions.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;';
+            const enabled = latest && game.enabled;
+            const expired = game.end_at && now >= new Date(game.end_at).getTime();
+            const toggleButton = gameButton(enabled ? '⏸ To‘xtatish' : '▶ Yoqish',
+                () => togglePromotionGame(game.id, !enabled, latest));
+            toggleButton.disabled = !enabled && !!expired;
+            if (toggleButton.disabled) toggleButton.title = 'Aksiya muddati tugagan';
+            actions.append(toggleButton);
             actions.append(
                 gameButton('👥 Ishtirokchilar', () => loadGameParticipants(game.id, 1)),
                 gameButton('📥 Excel', () => downloadGameExcel(game.id)),
@@ -2277,8 +2285,22 @@ async function downloadGameExcel(id) {
         message.textContent = `Aksiya #${id}: Excel yuklab olish boshlandi.`;
     } catch (error) { message.textContent = error.message; }
 }
+async function togglePromotionGame(id, enabled, current) {
+    if (enabled && !current && !confirm(`Aksiya #${id} yoqilsinmi? Ishtirok raqamlari shu aksiya bo‘yicha davom etadi. Boshqa aksiya joriy bo‘lsa, uning o‘rnini oladi.`)) return;
+    const message = document.getElementById('promotionGamesMessage');
+    message.textContent = enabled ? 'Aksiya yoqilmoqda…' : 'Aksiya to‘xtatilmoqda…';
+    try {
+        const result = await (await gameFetch(`/${id}/toggle`, {
+            method: 'PATCH', body: JSON.stringify({ enabled })
+        })).json();
+        message.textContent = result.message;
+        await loadPromotionGames();
+        await loadPromotionSettings();
+    } catch (error) { message.textContent = error.message; }
+}
+
 async function deletePromotionGame(id, latest) {
-    const note = latest ? '\nBu eng so‘nggi aksiya. O‘chirilgach, undan oldingi aksiya sozlamasi joriy bo‘ladi; u yoqilgan bo‘lsa, yana ishlashi mumkin.' : '';
+    const note = latest ? '\nBu joriy aksiya. O‘chirilgach, avvalgi aksiya sozlamasi joriy bo‘ladi; u yoqilgan bo‘lsa, yana ishlashi mumkin.' : '';
     if (!confirm(`Aksiya #${id}, uning barcha ishtirokchilari va Excel fayli o‘chirilsinmi? Bu amalni qaytarib bo‘lmaydi.${note}`)) return;
     const message = document.getElementById('promotionGamesMessage');
     message.textContent = 'O‘chirilmoqda…';
