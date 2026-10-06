@@ -1864,6 +1864,13 @@ async function loadOrders() {
     >
         ✅ Yakunlandi
     </button>
+
+    <button
+        style="background:#ffe5e5;color:#d00;"
+        onclick="deleteOrder('${order.id}')"
+    >
+        🗑 O‘chirish
+    </button>
 </div>
             `;
 
@@ -1913,6 +1920,46 @@ async function updateOrderStatus(orderId, status) {
 
     } catch (error) {
         console.error("STATUS XATOSI:", error);
+        alert("Server bilan bog‘lanishda xatolik.");
+    }
+}
+
+
+async function deleteOrder(orderId) {
+    if (!confirm("Bu buyurtmani o‘chirishni xohlaysizmi?")) {
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            "/api/admin/orders/" + encodeURIComponent(orderId),
+            {
+                method: "DELETE",
+                headers: {
+                    "Authorization": "Bearer " + adminToken
+                }
+            }
+        );
+
+        const result = await response.json();
+
+        if (response.status === 401) {
+            logout();
+            return;
+        }
+
+        if (!response.ok || !result.success) {
+            alert(
+                result.message ||
+                "Buyurtmani o‘chirib bo‘lmadi."
+            );
+            return;
+        }
+
+        loadOrders();
+
+    } catch (error) {
+        console.error("BUYURTMA O‘CHIRISH XATOSI:", error);
         alert("Server bilan bog‘lanishda xatolik.");
     }
 }
