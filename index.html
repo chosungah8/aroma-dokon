@@ -557,6 +557,21 @@
                     <span id="cartCouponDiscount">-0 so'm</span>
                 </div>
 
+                <div
+                    id="freeDeliveryRow"
+                    style="
+                        display:none;
+                        justify-content:space-between;
+                        margin-bottom:7px;
+                        font-size:13px;
+                        color:#198754;
+                        font-weight:600;
+                    "
+                >
+                    <span>Yetkazib berish:</span>
+                    <span id="freeDeliveryText">Bepul</span>
+                </div>
+
                 <div style="
                     border-top:1px solid #eee;
                     padding-top:9px;
@@ -1098,23 +1113,32 @@ async function loadAvailableCoupons() {
 function calculateCartSubtotal() {
     let total = 0;
 
-    for (const id in cart) {
+    for (const cartKey in cart) {
+        const parts = cartKey.split('__');
+        const productId = parts[0];
+        const variant = parts.length > 1
+            ? decodeURIComponent(parts.slice(1).join('__'))
+            : "";
+
         const product = products.find(
-            p => String(p.id) === String(id)
+            p => Number(p.id) === Number(productId)
         );
 
         if (!product) continue;
+
+        const quantity = Number(cart[cartKey]) || 0;
+        const variantPrice = getVariantPrice(product, variant);
 
         const finalPrice =
             product.discountActive &&
             Number(product.discountPercent) > 0
                 ? Math.round(
-                    Number(product.price) *
+                    Number(variantPrice) *
                     (1 - Number(product.discountPercent) / 100)
                 )
-                : Number(product.price);
+                : Number(variantPrice);
 
-        total += finalPrice * Number(cart[id] || 0);
+        total += finalPrice * quantity;
     }
 
     return total;
@@ -2496,6 +2520,24 @@ function updateCartBar() {
                 couponDiscountAmount = 0;
             }
 
+            const deliveryRow = document.getElementById('freeDeliveryRow');
+            const deliveryText = document.getElementById('freeDeliveryText');
+
+            if (deliveryRow && deliveryText && count > 0 && freeDeliveryEnabled) {
+                deliveryRow.style.display = 'flex';
+
+                if (total >= freeDeliveryMinAmount) {
+                    deliveryText.innerText = 'Bepul yetkazib berish';
+                } else {
+                    const remaining = freeDeliveryMinAmount - total;
+
+                    deliveryText.innerText =
+                        `${remaining.toLocaleString()} so'm qoldi`;
+                }
+            } else if (deliveryRow) {
+                deliveryRow.style.display = 'none';
+            }
+
             const bar = document.getElementById('cartBar');
 
             if (count > 0) {
@@ -2514,6 +2556,7 @@ function updateCartBar() {
         }
 
         function openCartModal() {
+            updateCartBar();
             renderCartItems();
             loadAvailableCoupons();
             document.getElementById('cartModal').style.display = 'flex';
@@ -3062,8 +3105,35 @@ function showOrderDetails(order) {
     });
 }
 
+let freeDeliveryEnabled = false;
+let freeDeliveryMinAmount = 0;
+
+async function loadDeliverySettings() {
+    try {
+        const response = await fetch("/api/shop-settings");
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            console.error("Yetkazib berish sozlamasi yuklanmadi:", result.message);
+            return;
+        }
+
+        const settings = result.settings || {};
+
+        freeDeliveryEnabled =
+            settings.free_delivery_enabled === true;
+
+        freeDeliveryMinAmount =
+            Math.max(0, Number(settings.free_delivery_min_amount) || 0);
+
+    } catch (error) {
+        console.error("Yetkazib berish sozlamasi xatosi:", error);
+    }
+}
+
 loadCategories();
 loadProducts();
+loadDeliverySettings();
 loadPublicPromotions();
 
     </script>
