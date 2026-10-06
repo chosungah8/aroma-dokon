@@ -1884,51 +1884,33 @@ async function loadOrders() {
         }
 
         const orders = await response.json();
-        const now = new Date();
-
-        const parseOrderDate = (value) => {
-            if (!value) return null;
-
-            const text = String(value).trim();
-            const match = text.match(/^([0-9]{1,2})[./-]([0-9]{1,2})[./-]([0-9]{4})/);
-
-            if (match) {
-                return new Date(
-                    Number(match[3]),
-                    Number(match[2]) - 1,
-                    Number(match[1])
-                );
-            }
-
-            const parsed = new Date(text);
-            return isNaN(parsed.getTime()) ? null : parsed;
+        // Orders use the shop's calendar, independent of the admin device timezone.
+        const shopDate = (value) => {
+            const parts = new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'Asia/Tashkent', year: 'numeric', month: '2-digit', day: '2-digit'
+            }).formatToParts(value);
+            const get = type => parts.find(part => part.type === type).value;
+            return `${get('year')}-${get('month')}-${get('day')}`;
         };
-
+        const today = shopDate(new Date());
+        const orderDay = (value) => {
+            if (!value) return null;
+            const text = String(value).trim();
+            // Legacy DD.MM.YYYY and SQL timestamps without a zone are shop-local.
+            const legacy = text.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})(?:\D|$)/);
+            if (legacy) return `${legacy[3]}-${legacy[2].padStart(2, '0')}-${legacy[1].padStart(2, '0')}`;
+            const local = text.match(/^(\d{4}-\d{2}-\d{2})(?:$|[ T]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$)/);
+            if (local) return local[1];
+            const parsed = new Date(text);
+            return Number.isNaN(parsed.getTime()) ? null : shopDate(parsed);
+        };
         const filteredOrders = orders.filter(order => {
             if (orderPeriod === "all") return true;
-
-            const d = parseOrderDate(order.date);
-            if (!d) return false;
-
-            if (orderPeriod === "day") {
-                return (
-                    d.getFullYear() === now.getFullYear() &&
-                    d.getMonth() === now.getMonth() &&
-                    d.getDate() === now.getDate()
-                );
-            }
-
-            if (orderPeriod === "month") {
-                return (
-                    d.getFullYear() === now.getFullYear() &&
-                    d.getMonth() === now.getMonth()
-                );
-            }
-
-            if (orderPeriod === "year") {
-                return d.getFullYear() === now.getFullYear();
-            }
-
+            const day = orderDay(order.date);
+            if (!day) return false;
+            if (orderPeriod === "day") return day === today;
+            if (orderPeriod === "month") return day.slice(0, 7) === today.slice(0, 7);
+            if (orderPeriod === "year") return day.slice(0, 4) === today.slice(0, 4);
             return true;
         });
 
