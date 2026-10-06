@@ -722,7 +722,7 @@
     min="0"
     placeholder="Ombordagi soni"
 >
-<textarea id="editVariants" placeholder="Variantlar (har birini alohida qatorda yozing)&#10;Masalan:&#10;Qizil&#10;Pushti&#10;Ko‘k" style="width:100%;min-height:80px;padding:10px;box-sizing:border-box;resize:vertical;"></textarea>
+<textarea id="editVariants" placeholder="Har bir variant alohida qatorda&#10;Qizil | 25000&#10;Pushti | 28000&#10;Narxi bir xil bo‘lsa: Ko‘k" style="width:100%;min-height:80px;padding:10px;box-sizing:border-box;resize:vertical;"></textarea>
 
 <input
     id="editDiscountPercent"
@@ -1201,6 +1201,32 @@ async function loadProducts() {
 }
 
 
+function formatProductVariants(variants) {
+    if (!Array.isArray(variants)) return '';
+    return variants.map(variant => {
+        if (typeof variant === 'string') return variant;
+        if (!variant || typeof variant.name !== 'string') throw new Error('Variant ma’lumoti noto‘g‘ri.');
+        return variant.price === undefined || variant.price === null || variant.price === ''
+            ? variant.name : `${variant.name} | ${variant.price}`;
+    }).join('\n');
+}
+
+function parseProductVariants(text) {
+    return String(text).split(/\r?\n/).map(line => line.trim()).filter(Boolean).map((line, index) => {
+        const parts = line.split('|').map(part => part.trim());
+        const name = parts[0];
+        if (!name || name === '[object Object]' || parts.length > 2) {
+            throw new Error(`${index + 1}-variant: “Variant | Narx” shaklida yozing.`);
+        }
+        if (parts.length === 1) return name;
+        const priceText = parts[1].replace(/\s/g, '');
+        if (!/^\d+(?:\.\d+)?$/.test(priceText) || !Number.isFinite(Number(priceText))) {
+            throw new Error(`${index + 1}-variant: narxni 25000 kabi musbat son yoki 0 bilan yozing. Asosiy narx uchun faqat variant nomini yozing.`);
+        }
+        return { name, price: Number(priceText) };
+    });
+}
+
 async function addProduct() {
 
     const message =
@@ -1234,27 +1260,14 @@ const countryId = document.getElementById("country").value
 const variantsText =
     document.getElementById("variants").value.trim();
 
-const variants = variantsText
-    ? variantsText
-        .split("\n")
-        .map(v => v.trim())
-        .filter(Boolean)
-        .map(v => {
-            const [name, price] = v.split("|").map(x => x.trim());
-
-            if (!name) return null;
-
-            if (!price) {
-                return name;
-            }
-
-            return {
-                name,
-                price: Number(price) || 0
-            };
-        })
-        .filter(Boolean)
-    : [];
+let variants;
+try { variants = parseProductVariants(variantsText); }
+catch (error) {
+    const variantMessage = document.getElementById("message");
+    variantMessage.className = "error";
+    variantMessage.innerText = error.message;
+    return;
+}
 
 const discountPercent =
     Number(document.getElementById("discountPercent").value) || 0;
@@ -1449,7 +1462,7 @@ async function editProduct(id) {
             Number(product.stock) || 0;
 
         document.getElementById("editVariants").value =
-            Array.isArray(product.variants) ? product.variants.join("\n") : "";
+            formatProductVariants(product.variants);
 
 document.getElementById("editDiscountPercent").value =
     Number(product.discount_percent || product.discountPercent) || 0;
@@ -1520,27 +1533,15 @@ const discountActive =
     const size = document.getElementById("editSize").value.trim();
 const variantsText = document.getElementById("editVariants").value.trim();
 
-const variants = variantsText
-    ? variantsText
-        .split("\n")
-        .map(v => v.trim())
-        .filter(Boolean)
-        .map(v => {
-            const [name, price] = v.split("|").map(x => x.trim());
+let variants;
+try { variants = parseProductVariants(variantsText); }
+catch (error) {
+    const variantMessage = document.getElementById("editMessage");
+    variantMessage.className = "error";
+    variantMessage.innerText = error.message;
+    return;
+}
 
-            if (!name) return null;
-
-            if (!price) {
-                return name;
-            }
-
-            return {
-                name,
-                price: Number(price) || 0
-            };
-        })
-        .filter(Boolean)
-    : [];
 const countryId = document.getElementById("editCountry").value
     ? Number(document.getElementById("editCountry").value)
     : null;
