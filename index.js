@@ -1,4 +1,4 @@
-const { bot, webServer } = require('./lib/server.js');
+const { bot, promotionBot, webServer } = require('./lib/server.js');
 const { safeEqual, adminTokenIsValid, telegramWebhookSecret } = require('./lib/security.js');
 
 function readBody(req) {
@@ -45,22 +45,25 @@ module.exports = async function handler(req, res) {
         }
     }
 
-    if ((pathname === '/api/admin/telegram-webhook' || pathname === '/api/setup-webhook') && req.method === 'POST') {
+    if ((pathname === '/api/admin/telegram-webhook' || pathname === '/api/setup-webhook' || pathname === '/api/admin/promotion-bot-webhook') && req.method === 'POST') {
         res.setHeader('Content-Type', 'application/json; charset=utf-8');
         if (!isSetupAdmin) {
             res.statusCode = 401;
             return res.end(JSON.stringify({ ok: false, message: 'Ruxsat yo‘q' }));
         }
         try {
-            const secret = telegramWebhookSecret(process.env.BOT_TOKEN);
+            const forPromotion = pathname === '/api/admin/promotion-bot-webhook';
+            const targetBot = forPromotion ? promotionBot : bot;
+            const secret = telegramWebhookSecret(forPromotion ? process.env.PROMOTION_BOT_TOKEN : process.env.BOT_TOKEN);
+            if (!targetBot) throw new Error('Bot not configured');
             if (!secret) throw new Error('BOT_TOKEN missing');
-            const webhookUrl = new URL('/api/telegram', process.env.WEB_APP_URL);
+            const webhookUrl = new URL(forPromotion ? '/api/promotion-telegram' : '/api/telegram', process.env.WEB_APP_URL);
             if (webhookUrl.protocol !== 'https:') throw new Error('HTTPS required');
-            await bot.telegram.setWebhook(webhookUrl.toString(), { secret_token: secret });
+            await targetBot.telegram.setWebhook(webhookUrl.toString(), { secret_token: secret });
             return res.end(JSON.stringify({ ok: true, message: 'Telegram himoyalangan ulanishi sozlandi.' }));
         } catch (error) {
             res.statusCode = 502;
-            return res.end(JSON.stringify({ ok: false, message: 'Ulanish sozlanmadi. BOT_TOKEN va WEB_APP_URL sozlamalarini tekshiring.' }));
+            return res.end(JSON.stringify({ ok: false, message: pathname === '/api/admin/promotion-bot-webhook' ? 'Ulanish sozlanmadi. Alohida PROMOTION_BOT_TOKEN va WEB_APP_URL sozlamalarini tekshiring.' : 'Ulanish sozlanmadi. BOT_TOKEN va WEB_APP_URL sozlamalarini tekshiring.' }));
         }
     }
     if (pathname === '/api/setup-webhook' || pathname === '/api/admin/telegram-webhook') {
@@ -69,10 +72,12 @@ module.exports = async function handler(req, res) {
         return res.end(JSON.stringify({ ok: false, message: 'POST so‘rovi kerak' }));
     }
 
-    if (pathname === '/api/telegram' && req.method === 'POST') {
+    if ((pathname === '/api/telegram' || pathname === '/api/promotion-telegram') && req.method === 'POST') {
         res.setHeader('Content-Type', 'application/json; charset=utf-8');
-        const secret = telegramWebhookSecret(process.env.BOT_TOKEN);
-        if (!secret) {
+        const forPromotion = pathname === '/api/promotion-telegram';
+        const targetBot = forPromotion ? promotionBot : bot;
+        const secret = telegramWebhookSecret(forPromotion ? process.env.PROMOTION_BOT_TOKEN : process.env.BOT_TOKEN);
+        if (!secret || !targetBot) {
             res.statusCode = 503;
             return res.end(JSON.stringify({ ok: false }));
         }
@@ -89,7 +94,7 @@ module.exports = async function handler(req, res) {
                 return res.end(JSON.stringify({ ok: false }));
             }
 
-            await bot.handleUpdate(update);
+            await targetBot.handleUpdate(update);
 
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');

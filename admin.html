@@ -154,6 +154,17 @@
         <div id="telegramWebhookMessage" role="status" style="padding:8px 0;"></div>
     </details>
 
+    <details style="margin-bottom:15px;">
+        <summary style="cursor:pointer;font-weight:bold;padding:12px;" onclick="loadPromotionBotAdmins()">Alohida aksiya boti — adminlar</summary>
+        <p>Bu ro‘yxat yangi botda raqam berish huquqini boshqaradi. Telegram ID’ni yangi botga /start yuborib bilish mumkin.</p>
+        <input id="promotionBotAdminId" placeholder="Telegram ID" inputmode="numeric">
+        <input id="promotionBotAdminLabel" placeholder="Admin ismi" maxlength="100">
+        <button type="button" onclick="addPromotionBotAdmin()">Ruxsat berish</button>
+        <button type="button" onclick="setupPromotionBot(this)">Yangi botni ulash</button>
+        <p id="promotionBotMessage" role="status"></p>
+        <div id="promotionBotAdmins"></div>
+    </details>
+
     <details id="categorySection" style="margin-bottom:15px;">
         <summary style="
             font-size:18px;
@@ -1051,6 +1062,37 @@ method: "POST",
     }
 }
 
+
+async function promotionBotApi(path, method='GET', body) {
+    const response=await fetch(path,{method,headers:{Authorization:'Bearer '+adminToken,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+    if(response.status===401){logout();throw new Error('Admin panelga qayta kiring.');}
+    const data=await response.json();
+    if(!response.ok || data.success===false || data.ok===false)throw new Error(data.message||'Amal bajarilmadi.');
+    return data;
+}
+async function loadPromotionBotAdmins(){
+    try {
+        const data=await promotionBotApi('/api/admin/promotion-bot-admins');
+        const list=document.getElementById('promotionBotAdmins');list.replaceChildren();
+        for(const admin of data.admins.filter(a=>a.active)){
+            const row=document.createElement('p');row.textContent=admin.label+' — '+admin.telegram_id+' ';
+            const button=document.createElement('button');button.textContent='Ruxsatni bekor qilish';
+            button.onclick=async()=>{try{await promotionBotApi('/api/admin/promotion-bot-admins/'+admin.telegram_id,'DELETE');await loadPromotionBotAdmins();}catch(e){document.getElementById('promotionBotMessage').textContent=e.message;}};
+            row.append(button);list.append(row);
+        }
+        document.getElementById('promotionBotMessage').textContent=data.configured?'Bot tokeni sozlangan.':'Vercel’da PROMOTION_BOT_TOKEN ni sozlang.';
+    }catch(e){document.getElementById('promotionBotMessage').textContent=e.message;}
+}
+async function addPromotionBotAdmin(){
+    try{await promotionBotApi('/api/admin/promotion-bot-admins','POST',{telegramId:document.getElementById('promotionBotAdminId').value.trim(),label:document.getElementById('promotionBotAdminLabel').value.trim()});await loadPromotionBotAdmins();}
+    catch(e){document.getElementById('promotionBotMessage').textContent=e.message;}
+}
+async function setupPromotionBot(button){
+    button.disabled=true;
+    try{await promotionBotApi('/api/admin/promotion-bot-webhook','POST');document.getElementById('promotionBotMessage').textContent='Aksiya boti ulandi. Endi yangi botga /start yuboring.';}
+    catch(e){document.getElementById('promotionBotMessage').textContent=e.message;}
+    finally{button.disabled=false;}
+}
 
 async function setupTelegramWebhook(button) {
     const message = document.getElementById('telegramWebhookMessage');
