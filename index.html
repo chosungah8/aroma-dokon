@@ -2328,7 +2328,9 @@ function closeFindProductModal(event) {
     }
 }
 
+let findProductSubmitting = false;
 async function sendFindProductRequest() {
+    if (findProductSubmitting) return;
     const text =
         document.getElementById("findProductText").value.trim();
 
@@ -2349,12 +2351,16 @@ async function sendFindProductRequest() {
     message.innerText = "Yuborilmoqda...";
 
     try {
+        if (!tg?.initData) throw new Error('Do‘konni yopib, Open yoki yangi /start xabaridagi tugmadan qayta oching.');
+        if (text.length > 2000) throw new Error('Matn 2000 belgidan oshmasin.');
+        findProductSubmitting = true;
         let imageUrl = "";
 
         const file = imageInput.files?.[0];
 
         // 1. Rasmni yuklash
         if (file) {
+            if (file.size > 3 * 1024 * 1024) throw new Error("Rasm 3 MB dan oshmasin.");
             const reader = new FileReader();
 
             const imageData = await new Promise((resolve, reject) => {
@@ -2369,7 +2375,8 @@ async function sendFindProductRequest() {
                 {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        "X-Telegram-Init-Data": tg.initData
                     },
                     body: JSON.stringify({
                         image: imageData
@@ -2390,24 +2397,17 @@ async function sendFindProductRequest() {
             imageUrl = uploadResult.url || "";
         }
 
-        // 2. So‘rovni Telegram botga yuborish
-        if (!window.Telegram || !window.Telegram.WebApp) {
-            throw new Error("Telegram Web App topilmadi");
-        }
-
-        const productRequestData = {
-            type: "product_request",
-            text: text,
-            imageUrl: imageUrl
-        };
-
-        Telegram.WebApp.sendData(
-            JSON.stringify(productRequestData)
-        );
+        const response = await fetch('/api/product-requests', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json', 'X-Telegram-Init-Data':tg.initData},
+            body: JSON.stringify({text, imageUrl})
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.message || 'So‘rov saqlanmadi.');
 
         message.style.color = "green";
         message.innerText =
-            "✅ So‘rovingiz adminga yuborildi!";
+            "So‘rovingiz saqlandi. Administrator ko‘rib chiqadi.";
 
         // Maydonlarni tozalash
         document.getElementById("findProductText").value = "";
@@ -2424,8 +2424,8 @@ async function sendFindProductRequest() {
 
         message.style.color = "#d00";
         message.innerText =
-            "❌ So‘rov yuborishda xatolik yuz berdi.";
-    }
+            error.message || "So‘rov yuborishda xatolik yuz berdi.";
+    } finally { findProductSubmitting = false; }
 }
 
 function restoreSavedCart() {
