@@ -415,6 +415,9 @@
             style="width:100%;box-sizing:border-box;margin-bottom:12px;"
         >
 
+        <label for="promotionMinPurchaseAmount">Ishtirok uchun minimal xarid (so‘m)</label>
+        <input id="promotionMinPurchaseAmount" type="number" min="0" step="1" value="0" style="width:100%;box-sizing:border-box;margin:8px 0;">
+        <p style="font-size:13px;color:#666;">Chegirma va kupondan keyingi bitta buyurtma summasi. 0 — minimal chegara yo‘q. Xaridlar qo‘shib hisoblanmaydi.</p>
         <button
             class="primary"
             onclick="savePromotionSettings()"
@@ -2209,6 +2212,14 @@ async function loadPromotionGames(page = gameListPage) {
             card.append(gameElement('p', 'Yaratilgan: ' + gameDate(game.created_at)));
             card.append(gameElement('p', `Boshlanish: ${gameDate(game.start_at)} • Tugash: ${gameDate(game.end_at)}`));
             card.append(gameElement('p', `Raqamlar: ${game.min_number}–${game.max_number}`));
+            const minimumLabel = gameElement('label', 'Minimal xarid (so‘m): ');
+            const minimumInput = gameElement('input');
+            minimumInput.type = 'number'; minimumInput.min = '0'; minimumInput.step = '1';
+            minimumInput.value = Number(game.min_purchase_amount) || 0;
+            minimumLabel.append(minimumInput);
+            card.append(minimumLabel);
+            card.append(gameButton('Summani saqlash', () => saveGameMinimum(game.id, minimumInput.value)));
+            card.append(gameElement('p', '0 — chegara yo‘q. O‘zgarish keyingi xaridlarga ta’sir qiladi; oldingi ishtirokchilar saqlanadi.'));
             const actions = gameElement('div');
             actions.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;';
             const enabled = latest && game.enabled;
@@ -2344,6 +2355,7 @@ async function loadPromotionSettings() {
         }
 
         const settings = result.settings || {};
+        document.getElementById("promotionMinPurchaseAmount").value = Number(settings.min_purchase_amount) || 0;
 
         document.getElementById("promotionEnabled").checked =
             settings.enabled === true;
@@ -2370,7 +2382,30 @@ async function loadPromotionSettings() {
 }
 
 
+async function saveGameMinimum(id, value) {
+    const amount = Number(value);
+    if (!String(value).trim() || !Number.isSafeInteger(amount) || amount < 0 || amount > 1000000000000) {
+        alert('Minimal summani 0 yoki musbat butun son bilan kiriting.'); return;
+    }
+    try {
+        const response = await fetch('/api/admin/promotion-games/' + id + '/minimum-purchase', {
+            method:'PATCH', headers:{'Content-Type':'application/json', Authorization:'Bearer ' + adminToken},
+            body:JSON.stringify({minPurchaseAmount:amount})
+        });
+        if (response.status === 401) { logout(); return; }
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.message || 'Saqlab bo‘lmadi.');
+        await loadPromotionGames();
+        await loadPromotionSettings();
+    } catch (error) { alert(error.message); }
+}
+
 async function savePromotionSettings() {
+    const amountText = document.getElementById('promotionMinPurchaseAmount').value;
+    const minPurchaseAmount = Number(amountText);
+    if (!amountText.trim() || !Number.isSafeInteger(minPurchaseAmount) || minPurchaseAmount < 0 || minPurchaseAmount > 1000000000000) {
+        alert('Minimal summani 0 yoki musbat butun son bilan kiriting.'); return;
+    }
     const enabled =
         document.getElementById("promotionEnabled").checked;
 
@@ -2419,6 +2454,7 @@ async function savePromotionSettings() {
                 startAt,
                 endAt,
                 minNumber,
+                minPurchaseAmount,
                 maxNumber
             })
         });
