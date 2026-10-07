@@ -1911,12 +1911,13 @@ async function loadOrders() {
         <button onclick="setOrderPeriod('day')" style="${orderPeriod === 'day' ? activeStyle : normalStyle}">📅 Bugun</button>
         <button onclick="setOrderPeriod('month')" style="${orderPeriod === 'month' ? activeStyle : normalStyle}">📆 Shu oy</button>
         <button onclick="setOrderPeriod('year')" style="${orderPeriod === 'year' ? activeStyle : normalStyle}">📊 Shu yil</button>
+        <button onclick="setOrderPeriod('archive')" style="${orderPeriod === 'archive' ? activeStyle : normalStyle}">🗃 Arxiv</button>
     `;
     list.parentNode.insertBefore(filter, list);
 
     try {
         const response = await fetch(
-            "/api/admin/orders",
+            "/api/admin/orders" + (orderPeriod === "archive" ? "?archived=1" : ""),
             {
                 headers: {
                     "Authorization": "Bearer " + adminToken
@@ -1951,7 +1952,7 @@ async function loadOrders() {
             return Number.isNaN(parsed.getTime()) ? null : shopDate(parsed);
         };
         const filteredOrders = orders.filter(order => {
-            if (orderPeriod === "all") return true;
+            if (orderPeriod === "all" || orderPeriod === "archive") return true;
             const day = orderDay(order.date);
             if (!day) return false;
             if (orderPeriod === "day") return day === today;
@@ -1988,6 +1989,7 @@ async function loadOrders() {
                 <div style="font-weight:bold; font-size:16px;">
                     🛍 ${escapeHtml(order.id)}
                 </div>
+                ${order.promotionNotice ? `<p>${escapeHtml(order.promotionNotice)}</p>` : ""}
 
                 <div style="font-size:12px; color:#777; margin-top:5px;">
                     🕒 ${escapeHtml(order.date)}
@@ -2084,7 +2086,7 @@ async function loadOrders() {
         style="background:#ffe5e5;color:#d00;"
         data-delete-order
     >
-        🗑 O‘chirish
+        ${order.archived ? '↩️ Tiklash' : '🗃 Arxivlash'}
     </button>
 </div>
             `;
@@ -2092,7 +2094,7 @@ async function loadOrders() {
             item.querySelectorAll('[data-order-status]').forEach(button => {
                 button.onclick = () => updateOrderStatus(order.id, button.dataset.orderStatus);
             });
-            item.querySelector('[data-delete-order]').onclick = () => deleteOrder(order.id);
+            item.querySelector('[data-delete-order]').onclick = () => deleteOrder(order.id, order.archived);
             list.appendChild(item);
         });
 
@@ -2144,8 +2146,8 @@ async function updateOrderStatus(orderId, status) {
 }
 
 
-async function deleteOrder(orderId) {
-    if (!confirm("Bu buyurtmani o‘chirishni xohlaysizmi?")) {
+async function deleteOrder(orderId, archived = false) {
+    if (!confirm(archived ? "Buyurtma asosiy ro‘yxatga qaytarilsinmi?" : "Buyurtma arxivlansinmi? Bu bekor qilish emas: qoldiq qaytarilmaydi, buyurtma ma’lumotlari saqlanadi.")) {
         return;
     }
 
@@ -2153,7 +2155,7 @@ async function deleteOrder(orderId) {
         const response = await fetch(
             "/api/admin/orders/" + encodeURIComponent(orderId),
             {
-                method: "DELETE",
+                method: archived ? "PATCH" : "DELETE",
                 headers: {
                     "Authorization": "Bearer " + adminToken
                 }
@@ -2170,7 +2172,7 @@ async function deleteOrder(orderId) {
         if (!response.ok || !result.success) {
             alert(
                 result.message ||
-                "Buyurtmani o‘chirib bo‘lmadi."
+                "Buyurtma arxivini o‘zgartirib bo‘lmadi."
             );
             return;
         }

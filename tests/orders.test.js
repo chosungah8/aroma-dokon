@@ -102,3 +102,12 @@ test('a stale Excel export cannot replace the newest promotion file', async () =
     assert.match(game.excel_path, /-v2\.xlsx$/);
     assert.equal(removed.length, 0);
 });
+
+test('exhausted promotion notice accompanies accepted order without issuing or exporting a number', async () => {
+    const texts=[]; let exports=0;
+    const ctx={webAppData:{data:'{}'},from:{id:123},reply:async()=>assert.fail('Must accept'),replyWithHTML:async text=>texts.push(text)};
+    await handlerFixture()(ctx,{}, {telegram:{sendMessage:async(_,text)=>texts.push(text)}},async()=>exports++,'admin',
+        {log(){},error(){}},async()=>({...saved,new_participant:false,order:{...saved.order,participant_number:null,promotion_notice:'Raqam tugagan <test>'}}),escapeHtml);
+    assert.equal(exports,0);assert.equal(texts.length,2);
+    assert.ok(texts.every(text=>text.includes('AR-confirmed')&&text.includes('Raqam tugagan &lt;test&gt;')));
+});
