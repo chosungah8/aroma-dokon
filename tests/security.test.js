@@ -30,7 +30,7 @@ function entry(environment = {}) {
         return res;
     } };
 }
-const adminHeader = { authorization: 'Bearer ' + crypto.createHash('sha256').update('test-password').digest('hex') };
+const adminHeader = { authorization: 'Bearer ' + security.createAdminToken('test-password', 'test-bot-token') };
 
 test('webhook rejects absent, invalid or multiple secret headers before handling data', async () => {
     const app = entry();

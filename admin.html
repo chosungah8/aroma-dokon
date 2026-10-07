@@ -1040,7 +1040,7 @@ method: "POST",
         const result = await response.json();
 
         if (!response.ok || !result.success) {
-            error.innerText = "Parol noto‘g‘ri!";
+            error.innerText = result.message || "Kirish amalga oshmadi.";
             return;
         }
 
@@ -1051,11 +1051,12 @@ method: "POST",
             adminToken
         );
 
+        document.getElementById("password").value = "";
         showAdmin();
 
-    } catch (error) {
+    } catch (loginFailure) {
 
-        console.error(error);
+        console.error(loginFailure);
 
         error.innerText =
             "Server bilan bog‘lanishda xatolik!";

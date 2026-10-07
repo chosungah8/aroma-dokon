@@ -24,8 +24,8 @@ function readBody(req) {
 module.exports = async function handler(req, res) {
 
     const pathname = new URL(req.url, 'http://localhost').pathname;
-    const setupToken = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-    const isSetupAdmin = adminTokenIsValid(setupToken, process.env.ADMIN_PASSWORD);
+    const setupToken = (typeof req.headers.authorization === 'string' ? req.headers.authorization : '').replace(/^Bearer\s+/i, '');
+    const isSetupAdmin = adminTokenIsValid(setupToken, process.env.ADMIN_PASSWORD, process.env.BOT_TOKEN);
     res.setHeader('Cache-Control', 'no-store');
 
     if (pathname === '/api/webhook-info' && req.method === 'GET') {

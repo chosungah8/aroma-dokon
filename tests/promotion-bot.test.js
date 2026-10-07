@@ -34,6 +34,6 @@ test('new bot webhook has separate secret and requires admin authentication for 
  assert.equal((await request('/api/promotion-telegram',{'x-telegram-bot-api-secret-token':security.telegramWebhookSecret('promotion')})).statusCode,200);
  assert.equal(events[0],'promotion');
  assert.equal((await request('/api/admin/promotion-bot-webhook')).statusCode,401);
- await request('/api/admin/promotion-bot-webhook',{authorization:'Bearer '+crypto.createHash('sha256').update('secret').digest('hex')});
+ await request('/api/admin/promotion-bot-webhook',{authorization:'Bearer '+security.createAdminToken('secret', 'shop')});
  assert.equal(events[1].name,'promotion');assert.equal(events[1].url,'https://shop.example/api/promotion-telegram');assert.equal(events[1].opts.secret_token,security.telegramWebhookSecret('promotion'));
 });
