@@ -8,7 +8,8 @@ const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
 
 test('shop coupon button is positioned and has a working download handler', () => {
     assert.match(html, /🎟️ Kuponni yuklab olish/);
-    assert.match(html, /position:absolute;\s*left:0;\s*bottom:0/);
+    assert.match(html, /position:relative;\s*display:block;\s*width:calc\(100% - 20px\)/);
+    assert.match(html, /margin:10px auto !important;/);
     assert.match(html, /async function downloadCoupon\(code\)/);
     assert.match(html, /fetch\("\/api\/coupons\/save"/);
     assert.match(html, /"X-Telegram-Init-Data": tg\.initData/);
