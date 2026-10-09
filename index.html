@@ -180,7 +180,7 @@
         #cartCountBadge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; border-radius: 10px; background: #ff3b30; color: white; font-size: 10px; font-weight: bold; line-height: 18px; text-align: center; border: 2px solid white; }
 
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: flex-end; }
-        .modal-content { background: #fff; width: 100%; border-radius: 16px 16px 0 0; padding: 16px; max-height: 80vh; overflow-y: auto; }
+        .modal-content { background: #fff; width: 100%; border-radius: 16px 16px 0 0; padding: 16px; max-height: 90vh; max-height: 90dvh; overflow-y: auto; overscroll-behavior:contain; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 16px; font-weight: bold; }
         .close-btn { font-size: 20px; cursor: pointer; color: #888; }
 
@@ -268,7 +268,6 @@
     </div>
 </div>
 
-    </button>
 <div class="categories" id="categories"></div>
 
 <!-- MAHSULOT TOPIB BERAMIZ BANNER -->
@@ -506,6 +505,39 @@
                 <span class="close-btn" onclick="closeCartModal()">✕</span>
             </div>
 
+            <div
+                id="cartCouponsSection"
+                style="
+                    margin:12px 0;
+                    padding:12px;
+                    background:#f8f8f8;
+                    border-radius:12px;
+                "
+            >
+                <div style="
+                    font-weight:700;
+                    margin-bottom:10px;
+                    font-size:15px;
+                ">
+                    🎟️ Kuponlar
+                </div>
+
+                <div
+                    id="cartCouponsList"
+                    style="display:flex; flex-direction:column; gap:8px; max-height:160px; overflow-y:auto;"
+                >
+                    Kuponlar yuklanmoqda...
+                </div>
+
+                <div
+                    id="couponResult"
+                    style="
+                        margin-top:8px;
+                        font-size:13px;
+                    "
+                ></div>
+            </div>
+
             <div id="cartItemsList"></div>
 
             <div
@@ -602,39 +634,6 @@
                         0 so'm
                     </span>
                 </div>
-            </div>
-
-            <div
-                id="cartCouponsSection"
-                style="
-                    margin:12px 0;
-                    padding:12px;
-                    background:#f8f8f8;
-                    border-radius:12px;
-                "
-            >
-                <div style="
-                    font-weight:700;
-                    margin-bottom:10px;
-                    font-size:15px;
-                ">
-                    🎟️ Kuponlar
-                </div>
-
-                <div
-                    id="cartCouponsList"
-                    style="display:flex; flex-direction:column; gap:8px;"
-                >
-                    Kuponlar yuklanmoqda...
-                </div>
-
-                <div
-                    id="couponResult"
-                    style="
-                        margin-top:8px;
-                        font-size:13px;
-                    "
-                ></div>
             </div>
 
             <div class="form-group" id="phoneForm">
@@ -1052,12 +1051,15 @@ async function loadAvailableCoupons() {
     const serial = ++couponLoadSerial;
     const list = document.getElementById('cartCouponsList');
     if (!list) return false;
+    if (!couponCatalogReady) list.textContent = 'Kuponlar yuklanmoqda…';
     try {
         const response = await fetch('/api/coupons/available', {cache:'no-store'});
         const data = await response.json().catch(() => ({}));
         if (serial !== couponLoadSerial) return false; // Eskirgan so‘rov tanlovni o‘zgartirmasin.
         if (!response.ok || !data.success || !Array.isArray(data.coupons)) {
-            throw new Error(data.message || `Kuponlar serverdan olinmadi (${response.status}).`);
+            throw new Error(response.status === 404
+                ? 'Kupon API topilmadi (404). Serverga /api/coupons/available endpointini joylang.'
+                : (data.message || `Kuponlar serverdan olinmadi (${response.status}).`));
         }
         availableCouponsCache = data.coupons;
         list.style.color = '';
@@ -1107,7 +1109,7 @@ async function loadAvailableCoupons() {
         updateCartBar();
         const result = document.getElementById('couponResult');
         if (result) {
-            result.textContent = '❌ Kuponlar serveridan javob yo‘q. Qayta urinib ko‘ring.';
+            result.textContent = 'Kuponlar serveri hozir javob bermadi. /api/coupons/available manzilini tekshiring.';
             result.style.color = '#c62828';
         }
         list.textContent = error.message || 'Kuponlarni yuklab bo‘lmadi.';
@@ -2654,18 +2656,30 @@ function updateCartBar() {
         bar.style.display = 'flex';
         document.getElementById('cartCountBadge').innerText = '0';
         document.getElementById('cartBarTotal').innerText = "0 so'm";
-        closeCartModal();
+        // Savat bo‘sh bo‘lsa ham ochiq qoladi. Uni faqat mijoz yopadi.
     }
 }
 
         function openCartModal() {
-            updateCartBar();
-            renderCartItems();
-            loadAvailableCoupons();
-            document.getElementById('cartModal').style.display = 'flex';
-
+            const modal = document.getElementById('cartModal');
+            if (!modal) return;
+            // Avval modalni ochish: yuklanayotgan savat yoki kupon uni yopmasin.
+            modal.style.display = 'flex';
             const bottomOrdersNav = document.getElementById('bottomOrdersNav');
             if (bottomOrdersNav) bottomOrdersNav.style.display = 'none';
+            try {
+                updateCartBar();
+                renderCartItems();
+            } catch (error) {
+                console.error('SAVATNI CHIZISH XATOSI:', error);
+                const result = document.getElementById('couponResult');
+                if (result) {
+                    result.textContent = 'Savatni ko‘rsatishda xatolik. Do‘konni qayta oching.';
+                    result.style.color = '#c62828';
+                }
+            }
+            // Async javob faqat kuponni o‘zgartiradi; modalni aslo yopmaydi.
+            void loadAvailableCoupons();
         }
 
         function closeCartModal() {
