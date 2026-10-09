@@ -539,7 +539,7 @@
                         color:#e53935;
                     "
                 >
-                    <span>Mahsulot chegirmasi:</span>
+                    <span>Mahsulot/kategoriya chegirmasi:</span>
                     <span id="cartProductDiscount">-0 so'm</span>
                 </div>
 
@@ -555,6 +555,14 @@
                 >
                     <span>Kupon chegirmasi:</span>
                     <span id="cartCouponDiscount">-0 so'm</span>
+                </div>
+
+                <div
+                    id="cartTotalDiscountRow"
+                    style="display:flex;justify-content:space-between;margin-bottom:7px;font-size:13px;font-weight:700;color:#c02f45;"
+                >
+                    <span>Jami chegirma:</span>
+                    <span id="cartTotalDiscount">-0 so'm</span>
                 </div>
 
                 <div
@@ -684,19 +692,7 @@ async function applyCoupon() {
         return;
     }
 
-    let orderAmount = 0;
-
-    Object.keys(cart).forEach(id => {
-        const product = products.find(p => String(p.id) === String(id));
-
-        if (!product) return;
-
-        const finalPrice = product.discountActive && product.discountPercent > 0
-            ? Math.round(Number(product.price) * (1 - Number(product.discountPercent) / 100))
-            : Number(product.price);
-
-        orderAmount += finalPrice * cart[id];
-    });
+    const orderAmount = calculateCartSubtotal();
 
     if (orderAmount <= 0) {
         result.textContent = "❌ Savat bo‘sh";
@@ -1052,13 +1048,16 @@ function chooseCouponForAmount(coupons, orderAmount, savedCode = "") {
     return suitableCoupons[0] || null;
 }
 
+let couponLoadSerial = 0;
 async function loadAvailableCoupons() {
+    const requestSerial = ++couponLoadSerial;
     const list = document.getElementById("cartCouponsList");
     if (!list) return;
 
     try {
         const response = await fetch("/api/coupons/available");
         const data = await response.json();
+        if (requestSerial !== couponLoadSerial) return;
 
         if (!response.ok || !data.success) {
             list.innerHTML = `
@@ -1105,13 +1104,14 @@ async function loadAvailableCoupons() {
         }
 
         const orderAmount = calculateCartSubtotal();
+        const chosenCode = downloadedCouponCode || appliedCoupon?.code || "";
 
         const suitableCoupons = coupons.filter(coupon =>
             orderAmount >= Number(coupon.minOrderAmount || 0)
         );
 
         if (suitableCoupons.length) {
-            const bestCoupon = chooseCouponForAmount(coupons, orderAmount, savedCode);
+            const bestCoupon = chooseCouponForAmount(coupons, orderAmount, chosenCode);
 
             appliedCoupon = bestCoupon;
             couponDiscountAmount = Math.round(
@@ -1218,38 +1218,65 @@ async function loadAvailableCoupons() {
     }
 }
 
-function calculateCartSubtotal() {
-    let total = 0;
+// Barcha savat hisoblari bir xil narx qoidasidan foydalanadi.
+// /api/products mahsulot chegirmasini, yoki ustuvorlikka qarab kategoriya
+// chegirmasini discountActive/discountPercent sifatida qaytaradi.
+function getDiscountedProductPrice(product, originalPrice) {
+    const base = Math.max(0, Number(originalPrice) || 0);
+    const percent = product?.discountActive === true
+        ? Math.min(100, Math.max(0, Number(product.discountPercent) || 0))
+        : 0;
+    return percent > 0 ? Math.round(base * (1 - percent / 100)) : base;
+}
+
+function getCartPricing() {
+    let originalTotal = 0;
+    let productDiscountAmount = 0;
+    let discountedSubtotal = 0;
+    let count = 0;
 
     for (const cartKey in cart) {
+        const quantity = Number(cart[cartKey]) || 0;
+        if (quantity <= 0) continue;
+        count += quantity;
+
         const parts = cartKey.split('__');
         const productId = parts[0];
         const variant = parts.length > 1
             ? decodeURIComponent(parts.slice(1).join('__'))
-            : "";
-
-        const product = products.find(
-            p => Number(p.id) === Number(productId)
-        );
-
+            : '';
+        const product = products.find(p => Number(p.id) === Number(productId));
         if (!product) continue;
 
-        const quantity = Number(cart[cartKey]) || 0;
-        const variantPrice = getVariantPrice(product, variant);
-
-        const finalPrice =
-            product.discountActive &&
-            Number(product.discountPercent) > 0
-                ? Math.round(
-                    Number(variantPrice) *
-                    (1 - Number(product.discountPercent) / 100)
-                )
-                : Number(variantPrice);
-
-        total += finalPrice * quantity;
+        const originalPrice = getVariantPrice(product, variant);
+        const finalPrice = getDiscountedProductPrice(product, originalPrice);
+        originalTotal += originalPrice * quantity;
+        productDiscountAmount += (originalPrice - finalPrice) * quantity;
+        discountedSubtotal += finalPrice * quantity;
     }
+    return { originalTotal, productDiscountAmount, discountedSubtotal, count };
+}
 
-    return total;
+function getCartTotals(coupon = appliedCoupon) {
+    const pricing = getCartPricing();
+    const couponIsEligible = coupon &&
+        Number(coupon.discountPercent) > 0 &&
+        pricing.discountedSubtotal >= Number(coupon.minOrderAmount || 0);
+    const validCoupon = couponIsEligible ? coupon : null;
+    const couponDiscountAmount = validCoupon
+        ? Math.round(pricing.discountedSubtotal *
+            Math.min(100, Math.max(0, Number(validCoupon.discountPercent))) / 100)
+        : 0;
+    return {
+        ...pricing,
+        coupon: validCoupon,
+        couponDiscountAmount,
+        total: Math.max(0, pricing.discountedSubtotal - couponDiscountAmount)
+    };
+}
+
+function calculateCartSubtotal() {
+    return getCartPricing().discountedSubtotal;
 }
 
 // Catalog requests can fail while a WebView connects or the server starts.
@@ -1324,6 +1351,7 @@ function loadProducts() {
             renderProducts();
             updateCartBar();
             productsLoaded = true;
+            loadAvailableCoupons();
 
             // Country information is optional; display products before fetching it.
             try {
@@ -2671,130 +2699,64 @@ function removeFromCart(id) {
 }
 
 function updateCartBar() {
-            let originalTotal = 0;
-            let productDiscountAmount = 0;
-            let total = 0;
-            let count = 0;
-
-            for (let cartKey in cart) {
-                const parts = cartKey.split('__');
-                const productId = parts[0];
-                const variant = parts.length > 1
-                    ? decodeURIComponent(parts.slice(1).join('__'))
-                    : "";
-
-                const p = products.find(
-                    prod => Number(prod.id) === Number(productId)
-                );
-
-                if (!p) {
-                    count += Number(cart[cartKey]) || 0;
-                    continue;
-                }
-
-                const quantity = Number(cart[cartKey]) || 0;
-                const originalPrice = getVariantPrice(p, variant);
-
-                originalTotal += originalPrice * quantity;
-
-                const finalPrice =
-                    p.discountActive && Number(p.discountPercent) > 0
-                        ? Math.round(
-                            originalPrice *
-                            (1 - Number(p.discountPercent) / 100)
-                        )
-                        : originalPrice;
-
-                total += finalPrice * quantity;
-
-                productDiscountAmount +=
-                    (originalPrice - finalPrice) * quantity;
-
-                count += quantity;
-            }
-
-            if (appliedCoupon && Number(appliedCoupon.discountPercent) > 0) {
-                couponDiscountAmount = Math.round(
-                    total *
-                    Number(appliedCoupon.discountPercent) / 100
-                );
-
-                total = Math.max(
-                    0,
-                    total - couponDiscountAmount
-                );
-            } else {
-                couponDiscountAmount = 0;
-            }
-
-            const originalTotalEl = document.getElementById('cartOriginalTotal');
-            const productDiscountRow = document.getElementById('cartProductDiscountRow');
-            const productDiscountEl = document.getElementById('cartProductDiscount');
-            const couponDiscountRow = document.getElementById('cartCouponDiscountRow');
-            const couponDiscountEl = document.getElementById('cartCouponDiscount');
-            const finalTotalEl = document.getElementById('cartFinalTotal');
-
-            if (originalTotalEl) {
-                originalTotalEl.innerText =
-                    `${originalTotal.toLocaleString()} so'm`;
-            }
-
-            if (productDiscountRow && productDiscountEl) {
-                if (productDiscountAmount > 0) {
-                    productDiscountRow.style.display = 'flex';
-                    productDiscountEl.innerText =
-                        `-${productDiscountAmount.toLocaleString()} so'm`;
-                } else {
-                    productDiscountRow.style.display = 'none';
-                }
-            }
-
-            if (couponDiscountRow && couponDiscountEl) {
-                if (couponDiscountAmount > 0) {
-                    couponDiscountRow.style.display = 'flex';
-                    couponDiscountEl.innerText =
-                        `-${couponDiscountAmount.toLocaleString()} so'm`;
-                } else {
-                    couponDiscountRow.style.display = 'none';
-                }
-            }
-
-            if (finalTotalEl) {
-                finalTotalEl.innerText =
-                    `${total.toLocaleString()} so'm`;
-            }
-
-            const deliveryRow = document.getElementById('freeDeliveryRow');
-            const deliveryText = document.getElementById('freeDeliveryText');
-
-            if (deliveryRow && deliveryText && count > 0 && freeDeliveryEnabled) {
-                deliveryRow.style.display = 'flex';
-
-                if (total >= freeDeliveryMinAmount) {
-                    deliveryText.innerText = 'Bepul yetkazib berish';
-                } else {
-                    deliveryText.innerText = 'Pullik yetkazib berish';
-                }
-            } else if (deliveryRow) {
-                deliveryRow.style.display = 'none';
-            }
-
-            const bar = document.getElementById('cartBar');
-
-            if (count > 0) {
-                bar.style.display = 'flex';
-
-                document.getElementById('cartCountBadge').innerText = count;
-
-                document.getElementById('cartBarTotal').innerText =
-                    `${total.toLocaleString()} so'm (${count} ta)`;
-            } else {
-                bar.style.display = 'flex';
-                document.getElementById('cartCountBadge').innerText = '0';
-                document.getElementById('cartBarTotal').innerText = '0 so\'m';
-                closeCartModal();
-            }
+    const totals = getCartTotals();
+    const {originalTotal, productDiscountAmount, couponDiscountAmount: couponAmount,
+        total, count} = totals;
+    // Kupon savat kamayganda minimal summaga yetmasa avtomatik olib tashlanadi.
+    if (appliedCoupon && !totals.coupon) {
+        appliedCoupon = null;
+        const result = document.getElementById('couponResult');
+        if (result) {
+            result.textContent = 'Kupon uchun minimal summaga yetilmadi.';
+            result.style.color = '#b45309';
         }
+    }
+    couponDiscountAmount = couponAmount;
+
+    const originalTotalEl = document.getElementById('cartOriginalTotal');
+    const productDiscountRow = document.getElementById('cartProductDiscountRow');
+    const productDiscountEl = document.getElementById('cartProductDiscount');
+    const couponDiscountRow = document.getElementById('cartCouponDiscountRow');
+    const couponDiscountEl = document.getElementById('cartCouponDiscount');
+    const totalDiscountEl = document.getElementById('cartTotalDiscount');
+    const finalTotalEl = document.getElementById('cartFinalTotal');
+
+    if (originalTotalEl) originalTotalEl.innerText = `${originalTotal.toLocaleString()} so'm`;
+    if (productDiscountRow && productDiscountEl) {
+        productDiscountRow.style.display = productDiscountAmount > 0 ? 'flex' : 'none';
+        productDiscountEl.innerText = `-${productDiscountAmount.toLocaleString()} so'm`;
+    }
+    if (couponDiscountRow && couponDiscountEl) {
+        couponDiscountRow.style.display = couponAmount > 0 ? 'flex' : 'none';
+        couponDiscountEl.innerText = `-${couponAmount.toLocaleString()} so'm`;
+    }
+    if (totalDiscountEl) {
+        totalDiscountEl.innerText = `-${(productDiscountAmount + couponAmount).toLocaleString()} so'm`;
+    }
+    if (finalTotalEl) finalTotalEl.innerText = `${total.toLocaleString()} so'm`;
+
+    const deliveryRow = document.getElementById('freeDeliveryRow');
+    const deliveryText = document.getElementById('freeDeliveryText');
+    if (deliveryRow && deliveryText && count > 0 && freeDeliveryEnabled) {
+        deliveryRow.style.display = 'flex';
+        deliveryText.innerText = total >= freeDeliveryMinAmount
+            ? 'Bepul yetkazib berish' : 'Pullik yetkazib berish';
+    } else if (deliveryRow) {
+        deliveryRow.style.display = 'none';
+    }
+    const bar = document.getElementById('cartBar');
+    if (count > 0) {
+        bar.style.display = 'flex';
+        document.getElementById('cartCountBadge').innerText = count;
+        document.getElementById('cartBarTotal').innerText =
+            `${total.toLocaleString()} so'm (${count} ta)`;
+    } else {
+        bar.style.display = 'flex';
+        document.getElementById('cartCountBadge').innerText = '0';
+        document.getElementById('cartBarTotal').innerText = "0 so'm";
+        closeCartModal();
+    }
+}
 
         function openCartModal() {
             updateCartBar();
@@ -2850,6 +2812,8 @@ function updateCartBar() {
 
                 const quantity = Number(cart[cartKey]) || 0;
                 const variantPrice = getVariantPrice(p, variant);
+                const finalPrice = getDiscountedProductPrice(p, variantPrice);
+                const hasDiscount = finalPrice < variantPrice;
 
                 hasItems = true;
 
@@ -2906,7 +2870,10 @@ function updateCartBar() {
                                 font-size:11px;
                                 font-weight:600;
                             ">
-                                ${Number(variantPrice).toLocaleString()} so'm
+                                ${hasDiscount
+                                    ? `<span style="text-decoration:line-through;color:#999;font-weight:400;">${variantPrice.toLocaleString()} so'm</span> `
+                                    : ''}
+                                <span style="color:${hasDiscount ? '#e53935' : '#007aff'};">${finalPrice.toLocaleString()} so'm</span>
                             </div>
                         </div>
                     </div>
@@ -3266,9 +3233,7 @@ async function sendOrder() {
             }
             const variantPrice = getVariantPrice(p, selectedVariant);
 
-            const finalPrice = p.discountActive && p.discountPercent > 0
-                ? Math.round(Number(variantPrice) * (1 - Number(p.discountPercent) / 100))
-                : Number(variantPrice);
+            const finalPrice = getDiscountedProductPrice(p, variantPrice);
 
             orderItems.push({
                 id: p.id,
@@ -3286,14 +3251,13 @@ async function sendOrder() {
         }
     }
 
-    if (appliedCoupon && Number(appliedCoupon.discountPercent) > 0) {
-        couponDiscountAmount = Math.round(
-            total * Number(appliedCoupon.discountPercent) / 100
-        );
-        total = Math.max(0, total - couponDiscountAmount);
-    } else {
-        couponDiscountAmount = 0;
-    }
+    // Savat va serverdagi hisobga mos: avval mahsulot/kategoriya, keyin kupon.
+    const totals = getCartTotals();
+    appliedCoupon = totals.coupon;
+    originalTotal = totals.originalTotal;
+    productDiscountAmount = totals.productDiscountAmount;
+    couponDiscountAmount = totals.couponDiscountAmount;
+    total = totals.total;
 
     if (orderItems.length === 0) {
         alert('Savatcha bo‘sh!');
