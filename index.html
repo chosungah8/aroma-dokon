@@ -1042,6 +1042,16 @@ async function loadPublicPromotions() {
     }
 }
 
+function chooseCouponForAmount(coupons, orderAmount, savedCode = "") {
+    const suitableCoupons = (coupons || [])
+        .filter(coupon => orderAmount >= Number(coupon.minOrderAmount || 0))
+        .sort((a, b) =>
+            Number(b.code === savedCode) - Number(a.code === savedCode) ||
+            Number(b.discountPercent || 0) - Number(a.discountPercent || 0)
+        );
+    return suitableCoupons[0] || null;
+}
+
 async function loadAvailableCoupons() {
     const list = document.getElementById("cartCouponsList");
     if (!list) return;
@@ -1101,14 +1111,7 @@ async function loadAvailableCoupons() {
         );
 
         if (suitableCoupons.length) {
-            suitableCoupons.sort(
-                (a, b) =>
-                    Number(b.code === savedCode) - Number(a.code === savedCode) ||
-                    Number(b.discountPercent || 0) -
-                    Number(a.discountPercent || 0)
-            );
-
-            const bestCoupon = suitableCoupons[0];
+            const bestCoupon = chooseCouponForAmount(coupons, orderAmount, savedCode);
 
             appliedCoupon = bestCoupon;
             couponDiscountAmount = Math.round(
