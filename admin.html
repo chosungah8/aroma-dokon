@@ -459,6 +459,8 @@
                 <h3 id="gameParticipantsTitle"></h3>
                 <button type="button" onclick="closeGameParticipants()">Yopish</button>
             </div>
+            <!-- AROMA_PROMOTION_PARTICIPANT_DELETE_STATUS_V2 -->
+            <div id="gameParticipantsFeedback" role="status" aria-live="polite" style="margin:10px 0;font-size:14px;"></div>
             <div id="gameParticipantsContent" style="overflow-x:auto;"></div>
             <div id="gameParticipantsPages" style="display:flex;gap:10px;margin-top:12px;"></div>
         </section>
@@ -2420,6 +2422,7 @@ function closeGameParticipants() {
     selectedGameId = null;
     document.getElementById('gameParticipantsPanel').hidden = true;
     document.getElementById('gameParticipantsContent').replaceChildren();
+    document.getElementById('gameParticipantsFeedback').textContent = '';
 }
 async function loadGameParticipants(id, page = 1) {
     const request = ++gameParticipantsRequest;
@@ -2466,34 +2469,57 @@ async function loadGameParticipants(id, page = 1) {
             content.append(table);
         }
         gamePager(pages, page, result.pageSize, result.total, next => loadGameParticipants(id, next));
+        return result;
     } catch (error) {
         if (request === gameParticipantsRequest) content.textContent = error.message;
     }
 }
-// AROMA_PROMOTION_PARTICIPANT_REUSE_V1
+// AROMA_PROMOTION_PARTICIPANT_DELETE_STATUS_V2
 async function deletePromotionParticipant(id, participant, page, previousTotal) {
     const number = Number(participant.participant_number);
-    if (!Number.isSafeInteger(number) || number <= 0 || typeof participant.customer_id !== 'string') {
-        alert('Ishtirokchini aniqlab bo‘lmadi. Ro‘yxatni yangilang.'); return;
+    const feedback = document.getElementById('gameParticipantsFeedback');
+    const say = (message, isError = false) => {
+        feedback.textContent = message;
+        feedback.style.color = isError ? '#b42318' : '#166534';
+    };
+    if (!Number.isSafeInteger(number) || number <= 0 || typeof participant.customer_id !== 'string'
+        || !participant.customer_id.trim()) {
+        say('Ishtirokchi ma’lumotlari yetishmayapti. Ro‘yxatni yangilang.', true);
+        return;
     }
     const name = participant.customer_name || participant.phone || participant.customer_username || 'Nomsiz ishtirokchi';
     const gameName = typeof promotionGameLabelForId === 'function'
         ? promotionGameLabelForId(id) : 'Aksiya';
     if (!confirm(`${gameName}\n\n${number}-raqam — ${name}\n\n` +
-        'Bu ishtirokchi butunlay ro‘yxatdan chiqariladi. Uning raqami keyingi yangi ishtirokchiga berilishi mumkin. ' +
-        'Qolgan ishtirokchilarning raqamlari o‘zgarmaydi. Oldingi Telegram xabarlari o‘zgarishsiz qoladi. Davom etilsinmi?')) return;
-    const notice = document.getElementById('promotionGamesMessage');
-    notice.textContent = `${number}-raqam o‘chirilmoqda…`;
+        'Ishtirokchi ro‘yxatdan o‘chiriladi. Uning raqami keyingi yangi ishtirokchiga berilishi mumkin. ' +
+        'Qolgan ishtirokchilarning raqamlari o‘zgarmaydi. Davom etilsinmi?')) return;
+    say(`${number}-raqam bazadan o‘chirilmoqda…`);
     try {
         const response = await gameFetch(`/${id}/participants/${number}`, {
             method: 'DELETE', body: JSON.stringify({ customerId: participant.customer_id })
         });
         const result = await response.json();
-        notice.textContent = result.message || `${number}-raqam bo‘shatildi.`;
-        if (result.warning) notice.textContent += ' ' + result.warning;
+        if (!result || result.success !== true || result.deletedNumber !== number) {
+            throw new Error('Server ishtirokchi o‘chirilganini tasdiqlamadi. Ro‘yxatni tekshiring.');
+        }
         const nextPage = page > 1 && previousTotal - 1 <= (page - 1) * 50 ? page - 1 : page;
-        if (selectedGameId === String(id)) await loadGameParticipants(id, nextPage);
-    } catch (error) { notice.textContent = error.message; }
+        if (selectedGameId === String(id)) {
+            const fresh = await loadGameParticipants(id, nextPage);
+            if (!fresh) {
+                say('Bazada o‘chirish tasdiqlandi, lekin ro‘yxatni yangilab bo‘lmadi. “Ishtirokchilar”ni qayta oching.', true);
+                return;
+            }
+            if (fresh.participants?.some(p => Number(p.participant_number) === number &&
+                p.customer_id === participant.customer_id)) {
+                say('Server o‘chirishni tasdiqladi, ammo ishtirokchi ro‘yxatda hali bor. Sahifani yangilang va xatoni yuboring.', true);
+                return;
+            }
+        }
+        say(result.message || `${number}-raqam ro‘yxatdan o‘chirildi.`);
+        if (result.warning) say(feedback.textContent + ' ' + result.warning);
+    } catch (error) {
+        say('O‘chirish amalga oshmadi: ' + error.message, true);
+    }
 }
 async function downloadGameExcel(id) {
     const message = document.getElementById('promotionGamesMessage');

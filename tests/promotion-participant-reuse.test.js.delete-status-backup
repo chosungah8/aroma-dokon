@@ -21,7 +21,7 @@ function route(){
     "return {status:404};})", {console:{...console,error(){}},Number,String,JSON,Error});
 }
 const url = new URL('https://example.org/api/admin/promotion-games/2/participants/3');
-function input(opts={}){ return {url,req:{method:'DELETE',body:{customerId:'offline:998901234567'}},isAdmin:true,parseBody:async req=>req.body,updatePromotionExcel:async()=>{},supabase:{rpc:async()=>({data:{deleted:true,deleted_number:3,promotion_id:2},error:null})},...opts}; }
+function input(opts={}){ return {url,req:{method:'DELETE',body:{customerId:'offline:998901234567'}},isAdmin:true,parseBody:async req=>req.body,updatePromotionExcel:async()=>{},supabase:{rpc:async()=>({data:{deleted:true},error:null})},...opts}; }
 test('admin bo‘lmasa DELETE qilinmaydi',async()=>{
  let called=false;
  const r=await route()(input({isAdmin:false,supabase:{rpc:async()=>{called=true;return {}}}}));
@@ -33,7 +33,7 @@ test('DELETE o‘rniga boshqa method rad etiladi',async()=>{
 test('maqsad ishtirokchi ID va raqami tasdiqlanadi',async()=>{
  let params, excel;
  const r=await route()(input({
-  supabase:{rpc:async(name,arg)=>{assert.equal(name,'aroma_delete_promotion_participant_v1');params=arg;return {data:{deleted:true,deleted_number:3,promotion_id:2},error:null};}},
+  supabase:{rpc:async(name,arg)=>{assert.equal(name,'aroma_delete_promotion_participant_v1');params=arg;return {data:{deleted:true},error:null};}},
   updatePromotionExcel:async id=>{excel=id;}
  }));
  assert.equal(r.status,200);assert.equal(params.p_promotion_id,2);
