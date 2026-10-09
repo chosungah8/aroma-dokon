@@ -23,6 +23,7 @@ function setup(cart, coupons, options = {}) {
         ],
         cart, appliedCoupon: null, couponDiscountAmount:0,
         downloadedCouponCode: options.downloadedCouponCode || '',
+        verifiedSavedCouponCodes: new Set(options.downloadedCouponCode ? [options.downloadedCouponCode.toUpperCase()] : []),
         document:{getElementById:id=>nodes[id] || null, createElement:tag=>element(tag)},
         fetch: options.fetch || (async () => ({ok:true,status:200,json:async()=>({success:true,coupons})})),
         console, Number, Math, localStorage:{setItem(){}}, tg:{initData:'valid'},
@@ -89,7 +90,7 @@ test('no coupon applies to empty cart or under minimum and server errors fail cl
     assert.equal(await context.loadAvailableCoupons(),false);
     assert.equal(context.appliedCoupon,null);
     assert.equal(context.getCartTotals().total,80000);
-    assert.match(nodes.couponResult.textContent,/serveri/);
+    assert.match(nodes.couponResult.textContent,/Kuponlarni yuklash ishlamadi/);
 });
 
 test('stale coupon requests cannot override newer results', async()=>{

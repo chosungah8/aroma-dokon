@@ -1089,17 +1089,84 @@ async function promotionBotApi(path, method='GET', body) {
     return data;
 }
 async function loadPromotionBotAdmins(){
+    const message=document.getElementById('promotionBotMessage');
     try {
         const data=await promotionBotApi('/api/admin/promotion-bot-admins');
-        const list=document.getElementById('promotionBotAdmins');list.replaceChildren();
-        for(const admin of data.admins.filter(a=>a.active)){
-            const row=document.createElement('p');row.textContent=admin.label+' — '+admin.telegram_id+' ';
-            const button=document.createElement('button');button.textContent='Ruxsatni bekor qilish';
-            button.onclick=async()=>{try{await promotionBotApi('/api/admin/promotion-bot-admins/'+admin.telegram_id,'DELETE');await loadPromotionBotAdmins();}catch(e){document.getElementById('promotionBotMessage').textContent=e.message;}};
-            row.append(button);list.append(row);
+        const list=document.getElementById('promotionBotAdmins');
+        list.replaceChildren();
+        const admins=(Array.isArray(data.admins)?data.admins:[]).filter(a=>a.active);
+        if(!admins.length){
+            const empty=document.createElement('p');
+            empty.textContent='Hozir ruxsat berilgan adminlar yo‘q.';
+            list.append(empty);
         }
-        document.getElementById('promotionBotMessage').textContent=data.configured?'Bot tokeni sozlangan.':'Vercel’da PROMOTION_BOT_TOKEN ni sozlang.';
-    }catch(e){document.getElementById('promotionBotMessage').textContent=e.message;}
+        for(const admin of admins){
+            const row=document.createElement('div');
+            row.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #e5e7eb';
+            const name=document.createElement('span');
+            name.style.cssText='flex:1 1 220px;overflow-wrap:anywhere';
+            name.textContent=(admin.label||'Ism kiritilmagan')+' — '+admin.telegram_id;
+            const edit=document.createElement('button');
+            edit.type='button';
+            edit.textContent='Ismini o‘zgartirish';
+            edit.onclick=()=>{
+                const input=document.createElement('input');
+                input.type='text';
+                input.maxLength=100;
+                input.placeholder='Yangi admin ismi';
+                input.value=admin.label||'';
+                input.setAttribute('aria-label','Adminning yangi ismi');
+                input.style.cssText='flex:1 1 220px;margin:0';
+                const save=document.createElement('button');
+                save.type='button';
+                save.textContent='Saqlash';
+                const cancel=document.createElement('button');
+                cancel.type='button';
+                cancel.textContent='Bekor qilish';
+                cancel.onclick=()=>row.replaceChildren(name,edit,revoke);
+                const saveName=async()=>{
+                    const label=input.value.trim();
+                    if(!label || label.length>100){
+                        message.textContent='Admin ismini 1–100 belgida kiriting.';
+                        input.focus();
+                        return;
+                    }
+                    save.disabled=true;cancel.disabled=true;
+                    try {
+                        await promotionBotApi('/api/admin/promotion-bot-admins/'+admin.telegram_id,'PATCH',{label});
+                        await loadPromotionBotAdmins();
+                        message.textContent='Admin ismi muvaffaqiyatli o‘zgartirildi.';
+                    } catch(e) {
+                        message.textContent=e.message;
+                        save.disabled=false;cancel.disabled=false;
+                    }
+                };
+                save.onclick=saveName;
+                input.onkeydown=e=>{
+                    if(e.key==='Enter'){e.preventDefault();saveName();}
+                    if(e.key==='Escape'){e.preventDefault();cancel.onclick();}
+                };
+                row.replaceChildren(input,save,cancel);
+                input.focus();
+            };
+            const revoke=document.createElement('button');
+            revoke.type='button';
+            revoke.textContent='Ruxsatni bekor qilish';
+            revoke.onclick=async()=>{
+                revoke.disabled=true;
+                try {
+                    await promotionBotApi('/api/admin/promotion-bot-admins/'+admin.telegram_id,'DELETE');
+                    await loadPromotionBotAdmins();
+                } catch(e) {
+                    message.textContent=e.message;
+                    revoke.disabled=false;
+                }
+            };
+            row.append(name,edit,revoke);
+            list.append(row);
+        }
+        message.textContent=data.configured?'Bot tokeni sozlangan.':'Vercel’da PROMOTION_BOT_TOKEN ni sozlang.';
+    }catch(e){message.textContent=e.message;}
 }
 async function addPromotionBotAdmin(){
     try{await promotionBotApi('/api/admin/promotion-bot-admins','POST',{telegramId:document.getElementById('promotionBotAdminId').value.trim(),label:document.getElementById('promotionBotAdminLabel').value.trim()});await loadPromotionBotAdmins();}
