@@ -1069,7 +1069,9 @@ function syncAutomaticCoupon() {
         result.textContent = 'Kuponlarni serverdan tekshirish kutilmoqda.';
         result.style.color = '#777';
     } else if (!availableCouponsCache.length) {
-        result.textContent = 'Hozir faol kupon yo‘q.';
+        result.textContent = verifiedSavedCouponCodes.size
+            ? `${verifiedSavedCouponCodes.size} ta kupon saqlangan, ammo hozir chegirma uchun faol emas. Kuponlar ro‘yxatida ko‘rishingiz mumkin.`
+            : 'Hozir faol kupon yo‘q.';
         result.style.color = '#777';
     } else if (amount <= 0) {
         result.textContent = 'Savatga mahsulot qo‘shilganda mos kupon avtomatik tanlanadi.';
@@ -1097,9 +1099,25 @@ function renderCouponCards() {
         Number(verifiedSavedCouponCodes.has(String(b.code).toUpperCase())) -
         Number(verifiedSavedCouponCodes.has(String(a.code).toUpperCase())) ||
         Number(b.discountPercent) - Number(a.discountPercent));
-    if (!coupons.length) {
+    // Saqlangan kupon faol ro‘yxatdan tushib qolgan bo‘lsa ham uni yashirmaymiz.
+    // Bu kodlarni chegirmaga qo‘llamaymiz: faollik serverda tekshiriladi.
+    const inactiveSavedCodes = [...verifiedSavedCouponCodes].filter(code =>
+        !availableCouponsCache.some(c => String(c.code).toUpperCase() === code));
+    if (!coupons.length && !inactiveSavedCodes.length) {
         list.textContent = 'Hozir faol kuponlar mavjud emas.';
         return;
+    }
+    for (const code of inactiveSavedCodes) {
+        const item = document.createElement('div');
+        item.style.cssText = 'padding:10px;border:1px solid #fbbf24;border-radius:10px;background:#fffbeb;';
+        const title = document.createElement('div');
+        title.style.cssText = 'font-size:13px;font-weight:800;color:#78350f;';
+        title.textContent = `🎟️ ${code} — Yuklab olingan`;
+        const status = document.createElement('div');
+        status.style.cssText = 'font-size:12px;margin-top:5px;color:#92400e;';
+        status.textContent = 'Saqlangan, ammo hozir qo‘llab bo‘lmaydi. Faolligi, amal qilish muddati yoki foydalanish limitini tekshiring.';
+        item.append(title, status);
+        list.append(item);
     }
     for (const coupon of coupons) {
         const eligible = amount > 0 && amount >= Number(coupon.minOrderAmount || 0);
@@ -1125,14 +1143,6 @@ function renderCouponCards() {
             amount ? `Yana ${required.toLocaleString()} so‘m kerak` : 'Savatga mahsulot qo‘shing';
         item.append(label, info, status);
         list.append(item);
-    }
-    const inactive = [...verifiedSavedCouponCodes].filter(code =>
-        !availableCouponsCache.some(c => String(c.code).toUpperCase() === code));
-    if (inactive.length) {
-        const note = document.createElement('div');
-        note.style.cssText = 'font-size:12px;color:#a16207;padding:4px';
-        note.textContent = `${inactive.length} ta yuklab olingan kupon hozir faol emas yoki muddati tugagan.`;
-        list.append(note);
     }
 }
 
