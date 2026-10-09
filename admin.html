@@ -997,7 +997,24 @@
 
 <script>
 
+function adminSessionLooksCurrent(token) {
+    try {
+        if (typeof token !== "string") return false;
+        const parts = token.split(".");
+        if (parts.length !== 3 || parts[0] !== "a1") return false;
+        const encoded = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+        const payload = JSON.parse(atob(encoded + "=".repeat((4 - encoded.length % 4) % 4)));
+        return Number.isSafeInteger(payload.exp) && payload.exp > Math.floor(Date.now() / 1000);
+    } catch (_) {
+        return false;
+    }
+}
+
 let adminToken = sessionStorage.getItem("aroma_admin_token");
+if (!adminSessionLooksCurrent(adminToken)) {
+    sessionStorage.removeItem("aroma_admin_token");
+    adminToken = null;
+}
 let gameListPage = 1;
 let gameListRequest = 0;
 let gameParticipantsRequest = 0;
@@ -3333,8 +3350,13 @@ async function loadCoupons() {
 
         const result = await response.json();
 
+        if (response.status === 401) {
+            logout();
+            return;
+        }
+
         if (!response.ok || !result.success) {
-            list.innerHTML = "<div style='color:#d00;'>Kuponlarni yuklab bo‘lmadi</div>";
+            list.innerHTML = "<div style='color:#d00;'>" + escapeHtml(result.message || "Kuponlarni yuklab bo‘lmadi") + "</div>";
             return;
         }
 
@@ -3408,7 +3430,7 @@ async function loadCoupons() {
 
     } catch (error) {
         console.error("COUPON LIST XATOSI:", error);
-        list.innerHTML = "<div style='color:#d00;'>Server bilan bog‘lanishda xatolik</div>";
+        list.innerHTML = "<div style='color:#d00;'>" + escapeHtml(error.message || "Server bilan bog‘lanishda xatolik") + "</div>";
     }
 }
 
