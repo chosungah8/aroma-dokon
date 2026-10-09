@@ -57,25 +57,6 @@ test('threshold changes with cart contents and coupon cannot discount an empty c
     assert.equal(c.getCartTotals().total, 0);
 });
 
-test('manual coupon validation sends variant-inclusive discounted cart subtotal', async () => {
-    const c = ctx(products, {'2__Katta%20hajm':1}, null);
-    const el = {value:'save10', textContent:'', style:{}};
-    const response = {
-        ok:true,
-        json:async () => ({success:true,coupon:{code:'SAVE10',discountPercent:10,minOrderAmount:180000}})
-    };
-    let request;
-    c.document = {getElementById:() => el};
-    c.fetch = async (url, opts) => {request = {url, opts}; return response;};
-    c.updateCartBar = () => {};
-    c.console = console;
-    vm.runInContext(part('async function applyCoupon()', 'function showCouponNotice('), c);
-    await c.applyCoupon();
-    assert.equal(request.url, '/api/coupons/validate');
-    assert.equal(JSON.parse(request.opts.body).orderAmount, 180000);
-    assert.equal(c.couponDiscountAmount, 18000);
-});
-
 test('cart summary shows combined reductions and payable balance', () => {
     assert.ok(html.includes('id="cartTotalDiscount"'));
     assert.ok(html.includes('Mahsulot/kategoriya chegirmasi:'));

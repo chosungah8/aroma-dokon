@@ -680,71 +680,9 @@ try {
     downloadedCouponCode = String(localStorage.getItem(downloadedCouponStorageKey) || "").trim().toUpperCase();
 } catch (_) { /* Private browsing may block localStorage. */ }
 
+// Kupon qo‘lda kiritilmaydi: savat uchun mosini serverdan olamiz.
 async function applyCoupon() {
-    const input = document.getElementById("couponCodeInput");
-    const result = document.getElementById("couponResult");
-
-    const code = input.value.trim().toUpperCase();
-
-    if (!code) {
-        result.textContent = "❌ Kupon kodini kiriting";
-        result.style.color = "#d00";
-        return;
-    }
-
-    const orderAmount = calculateCartSubtotal();
-
-    if (orderAmount <= 0) {
-        result.textContent = "❌ Savat bo‘sh";
-        result.style.color = "#d00";
-        return;
-    }
-
-    try {
-        const response = await fetch("/api/coupons/validate", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                code,
-                orderAmount
-            })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-            appliedCoupon = null;
-            couponDiscountAmount = 0;
-            result.textContent = "❌ " + (data.message || "Kuponni qo‘llab bo‘lmadi");
-            result.style.color = "#d00";
-            updateCartBar();
-            return;
-        }
-
-        appliedCoupon = data.coupon;
-        couponDiscountAmount = Math.round(
-            orderAmount * Number(data.coupon.discountPercent) / 100
-        );
-
-        result.textContent =
-            "✅ " + data.coupon.code +
-            " qo‘llandi: -" +
-            Number(data.coupon.discountPercent) +
-            "% (" +
-            couponDiscountAmount.toLocaleString() +
-            " so‘m)";
-
-        result.style.color = "#16803c";
-
-        updateCartBar();
-
-    } catch (error) {
-        console.error("COUPON APPLY XATOSI:", error);
-        result.textContent = "❌ Server bilan bog‘lanishda xatolik";
-        result.style.color = "#d00";
-    }
+    return loadAvailableCoupons();
 }
 
 function showCouponNotice(message, success = true) {
@@ -784,28 +722,43 @@ async function downloadCoupon(code) {
         showCouponNotice("Kuponni saqlash uchun do‘konni Telegram ichidan oching.", false);
         return;
     }
-
     try {
+        let localOnly = false;
         const response = await fetch("/api/coupons/save", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-Telegram-Init-Data": tg.initData
-            },
-            body: JSON.stringify({ code: normalizedCode })
+            method: "POST", cache: "no-store",
+            headers: {"Content-Type":"application/json", "X-Telegram-Init-Data": tg.initData},
+            body: JSON.stringify({code: normalizedCode})
         });
         const data = await response.json().catch(() => ({}));
-
         if (!response.ok || !data.success) {
-            throw new Error(data.message || "Kuponni saqlab bo‘lmadi.");
+            if (response.status === 401 || response.status === 403) {
+                throw new Error(data.message || "Telegram seansi eskirgan. Do‘konni qayta oching.");
+            }
+            // Optional user_coupons jadvali nosoz bo‘lsa, faol kuponni tekshirib
+            // faqat ushbu qurilmada saqlaymiz. Bazaga saqlandi deb da’vo qilmaymiz.
+            const check = await fetch("/api/coupons/available", {cache:"no-store"});
+            const listing = await check.json().catch(() => ({}));
+            if (!check.ok || !listing.success ||
+                !(listing.coupons || []).some(c =>
+                    String(c.code).toUpperCase() === normalizedCode && Number(c.discountPercent) > 0)) {
+                throw new Error(data.message || "Kuponni saqlab bo‘lmadi.");
+            }
+            localOnly = true;
         }
-
         try {
             localStorage.setItem(downloadedCouponStorageKey, normalizedCode);
-        } catch (_) { /* Private browsing may block localStorage. */ }
+        } catch (_) {
+            if (localOnly) {
+                showCouponNotice("Kuponni qurilmada saqlab bo‘lmadi.", false);
+                return;
+            }
+        }
         downloadedCouponCode = normalizedCode;
-        showCouponNotice(`✅ ${normalizedCode} kuponi saqlandi. Savatda foydalanishingiz mumkin.`);
-        await loadAvailableCoupons();
+        const ok = await loadAvailableCoupons();
+        showCouponNotice(ok
+            ? (localOnly ? `✅ ${normalizedCode} shu qurilmada saqlandi. Mos kelganda avtomatik qo‘llanadi.`
+                : `✅ ${normalizedCode} saqlandi. Mos kelganda avtomatik qo‘llanadi.`)
+            : `Kupon ${normalizedCode} saqlandi, ammo savatni yangilab bo‘lmadi.`, ok);
     } catch (error) {
         console.error("COUPON DOWNLOAD XATOSI:", error);
         showCouponNotice(error.message || "Kuponni saqlashda xatolik.", false);
@@ -1038,183 +991,129 @@ async function loadPublicPromotions() {
     }
 }
 
+// Serverdan kelgan faol kuponlar: saqlangan mos kupon avval, aks holda eng katta chegirma.
 function chooseCouponForAmount(coupons, orderAmount, savedCode = "") {
-    const suitableCoupons = (coupons || [])
-        .filter(coupon => orderAmount >= Number(coupon.minOrderAmount || 0))
-        .sort((a, b) =>
-            Number(b.code === savedCode) - Number(a.code === savedCode) ||
-            Number(b.discountPercent || 0) - Number(a.discountPercent || 0)
-        );
-    return suitableCoupons[0] || null;
+    if (!Number.isFinite(orderAmount) || orderAmount <= 0) return null;
+    const preferred = String(savedCode || "").toUpperCase();
+    const suitable = (Array.isArray(coupons) ? coupons : [])
+        .filter(c => c && typeof c.code === 'string' &&
+            Number.isFinite(Number(c.discountPercent)) &&
+            Number(c.discountPercent) > 0 && Number(c.discountPercent) <= 100 &&
+            Number.isFinite(Number(c.minOrderAmount || 0)) &&
+            Number(c.minOrderAmount || 0) >= 0 &&
+            orderAmount >= Number(c.minOrderAmount || 0));
+    suitable.sort((a, b) =>
+        Number(String(b.code).toUpperCase() === preferred) - Number(String(a.code).toUpperCase() === preferred) ||
+        Number(b.discountPercent) - Number(a.discountPercent) ||
+        String(a.code).localeCompare(String(b.code))
+    );
+    return suitable[0] || null;
 }
 
+let availableCouponsCache = [];
+let couponCatalogReady = false;
 let couponLoadSerial = 0;
+
+// updateCartBar() paytida tarmoq kutmasdan savat miqdori bilan sinxronlash.
+function syncAutomaticCoupon() {
+    const amount = calculateCartSubtotal();
+    appliedCoupon = couponCatalogReady
+        ? chooseCouponForAmount(availableCouponsCache, amount, downloadedCouponCode)
+        : null;
+    couponDiscountAmount = getCartTotals().couponDiscountAmount;
+    const result = document.getElementById('couponResult');
+    if (!result) return;
+    if (appliedCoupon) {
+        result.textContent = `✅ ${appliedCoupon.code}: -${Number(appliedCoupon.discountPercent)}% kupon avtomatik qo‘llandi (${couponDiscountAmount.toLocaleString()} so‘m).`;
+        result.style.color = '#16803c';
+    } else if (!couponCatalogReady) {
+        result.textContent = 'Kuponlarni tekshirish kutilmoqda.';
+        result.style.color = '#777';
+    } else if (!availableCouponsCache.length) {
+        result.textContent = 'Hozir faol kupon yo‘q.';
+        result.style.color = '#777';
+    } else if (amount <= 0) {
+        result.textContent = 'Savatga mahsulot qo‘shilganda mos kupon avtomatik tanlanadi.';
+        result.style.color = '#777';
+    } else {
+        const thresholds = availableCouponsCache
+            .filter(c => Number(c.discountPercent) > 0 && Number(c.discountPercent) <= 100)
+            .map(c => Number(c.minOrderAmount || 0))
+            .filter(n => Number.isFinite(n) && n >= 0);
+        const needed = thresholds.length ? Math.max(0, Math.min(...thresholds) - amount) : 0;
+        result.textContent = needed > 0
+            ? `Kupon uchun yana ${needed.toLocaleString()} so‘mlik mahsulot qo‘shing.`
+            : 'Hozir savat uchun mos kupon yo‘q.';
+        result.style.color = '#b45309';
+    }
+}
+
 async function loadAvailableCoupons() {
-    const requestSerial = ++couponLoadSerial;
-    const list = document.getElementById("cartCouponsList");
-    if (!list) return;
-
+    const serial = ++couponLoadSerial;
+    const list = document.getElementById('cartCouponsList');
+    if (!list) return false;
     try {
-        const response = await fetch("/api/coupons/available");
-        const data = await response.json();
-        if (requestSerial !== couponLoadSerial) return;
-
-        if (!response.ok || !data.success) {
-            list.innerHTML = `
-                <div style="color:#d00; font-size:13px;">
-                    Kuponlarni yuklab bo‘lmadi
-                </div>
-            `;
-            return;
+        const response = await fetch('/api/coupons/available', {cache:'no-store'});
+        const data = await response.json().catch(() => ({}));
+        if (serial !== couponLoadSerial) return false; // Eskirgan so‘rov tanlovni o‘zgartirmasin.
+        if (!response.ok || !data.success || !Array.isArray(data.coupons)) {
+            throw new Error(data.message || `Kuponlar serverdan olinmadi (${response.status}).`);
         }
+        availableCouponsCache = data.coupons;
+        list.style.color = '';
+        couponCatalogReady = true;
+        syncAutomaticCoupon();
+        updateCartBar();
 
-        let coupons = data.coupons || [];
-        const savedCode = downloadedCouponCode;
-        if (savedCode) {
-            const savedIndex = coupons.findIndex(coupon => coupon.code === savedCode);
-            if (savedIndex > 0) {
-                coupons = [coupons[savedIndex], ...coupons.slice(0, savedIndex), ...coupons.slice(savedIndex + 1)];
-            }
+        if (!availableCouponsCache.length) {
+            list.textContent = 'Hozir faol kuponlar mavjud emas.';
+            return true;
         }
-
-        if (!coupons.length && savedCode) {
-            list.innerHTML = `
-                <div style="
-                    padding:10px;
-                    border:1px solid #16803c;
-                    border-radius:10px;
-                    background:#f0fff5;
-                ">
-                    <div style="font-weight:800;">🎟️ ${savedCode}</div>
-                    <div style="margin-top:5px; font-size:12px; color:#16803c;">
-                        ✅ Saqlangan kupon. Buyurtma shartlariga mos bo‘lsa qo‘llanadi.
-                    </div>
-                </div>
-            `;
-            return;
+        const amount = calculateCartSubtotal();
+        list.replaceChildren();
+        const coupons = [...availableCouponsCache].sort((a,b) =>
+            Number(String(b.code).toUpperCase() === downloadedCouponCode) -
+            Number(String(a.code).toUpperCase() === downloadedCouponCode));
+        for (const coupon of coupons) {
+            const eligible = amount > 0 && amount >= Number(coupon.minOrderAmount || 0);
+            const chosen = appliedCoupon?.code === coupon.code;
+            const saved = downloadedCouponCode === String(coupon.code).toUpperCase();
+            const item = document.createElement('div');
+            item.style.cssText = `padding:10px;border:1px solid ${chosen?'#16803c':'#e5e5e5'};border-radius:10px;background:${chosen?'#f0fff5':'#fff'};`;
+            const label = document.createElement('div');
+            label.style.cssText = 'display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:800;';
+            const title = document.createElement('span');
+            title.textContent = `🎟️ ${coupon.code}${saved?' (saqlangan)':''}`;
+            const percent = document.createElement('span');
+            percent.style.color = '#e53935';
+            percent.textContent = `-${Number(coupon.discountPercent)}%`;
+            label.append(title, percent);
+            const info = document.createElement('div');
+            info.style.cssText = 'margin-top:6px;font-size:12px;color:#777;';
+            info.textContent = `Minimal summa: ${Number(coupon.minOrderAmount || 0).toLocaleString()} so‘m`;
+            const status = document.createElement('div');
+            status.style.cssText = `margin-top:5px;font-size:12px;font-weight:700;color:${chosen?'#16803c':'#777'};`;
+            status.textContent = chosen ? '✅ Avtomatik qo‘llandi' : eligible ? 'Mos keladi (boshqa kupon tanlangan)' : 'Minimal summaga yetmagan';
+            item.append(label, info, status);
+            list.append(item);
         }
-
-        if (!coupons.length) {
-            list.innerHTML = `
-                <div style="color:#777; font-size:13px;">
-                    Hozircha mavjud kuponlar yo‘q
-                </div>
-            `;
-            return;
+        return true;
+    } catch(error) {
+        if (serial !== couponLoadSerial) return false;
+        availableCouponsCache = [];
+        couponCatalogReady = false;
+        appliedCoupon = null;
+        couponDiscountAmount = 0;
+        updateCartBar();
+        const result = document.getElementById('couponResult');
+        if (result) {
+            result.textContent = '❌ Kuponlar serveridan javob yo‘q. Qayta urinib ko‘ring.';
+            result.style.color = '#c62828';
         }
-
-        const orderAmount = calculateCartSubtotal();
-        const chosenCode = downloadedCouponCode || appliedCoupon?.code || "";
-
-        const suitableCoupons = coupons.filter(coupon =>
-            orderAmount >= Number(coupon.minOrderAmount || 0)
-        );
-
-        if (suitableCoupons.length) {
-            const bestCoupon = chooseCouponForAmount(coupons, orderAmount, chosenCode);
-
-            appliedCoupon = bestCoupon;
-            couponDiscountAmount = Math.round(
-                orderAmount * Number(bestCoupon.discountPercent || 0) / 100
-            );
-
-            const result = document.getElementById("couponResult");
-
-            if (result) {
-                result.textContent =
-                    "✅ " + bestCoupon.code +
-                    " avtomatik qo‘llandi: -" +
-                    Number(bestCoupon.discountPercent || 0) +
-                    "% (" +
-                    couponDiscountAmount.toLocaleString() +
-                    " so‘m)";
-                result.style.color = "#16803c";
-            }
-
-            updateCartBar();
-        } else {
-            appliedCoupon = null;
-            couponDiscountAmount = 0;
-
-            const result = document.getElementById("couponResult");
-
-            if (result) {
-                result.textContent = "";
-            }
-
-            updateCartBar();
-        }
-
-        list.innerHTML = coupons.map(coupon => {
-            const minAmount = Number(coupon.minOrderAmount || 0);
-            const canUse = orderAmount >= minAmount;
-            const isApplied =
-                appliedCoupon &&
-                appliedCoupon.code === coupon.code;
-            const isSaved = savedCode && savedCode === coupon.code;
-
-            return `
-                <div style="
-                    padding:10px;
-                    border:1px solid ${isApplied || isSaved ? "#16803c" : "#e5e5e5"};
-                    border-radius:10px;
-                    background:${isApplied || isSaved ? "#f0fff5" : "#fff"};
-                ">
-                    <div style="
-                        display:flex;
-                        justify-content:space-between;
-                        align-items:center;
-                        gap:8px;
-                    ">
-                        <div style="font-weight:800;">
-                            🎟️ ${coupon.code}
-                        </div>
-
-                        <div style="
-                            color:#e53935;
-                            font-weight:800;
-                        ">
-                            -${Number(coupon.discountPercent || 0)}%
-                        </div>
-                    </div>
-
-                    <div style="
-                        margin-top:5px;
-                        font-size:12px;
-                        color:#777;
-                    ">
-                        Minimal summa:
-                        ${minAmount.toLocaleString()} so‘m
-                    </div>
-
-                    <div style="
-                        margin-top:5px;
-                        font-size:12px;
-                        color:${canUse ? "#16803c" : "#999"};
-                        font-weight:600;
-                    ">
-                        ${
-                            isApplied
-                                ? "✅ Avtomatik qo‘llandi"
-                                : isSaved
-                                    ? "✅ Saqlangan kupon"
-                                : canUse
-                                    ? "✅ Foydalanish mumkin"
-                                    : "🔒 Minimal summaga yetmagan"
-                        }
-                    </div>
-                </div>
-            `;
-        }).join("");
-
-    } catch (error) {
-        console.error("AVAILABLE COUPONS XATOSI:", error);
-
-        list.innerHTML = `
-            <div style="color:#d00; font-size:13px;">
-                Server bilan bog‘lanishda xatolik
-            </div>
-        `;
+        list.textContent = error.message || 'Kuponlarni yuklab bo‘lmadi.';
+        list.style.color = '#c62828';
+        console.error('AVAILABLE COUPONS XATOSI:', error);
+        return false;
     }
 }
 
@@ -2699,6 +2598,7 @@ function removeFromCart(id) {
 }
 
 function updateCartBar() {
+    syncAutomaticCoupon();
     const totals = getCartTotals();
     const {originalTotal, productDiscountAmount, couponDiscountAmount: couponAmount,
         total, count} = totals;
@@ -3201,6 +3101,11 @@ async function sendOrder() {
         return;
     }
 
+    // Yakuniy hisobdan oldin faol kuponlar va minimal summani yana tekshirish.
+    if (!(await loadAvailableCoupons())) {
+        alert('Kuponlarni tekshirib bo‘lmadi. Buyurtmani qayta tasdiqlang.');
+        return;
+    }
     const orderItems = [];
     let originalTotal = 0;
     let productDiscountAmount = 0;
