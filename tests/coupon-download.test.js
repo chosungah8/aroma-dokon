@@ -22,3 +22,13 @@ test('shop reports missing Telegram authentication instead of silently failing',
     assert.match(handler, /if \(!tg\?\.initData\)/);
     assert.match(handler, /Telegram ichidan oching/);
 });
+
+test('downloaded coupon is persisted per Telegram user, highlighted in the cart and stays above orders overlay', () => {
+    assert.match(html, /aroma_downloaded_coupon:/);
+    assert.match(html, /downloadedCouponCode = normalizedCode/);
+    assert.match(html, /const isSaved = savedCode && savedCode === coupon\.code/);
+    assert.match(html, /top:16px;\s*bottom:auto;\s*z-index:1000000/);
+    assert.match(html, /Saqlangan kupon/);
+    assert.match(html, /!coupons\.length && savedCode/);
+    assert.match(html, /Number\(b\.code === savedCode\) - Number\(a\.code === savedCode\)/);
+});

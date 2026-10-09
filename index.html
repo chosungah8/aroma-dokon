@@ -665,6 +665,12 @@ let allCategories = [];
 
 let appliedCoupon = null;
 let couponDiscountAmount = 0;
+const downloadedCouponStorageKey = "aroma_downloaded_coupon:" +
+    (telegramUserId ? String(telegramUserId) : "guest");
+let downloadedCouponCode = "";
+try {
+    downloadedCouponCode = String(localStorage.getItem(downloadedCouponStorageKey) || "").trim().toUpperCase();
+} catch (_) { /* Private browsing may block localStorage. */ }
 
 async function applyCoupon() {
     const input = document.getElementById("couponCodeInput");
@@ -756,8 +762,9 @@ function showCouponNotice(message, success = true) {
         position:fixed;
         left:12px;
         right:12px;
-        bottom:18px;
-        z-index:1000;
+        top:16px;
+        bottom:auto;
+        z-index:1000000;
         padding:12px 14px;
         border-radius:10px;
         background:${success ? "#16803c" : "#c62828"};
@@ -798,8 +805,9 @@ async function downloadCoupon(code) {
         }
 
         try {
-            localStorage.setItem("aroma_downloaded_coupon", normalizedCode);
+            localStorage.setItem(downloadedCouponStorageKey, normalizedCode);
         } catch (_) { /* Private browsing may block localStorage. */ }
+        downloadedCouponCode = normalizedCode;
         showCouponNotice(`✅ ${normalizedCode} kuponi saqlandi. Savatda foydalanishingiz mumkin.`);
         await loadAvailableCoupons();
     } catch (error) {
@@ -1051,7 +1059,31 @@ async function loadAvailableCoupons() {
             return;
         }
 
-        const coupons = data.coupons || [];
+        let coupons = data.coupons || [];
+        const savedCode = downloadedCouponCode;
+        if (savedCode) {
+            const savedIndex = coupons.findIndex(coupon => coupon.code === savedCode);
+            if (savedIndex > 0) {
+                coupons = [coupons[savedIndex], ...coupons.slice(0, savedIndex), ...coupons.slice(savedIndex + 1)];
+            }
+        }
+
+        if (!coupons.length && savedCode) {
+            list.innerHTML = `
+                <div style="
+                    padding:10px;
+                    border:1px solid #16803c;
+                    border-radius:10px;
+                    background:#f0fff5;
+                ">
+                    <div style="font-weight:800;">🎟️ ${savedCode}</div>
+                    <div style="margin-top:5px; font-size:12px; color:#16803c;">
+                        ✅ Saqlangan kupon. Buyurtma shartlariga mos bo‘lsa qo‘llanadi.
+                    </div>
+                </div>
+            `;
+            return;
+        }
 
         if (!coupons.length) {
             list.innerHTML = `
@@ -1071,6 +1103,7 @@ async function loadAvailableCoupons() {
         if (suitableCoupons.length) {
             suitableCoupons.sort(
                 (a, b) =>
+                    Number(b.code === savedCode) - Number(a.code === savedCode) ||
                     Number(b.discountPercent || 0) -
                     Number(a.discountPercent || 0)
             );
@@ -1115,13 +1148,14 @@ async function loadAvailableCoupons() {
             const isApplied =
                 appliedCoupon &&
                 appliedCoupon.code === coupon.code;
+            const isSaved = savedCode && savedCode === coupon.code;
 
             return `
                 <div style="
                     padding:10px;
-                    border:1px solid ${isApplied ? "#16803c" : "#e5e5e5"};
+                    border:1px solid ${isApplied || isSaved ? "#16803c" : "#e5e5e5"};
                     border-radius:10px;
-                    background:${isApplied ? "#f0fff5" : "#fff"};
+                    background:${isApplied || isSaved ? "#f0fff5" : "#fff"};
                 ">
                     <div style="
                         display:flex;
@@ -1159,6 +1193,8 @@ async function loadAvailableCoupons() {
                         ${
                             isApplied
                                 ? "✅ Avtomatik qo‘llandi"
+                                : isSaved
+                                    ? "✅ Saqlangan kupon"
                                 : canUse
                                     ? "✅ Foydalanish mumkin"
                                     : "🔒 Minimal summaga yetmagan"
