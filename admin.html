@@ -382,6 +382,10 @@
             Aksiyani yoqish
         </label>
 
+        <!-- AROMA_PROMOTION_GAME_NAMES_V1 -->
+        <label for="promotionGameName" style="display:block;margin-bottom:6px;font-weight:600;">Aksiya nomi</label>
+        <input id="promotionGameName" type="text" maxlength="100" placeholder="Masalan: Kuzgi sovg‘alar o‘yini" autocomplete="off" required
+            style="width:100%;box-sizing:border-box;margin-bottom:12px;">
         <label style="display:block;margin-bottom:6px;">
             Boshlanish sanasi
         </label>
@@ -2276,6 +2280,17 @@ function gameLocalInputDate(value) {
     const date = new Date(value);
     return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 }
+const promotionGameNames = new Map();
+function promotionGameLabel(game) {
+    return typeof game?.name === 'string' && game.name.trim() ? game.name.trim() : 'Nomsiz aksiya';
+}
+function promotionGameLabelForId(id) {
+    return promotionGameNames.get(String(id)) || 'Nomsiz aksiya';
+}
+function promotionGameDownloadName(id) {
+    const label = promotionGameLabelForId(id);
+    return (label.replace(/[\/\\:*?"<>|\x00-\x1F]/g, '').trim().slice(0, 80) || 'aksiya') + '.xlsx';
+}
 function gameDate(value) {
     return value ? new Date(value).toLocaleString('uz-UZ') : 'Belgilanmagan';
 }
@@ -2330,6 +2345,7 @@ async function loadPromotionGames(page = gameListPage) {
         list.replaceChildren();
         if (!result.games.length) list.textContent = 'Hozircha aksiya yaratilmagan.';
         for (const game of result.games) {
+            promotionGameNames.set(String(game.id), promotionGameLabel(game));
             const card = gameElement('div');
             card.style.cssText = 'border:1px solid #ddd;border-radius:10px;padding:14px;margin:10px 0;';
             const latest = String(game.id) === String(result.latestId);
@@ -2337,7 +2353,15 @@ async function loadPromotionGames(page = gameListPage) {
             const status = !latest ? 'Arxiv' : !game.enabled ? 'To‘xtatilgan'
                 : game.end_at && now > new Date(game.end_at).getTime() ? 'Tugagan'
                 : game.start_at && now < new Date(game.start_at).getTime() ? 'Rejalashtirilgan' : 'Faol';
-            card.append(gameElement('strong', `Aksiya #${game.id} — ${status}`));
+            card.append(gameElement('strong', `${promotionGameLabel(game)} — ${status}`));
+            const nameInput = gameElement('input');
+            nameInput.type = 'text';
+            nameInput.maxLength = 100;
+            nameInput.value = promotionGameLabel(game) === 'Nomsiz aksiya' ? '' : promotionGameLabel(game);
+            nameInput.placeholder = 'Aksiyaning yangi nomi';
+            nameInput.setAttribute('aria-label', 'Aksiya nomi');
+            card.append(nameInput);
+            card.append(gameButton('✏️ Nomni saqlash', () => savePromotionGameName(game.id, nameInput.value)));
             card.append(gameElement('p', 'Yaratilgan: ' + gameDate(game.created_at)));
             card.append(gameElement('p', `Boshlanish: ${gameDate(game.start_at)} • Tugash: ${gameDate(game.end_at)}`));
             card.append(gameElement('p', `Raqamlar: ${game.min_number}–${game.max_number}`));
@@ -2371,6 +2395,26 @@ async function loadPromotionGames(page = gameListPage) {
         if (request === gameListRequest) list.textContent = error.message;
     }
 }
+async function savePromotionGameName(id, rawName) {
+    const name = String(rawName || '').trim();
+    if (!name || name.length > 100 || /[\u0000-\u001f\u007f]/.test(name)) {
+        alert('Aksiya nomini 1–100 ta belgida kiriting.');
+        return;
+    }
+    const message = document.getElementById('promotionGamesMessage');
+    message.textContent = 'Aksiya nomi saqlanmoqda…';
+    try {
+        const result = await (await gameFetch(`/${id}/name`, {
+            method: 'PATCH', body: JSON.stringify({name})
+        })).json();
+        promotionGameNames.set(String(id), promotionGameLabel(result.game));
+        message.textContent = 'Aksiya nomi saqlandi.';
+        await loadPromotionGames();
+        if (selectedGameId === String(id)) {
+            document.getElementById('gameParticipantsTitle').textContent = promotionGameLabelForId(id) + ' — Ishtirokchilar';
+        }
+    } catch (error) { message.textContent = error.message; }
+}
 function closeGameParticipants() {
     ++gameParticipantsRequest;
     selectedGameId = null;
@@ -2384,13 +2428,13 @@ async function loadGameParticipants(id, page = 1) {
     const content = document.getElementById('gameParticipantsContent');
     const pages = document.getElementById('gameParticipantsPages');
     panel.hidden = false;
-    document.getElementById('gameParticipantsTitle').textContent = `Aksiya #${id} — Ishtirokchilar`;
+    document.getElementById('gameParticipantsTitle').textContent = `${promotionGameLabelForId(id)} — Ishtirokchilar`;
     content.textContent = 'Yuklanmoqda…';
     pages.replaceChildren();
     try {
         const result = await (await gameFetch(`/${id}/participants?page=${page}`)).json();
         if (request !== gameParticipantsRequest || !adminToken) return;
-        document.getElementById('gameParticipantsTitle').textContent = `Aksiya #${id} — ${result.total} ishtirokchi`;
+        document.getElementById('gameParticipantsTitle').textContent = `${promotionGameLabelForId(id)} — ${result.total} ishtirokchi`;
         content.replaceChildren();
         if (!result.participants.length) content.textContent = 'Hozircha ishtirokchi yo‘q.';
         else {
@@ -2420,23 +2464,23 @@ async function loadGameParticipants(id, page = 1) {
 }
 async function downloadGameExcel(id) {
     const message = document.getElementById('promotionGamesMessage');
-    message.textContent = `Aksiya #${id}: Excel tayyorlanmoqda…`;
+    message.textContent = `${promotionGameLabelForId(id)}: Excel tayyorlanmoqda…`;
     try {
         const response = await gameFetch(`/${id}/excel`);
         const blob = await response.blob();
         const objectUrl = URL.createObjectURL(blob);
         const link = gameElement('a');
         link.href = objectUrl;
-        link.download = `aksiya-${id}.xlsx`;
+        link.download = promotionGameDownloadName(id);
         document.body.append(link);
         link.click();
         link.remove();
         setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
-        message.textContent = `Aksiya #${id}: Excel yuklab olish boshlandi.`;
+        message.textContent = `${promotionGameLabelForId(id)}: Excel yuklab olish boshlandi.`;
     } catch (error) { message.textContent = error.message; }
 }
 async function togglePromotionGame(id, enabled, current) {
-    if (enabled && !current && !confirm(`Aksiya #${id} yoqilsinmi? Ishtirok raqamlari shu aksiya bo‘yicha davom etadi. Boshqa aksiya joriy bo‘lsa, uning o‘rnini oladi.`)) return;
+    if (enabled && !current && !confirm(`${promotionGameLabelForId(id)} yoqilsinmi? Ishtirok raqamlari shu aksiya bo‘yicha davom etadi. Boshqa aksiya joriy bo‘lsa, uning o‘rnini oladi.`)) return;
     const message = document.getElementById('promotionGamesMessage');
     message.textContent = enabled ? 'Aksiya yoqilmoqda…' : 'Aksiya to‘xtatilmoqda…';
     try {
@@ -2451,13 +2495,13 @@ async function togglePromotionGame(id, enabled, current) {
 
 async function deletePromotionGame(id, latest) {
     const note = latest ? '\nBu joriy aksiya. O‘chirilgach, avvalgi aksiya sozlamasi joriy bo‘ladi; u yoqilgan bo‘lsa, yana ishlashi mumkin.' : '';
-    if (!confirm(`Aksiya #${id}, uning barcha ishtirokchilari va Excel fayli o‘chirilsinmi? Bu amalni qaytarib bo‘lmaydi.${note}`)) return;
+    if (!confirm(`${promotionGameLabelForId(id)}, uning barcha ishtirokchilari va Excel fayli o‘chirilsinmi? Bu amalni qaytarib bo‘lmaydi.${note}`)) return;
     const message = document.getElementById('promotionGamesMessage');
     message.textContent = 'O‘chirilmoqda…';
     try {
         const result = await (await gameFetch('/' + id, { method: 'DELETE' })).json();
         if (selectedGameId === String(id)) closeGameParticipants();
-        message.textContent = result.warning || `Aksiya #${id} o‘chirildi.`;
+        message.textContent = result.warning || `${promotionGameLabelForId(id)} o‘chirildi.`;
     } catch (error) { message.textContent = error.message; }
     await loadPromotionGames();
     await loadPromotionSettings();
@@ -2530,6 +2574,11 @@ async function saveGameMinimum(id, value) {
 }
 
 async function savePromotionSettings() {
+    const name = document.getElementById('promotionGameName').value.trim();
+    if (!name || name.length > 100 || /[\u0000-\u001f\u007f]/.test(name)) {
+        alert('Yangi aksiya nomini 1–100 ta belgida kiriting.');
+        return;
+    }
     const amountText = document.getElementById('promotionMinPurchaseAmount').value;
     const minPurchaseAmount = Number(amountText);
     if (!amountText.trim() || !Number.isSafeInteger(minPurchaseAmount) || minPurchaseAmount < 0 || minPurchaseAmount > 1000000000000) {
@@ -2579,6 +2628,7 @@ async function savePromotionSettings() {
                 "Authorization": "Bearer " + adminToken
             },
             body: JSON.stringify({
+                name,
                 enabled,
                 startAt,
                 endAt,
@@ -2603,8 +2653,8 @@ async function savePromotionSettings() {
         }
 
         message.style.color = "#198754";
-        message.innerText =
-            "🎉 Yangi aksiya yaratildi! Excel fayli avtomatik yaratildi.";
+        message.innerText = `🎉 ${name} yaratildi! Excel fayli avtomatik yaratildi.`;
+        document.getElementById('promotionGameName').value = '';
         await loadPromotionGames(1);
 
     } catch (error) {
