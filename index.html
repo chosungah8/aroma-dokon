@@ -745,6 +745,69 @@ async function applyCoupon() {
     }
 }
 
+function showCouponNotice(message, success = true) {
+    const oldNotice = document.getElementById("couponDownloadNotice");
+    if (oldNotice) oldNotice.remove();
+
+    const notice = document.createElement("div");
+    notice.id = "couponDownloadNotice";
+    notice.textContent = message;
+    notice.style.cssText = `
+        position:fixed;
+        left:12px;
+        right:12px;
+        bottom:18px;
+        z-index:1000;
+        padding:12px 14px;
+        border-radius:10px;
+        background:${success ? "#16803c" : "#c62828"};
+        color:#fff;
+        font-size:13px;
+        font-weight:700;
+        text-align:center;
+        box-shadow:0 4px 16px rgba(0,0,0,.2);
+    `;
+    document.body.appendChild(notice);
+    setTimeout(() => notice.remove(), 4000);
+}
+
+async function downloadCoupon(code) {
+    const normalizedCode = String(code || "").trim().toUpperCase();
+    if (!normalizedCode) {
+        showCouponNotice("Kupon kodi topilmadi.", false);
+        return;
+    }
+    if (!tg?.initData) {
+        showCouponNotice("Kuponni saqlash uchun do‘konni Telegram ichidan oching.", false);
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/coupons/save", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Telegram-Init-Data": tg.initData
+            },
+            body: JSON.stringify({ code: normalizedCode })
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || "Kuponni saqlab bo‘lmadi.");
+        }
+
+        try {
+            localStorage.setItem("aroma_downloaded_coupon", normalizedCode);
+        } catch (_) { /* Private browsing may block localStorage. */ }
+        showCouponNotice(`✅ ${normalizedCode} kuponi saqlandi. Savatda foydalanishingiz mumkin.`);
+        await loadAvailableCoupons();
+    } catch (error) {
+        console.error("COUPON DOWNLOAD XATOSI:", error);
+        showCouponNotice(error.message || "Kuponni saqlashda xatolik.", false);
+    }
+}
+
 // MIJOZ UCHUN AKSIYALARNI YUKLASH
 async function loadPublicPromotions() {
     try {
@@ -925,6 +988,7 @@ async function loadPublicPromotions() {
                             type="button"
                             onclick="event.stopPropagation(); downloadCoupon('${special.coupon_code}')"
                             style="
+                                position:absolute;
                                 left:0;
                                 bottom:0 !important;
                                 margin:0 !important;
