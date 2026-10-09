@@ -2441,7 +2441,7 @@ async function loadGameParticipants(id, page = 1) {
             const table = gameElement('table');
             table.style.cssText = 'width:100%;border-collapse:collapse;text-align:left;';
             const header = gameElement('tr');
-            for (const title of ['Raqam', 'Telefon', 'Ism', 'Username', 'Qo‘shilgan sana']) header.append(gameElement('th', title));
+            for (const title of ['Raqam', 'Telefon', 'Ism', 'Username', 'Qo‘shilgan sana', 'Amal']) header.append(gameElement('th', title));
             const head = gameElement('thead');
             head.append(header);
             const body = gameElement('tbody');
@@ -2452,6 +2452,14 @@ async function loadGameParticipants(id, page = 1) {
                     cell.style.cssText = 'padding:10px 8px;border-bottom:1px solid #eee;white-space:nowrap;';
                     row.append(cell);
                 }
+                // AROMA_PROMOTION_PARTICIPANT_REUSE_V1
+                const actions = gameElement('td');
+                actions.style.cssText = 'padding:8px;border-bottom:1px solid #eee;';
+                const remove = gameButton('🗑 O‘chirish', () => deletePromotionParticipant(id, p, page, result.total));
+                remove.style.cssText = 'background:#b42318;color:white;white-space:nowrap;';
+                remove.title = 'Ishtirokchini ro‘yxatdan chiqarish; raqami keyingi yangi ishtirokchiga beriladi';
+                actions.append(remove);
+                row.append(actions);
                 body.append(row);
             }
             table.append(head, body);
@@ -2461,6 +2469,31 @@ async function loadGameParticipants(id, page = 1) {
     } catch (error) {
         if (request === gameParticipantsRequest) content.textContent = error.message;
     }
+}
+// AROMA_PROMOTION_PARTICIPANT_REUSE_V1
+async function deletePromotionParticipant(id, participant, page, previousTotal) {
+    const number = Number(participant.participant_number);
+    if (!Number.isSafeInteger(number) || number <= 0 || typeof participant.customer_id !== 'string') {
+        alert('Ishtirokchini aniqlab bo‘lmadi. Ro‘yxatni yangilang.'); return;
+    }
+    const name = participant.customer_name || participant.phone || participant.customer_username || 'Nomsiz ishtirokchi';
+    const gameName = typeof promotionGameLabelForId === 'function'
+        ? promotionGameLabelForId(id) : 'Aksiya';
+    if (!confirm(`${gameName}\n\n${number}-raqam — ${name}\n\n` +
+        'Bu ishtirokchi butunlay ro‘yxatdan chiqariladi. Uning raqami keyingi yangi ishtirokchiga berilishi mumkin. ' +
+        'Qolgan ishtirokchilarning raqamlari o‘zgarmaydi. Oldingi Telegram xabarlari o‘zgarishsiz qoladi. Davom etilsinmi?')) return;
+    const notice = document.getElementById('promotionGamesMessage');
+    notice.textContent = `${number}-raqam o‘chirilmoqda…`;
+    try {
+        const response = await gameFetch(`/${id}/participants/${number}`, {
+            method: 'DELETE', body: JSON.stringify({ customerId: participant.customer_id })
+        });
+        const result = await response.json();
+        notice.textContent = result.message || `${number}-raqam bo‘shatildi.`;
+        if (result.warning) notice.textContent += ' ' + result.warning;
+        const nextPage = page > 1 && previousTotal - 1 <= (page - 1) * 50 ? page - 1 : page;
+        if (selectedGameId === String(id)) await loadGameParticipants(id, nextPage);
+    } catch (error) { notice.textContent = error.message; }
 }
 async function downloadGameExcel(id) {
     const message = document.getElementById('promotionGamesMessage');
