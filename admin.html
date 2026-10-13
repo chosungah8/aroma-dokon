@@ -379,6 +379,31 @@
             <div id="couponList"></div>
         </div>
 
+        <div style="margin-top:20px;padding:14px;background:#f8fafc;border:1px solid #dbe3eb;border-radius:12px;">
+            <div style="font-weight:800;margin-bottom:9px;">🎁 Shaxsiy kupon — faqat bitta mijozga</div>
+            <div style="font-size:12px;color:#555;margin-bottom:12px;">Telefon yoki Telegram ID orqali bering. Oddiy kupon bilan qo‘shib ishlatiladi; bir martalik.</div>
+            <label style="display:block;margin:7px 0;">Mijozni topish usuli</label>
+            <select id="personalTargetType" style="width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;">
+                <option value="phone">📱 Telefon raqami</option>
+                <option value="telegram">👤 Telegram ID</option>
+            </select>
+            <input id="personalTarget" type="text" placeholder="+998 90 123 45 67 yoki Telegram ID" autocomplete="off" style="width:100%;box-sizing:border-box;margin-top:8px;" />
+            <label style="display:block;margin:8px 0;">Chegirma turi</label>
+            <select id="personalDiscountType" style="width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;">
+                <option value="fixed">💰 So‘m miqdorida</option>
+                <option value="percent">% Foizda</option>
+            </select>
+            <input id="personalDiscountValue" type="number" min="1" step="1" placeholder="Chegirma: masalan 20000" style="width:100%;box-sizing:border-box;margin-top:8px;" />
+            <input id="personalMinAmount" type="number" min="0" step="1" placeholder="Minimal xarid: masalan 300000" style="width:100%;box-sizing:border-box;margin-top:8px;" />
+            <label style="display:block;margin-top:9px;">Amal qilish muddati (kun)</label>
+            <input id="personalDays" type="number" min="1" max="365" value="10" step="1" style="width:100%;box-sizing:border-box;" />
+            <button class="primary" type="button" onclick="issuePersonalCoupon()" style="margin-top:12px;width:100%;">🎁 Mijozga shaxsiy kupon taqdim etish</button>
+            <div id="personalCouponMessage" role="status" style="margin-top:9px;font-size:13px;white-space:pre-wrap;"></div>
+            <div style="font-weight:800;margin-top:16px;margin-bottom:6px;">Berilgan shaxsiy kuponlar</div>
+            <button type="button" onclick="loadPersonalCouponsAdmin()" style="margin-bottom:8px;">🔄 Ro‘yxatni yangilash</button>
+            <div id="personalCouponAdminList" style="display:flex;flex-direction:column;gap:7px;max-height:390px;overflow-y:auto;"></div>
+        </div>
+
     </div>
 </details>
 
@@ -1348,6 +1373,7 @@ loadProducts();
 loadOrders();
 loadCategories();
 loadCoupons();
+loadPersonalCouponsAdmin();
 loadPromotions();
 loadPromotionCoupons();
 loadDeliverySettings();
@@ -4373,6 +4399,83 @@ async function createCoupon() {
     }
 }
 
+
+// === AROMA shaxsiy kuponlar (admin) ===
+async function issuePersonalCoupon() {
+    const message=document.getElementById('personalCouponMessage');
+    const payload={
+        targetType:document.getElementById('personalTargetType').value,
+        target:document.getElementById('personalTarget').value.trim(),
+        discountType:document.getElementById('personalDiscountType').value,
+        discountValue:Number(document.getElementById('personalDiscountValue').value),
+        minOrderAmount:Number(document.getElementById('personalMinAmount').value),
+        days:Number(document.getElementById('personalDays').value)
+    };
+    if (!payload.target || !Number.isInteger(payload.discountValue) || payload.discountValue<=0 ||
+        !Number.isSafeInteger(payload.minOrderAmount) || payload.minOrderAmount<0 ||
+        !Number.isInteger(payload.days) || payload.days<1 || payload.days>365) {
+        message.textContent='❌ Mijoz, chegirma, minimal summa va muddatni to‘g‘ri kiriting.';
+        return;
+    }
+    message.textContent='Mijoz tekshirilmoqda…';
+    try {
+        const response=await fetch('/api/admin/personal-coupons',{
+            method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+adminToken},
+            body:JSON.stringify(payload)
+        });
+        const result=await response.json();
+        if (!response.ok || !result.success) throw Error(result.message||'Kuponni berib bo‘lmadi.');
+        message.textContent='✅ '+result.message+'\nKupon: '+result.coupon.code;
+        await loadPersonalCouponsAdmin();
+    } catch(error){message.textContent='❌ '+error.message;}
+}
+async function loadPersonalCouponsAdmin() {
+    const list=document.getElementById('personalCouponAdminList');
+    if (!list || !adminToken) return;
+    list.textContent='Yuklanmoqda…';
+    try {
+        const response=await fetch('/api/admin/personal-coupons',{headers:{'Authorization':'Bearer '+adminToken},cache:'no-store'});
+        const result=await response.json();
+        if (!response.ok || !result.success) throw Error(result.message||'Ma’lumot yuklanmadi.');
+        list.replaceChildren();
+        if (!result.coupons.length) {list.textContent='Hozircha shaxsiy kupon berilmagan.';return;}
+        for (const c of result.coupons) {
+            const box=document.createElement('div');
+            box.style.cssText='padding:10px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;font-size:13px;';
+            const used=!!c.used_at, expired=new Date(c.expires_at).getTime()<=Date.now();
+            const status=used?'Ishlatilgan':!c.active?'Bekor qilingan':expired?'Muddati tugagan':'Faol';
+            const title=document.createElement('div');
+            title.style.cssText='font-weight:800;color:#1e293b;';
+            title.textContent=c.code+' · '+status;
+            const info=document.createElement('div');
+            info.style.cssText='margin-top:5px;line-height:1.5;color:#475569;';
+            info.textContent='Telegram ID: '+c.customer_id+' | '+
+                (c.discount_type==='percent'?Number(c.discount_value)+'%':Number(c.discount_value).toLocaleString()+' so‘m')+
+                ' | Minimum: '+Number(c.min_order_amount).toLocaleString()+' so‘m | Tugash: '+new Date(c.expires_at).toLocaleDateString('uz-UZ');
+            box.append(title,info);
+            if (!used && c.active && !expired) {
+                const button=document.createElement('button');
+                button.type='button';button.textContent='🚫 Bekor qilish';
+                button.style.cssText='margin-top:7px;padding:7px;border-radius:7px;';
+                button.onclick=()=>cancelPersonalCoupon(c.id);
+                box.append(button);
+            }
+            list.append(box);
+        }
+    } catch(error){list.textContent='❌ '+error.message;}
+}
+async function cancelPersonalCoupon(id) {
+    if (!confirm('Bu mijozning shaxsiy kuponini bekor qilasizmi?')) return;
+    try {
+        const response=await fetch('/api/admin/personal-coupons/cancel',{
+            method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+adminToken},
+            body:JSON.stringify({id})
+        });
+        const result=await response.json();
+        if (!response.ok || !result.success) throw Error(result.message||'Bekor qilib bo‘lmadi');
+        await loadPersonalCouponsAdmin();
+    } catch(error){alert(error.message);}
+}
 
 </script>
 

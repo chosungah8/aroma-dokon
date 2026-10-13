@@ -532,6 +532,7 @@
                     Kuponlar yuklanmoqda...
                 </div>
 
+                <div id="personalCouponCards" style="display:flex;flex-direction:column;gap:7px;margin-top:10px;" role="status"></div>
                 <div
                     id="couponResult"
                     style="
@@ -592,6 +593,9 @@
                     <span id="cartCouponDiscount">-0 so'm</span>
                 </div>
 
+                <div id="cartPersonalDiscountRow" style="display:none;justify-content:space-between;margin-bottom:7px;font-size:13px;color:#be185d;">
+                    <span>🎁 Shaxsiy kupon:</span><span id="cartPersonalDiscount">-0 so'm</span>
+                </div>
                 <div
                     id="cartTotalDiscountRow"
                     style="display:flex;justify-content:space-between;margin-bottom:7px;font-size:13px;font-weight:700;color:#c02f45;"
@@ -675,6 +679,8 @@ let allCategories = [];
 
 let appliedCoupon = null;
 let couponDiscountAmount = 0;
+let personalCoupons = [];
+let personalCouponsLoaded = false;
 const downloadedCouponStorageKey = "aroma_downloaded_coupon:" +
     (telegramUserId ? String(telegramUserId) : "guest");
 let downloadedCouponCode = "";
@@ -1146,6 +1152,51 @@ function renderCouponCards() {
     }
 }
 
+// Personal coupons belong to the VERIFIED Telegram Web App session, never URL userId.
+async function loadPersonalCoupons() {
+    const list=document.getElementById('personalCouponCards');
+    if (!tg?.initData) {
+        if (list) list.textContent='Shaxsiy kuponlarni ko‘rish uchun do‘konni Telegram orqali oching.';
+        return false;
+    }
+    try {
+        const response=await fetch('/api/coupons/personal/mine',{
+            headers:{'X-Telegram-Init-Data':tg.initData},cache:'no-store'
+        });
+        const data=await response.json().catch(()=>({}));
+        if (!response.ok||!data.success||!Array.isArray(data.coupons)) throw Error(data.message||'Kuponlar olinmadi.');
+        personalCoupons=data.coupons;
+        personalCouponsLoaded=true;
+        updateCartBar();
+        return true;
+    } catch (error) {
+        personalCouponsLoaded=false;
+        if (list) list.textContent='⚠️ Shaxsiy kuponni tekshirib bo‘lmadi. Qayta urinib ko‘ring.';
+        return false;
+    }
+}
+function renderPersonalCoupons() {
+    const list=document.getElementById('personalCouponCards');
+    if (!list || !personalCouponsLoaded) return;
+    list.replaceChildren();
+    if (!personalCoupons.length) return;
+    const amount=calculateCartSubtotal();
+    const chosen=getCartTotals().personalCoupon;
+    for (const c of personalCoupons) {
+        const box=document.createElement('div');
+        box.style.cssText='border:1px solid #fbcfe8;border-radius:9px;background:#fff7fb;padding:9px;font-size:12px;';
+        const heading=document.createElement('div');
+        heading.style.cssText='font-weight:800;color:#9d174d;';
+        heading.textContent='🎁 '+c.code+' — '+(c.discountType==='percent'?c.discountValue+'%':Number(c.discountValue).toLocaleString()+' so‘m');
+        const info=document.createElement('div');
+        info.style.cssText='color:#6b7280;margin-top:5px;';
+        const needed=Math.max(0,Number(c.minOrderAmount)-amount);
+        info.textContent='Minimal xarid: '+Number(c.minOrderAmount).toLocaleString()+' so‘m. '+
+            (c.status==='used'?'Ishlatilgan':c.status==='cancelled'?'Bekor qilingan':(c.status==='expired'||new Date(c.expiresAt).getTime()<=Date.now())?'Muddati tugagan':
+                chosen?.id===c.id?'✅ Oddiy kupon bilan qo‘shib qo‘llandi':needed>0?'Yana '+needed.toLocaleString()+' so‘m kerak':'Xarid shartiga mos');
+        box.append(heading,info);list.append(box);
+    }
+}
 async function loadAvailableCoupons() {
     const serial = ++couponLoadSerial;
     const list = document.getElementById('cartCouponsList');
@@ -1223,6 +1274,21 @@ function getCartPricing() {
     return { originalTotal, productDiscountAmount, discountedSubtotal, count };
 }
 
+function eligiblePersonalCoupon(amount, afterRegular) {
+    if (!(typeof personalCoupons !== 'undefined' && Array.isArray(personalCoupons))) return null;
+    let best=null, bestDiscount=0;
+    for (const c of personalCoupons) {
+        if (!c || c.active !== true || c.status !== 'active' ||
+            new Date(c.expiresAt).getTime()<=Date.now() || amount<=0 ||
+            amount<Number(c.minOrderAmount||0)) continue;
+        const value=Number(c.discountValue);
+        if (!Number.isFinite(value)||value<=0) continue;
+        const discount=Math.min(afterRegular, Math.max(0,c.discountType==='percent'
+            ? Math.round(afterRegular*Math.min(100,value)/100) : value));
+        if (discount>bestDiscount) {best=c;bestDiscount=discount;}
+    }
+    return best ? {coupon:best,discount:bestDiscount} : null;
+}
 function getCartTotals(coupon = appliedCoupon) {
     const pricing = getCartPricing();
     const couponIsEligible = coupon &&
@@ -1233,11 +1299,15 @@ function getCartTotals(coupon = appliedCoupon) {
         ? Math.round(pricing.discountedSubtotal *
             Math.min(100, Math.max(0, Number(validCoupon.discountPercent))) / 100)
         : 0;
+    const afterRegular = Math.max(0,pricing.discountedSubtotal-couponDiscountAmount);
+    const personal = eligiblePersonalCoupon(pricing.discountedSubtotal,afterRegular);
     return {
         ...pricing,
         coupon: validCoupon,
         couponDiscountAmount,
-        total: Math.max(0, pricing.discountedSubtotal - couponDiscountAmount)
+        personalCoupon:personal?.coupon||null,
+        personalDiscountAmount:personal?.discount||0,
+        total: Math.max(0,afterRegular-(personal?.discount||0))
     };
 }
 
@@ -2769,12 +2839,15 @@ function updateCartBar() {
     }
     couponDiscountAmount = couponAmount;
     renderCouponCards();
+    renderPersonalCoupons();
 
     const originalTotalEl = document.getElementById('cartOriginalTotal');
     const productDiscountRow = document.getElementById('cartProductDiscountRow');
     const productDiscountEl = document.getElementById('cartProductDiscount');
     const couponDiscountRow = document.getElementById('cartCouponDiscountRow');
     const couponDiscountEl = document.getElementById('cartCouponDiscount');
+    const personalDiscountRow=document.getElementById('cartPersonalDiscountRow');
+    const personalDiscountEl=document.getElementById('cartPersonalDiscount');
     const totalDiscountEl = document.getElementById('cartTotalDiscount');
     const finalTotalEl = document.getElementById('cartFinalTotal');
 
@@ -2787,8 +2860,12 @@ function updateCartBar() {
         couponDiscountRow.style.display = couponAmount > 0 ? 'flex' : 'none';
         couponDiscountEl.innerText = `-${couponAmount.toLocaleString()} so'm`;
     }
+    if (personalDiscountRow && personalDiscountEl) {
+        personalDiscountRow.style.display=totals.personalDiscountAmount>0?'flex':'none';
+        personalDiscountEl.innerText=`-${totals.personalDiscountAmount.toLocaleString()} so'm`;
+    }
     if (totalDiscountEl) {
-        totalDiscountEl.innerText = `-${(productDiscountAmount + couponAmount).toLocaleString()} so'm`;
+        totalDiscountEl.innerText = `-${(productDiscountAmount + couponAmount + totals.personalDiscountAmount).toLocaleString()} so'm`;
     }
     if (finalTotalEl) finalTotalEl.innerText = `${total.toLocaleString()} so'm`;
 
@@ -2836,6 +2913,7 @@ function updateCartBar() {
             // Async javob faqat kuponni o‘zgartiradi; modalni aslo yopmaydi.
             void loadAvailableCoupons();
             void loadSavedCoupons();
+            void loadPersonalCoupons();
         }
 
         function closeCartModal() {
@@ -3149,6 +3227,8 @@ async function checkCheckoutReceipt() {
             checkoutAttempt = null;
             appliedCoupon = null;
             couponDiscountAmount = 0;
+            personalCoupons=[];
+            personalCouponsLoaded=false;
             updateCartBar(); renderCartItems(); renderProducts();
             receiptNotice('Buyurtma qabul qilindi: ' + result.orderId);
             alert('Buyurtma qabul qilindi: ' + result.orderId + (unchanged ? '' : '. Savat boshqa oynada o‘zgargani uchun saqlandi; uni tekshiring.'));
@@ -3276,6 +3356,10 @@ async function sendOrder() {
         alert('Kuponlarni tekshirib bo‘lmadi. Buyurtmani qayta tasdiqlang.');
         return;
     }
+    if (!(await loadPersonalCoupons())) {
+        alert('Shaxsiy kuponni tekshirib bo‘lmadi. Internetni tekshiring va qayta urinib ko‘ring.');
+        return;
+    }
     const orderItems = [];
     let originalTotal = 0;
     let productDiscountAmount = 0;
@@ -3347,6 +3431,8 @@ const orderData = {
     couponCode: appliedCoupon?.code || null,
     couponDiscountPercent: appliedCoupon ? Number(appliedCoupon.discountPercent) || 0 : 0,
     couponDiscountAmount: couponDiscountAmount || 0,
+    personalCouponId: totals.personalCoupon?.id || null,
+    personalCouponDiscountAmount: totals.personalDiscountAmount || 0,
     phone: phone,
     address: address,
     telegramUserId: tg?.initDataUnsafe?.user?.id || null
@@ -3633,6 +3719,7 @@ function startCatalog() {
     loadPublicPromotions();
     void loadAvailableCoupons();
     void loadSavedCoupons();
+    void loadPersonalCoupons();
     resumeCheckoutReceipt();
 }
 function recoverCatalog() {
