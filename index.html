@@ -1308,6 +1308,47 @@ let categoriesLoaded = false;
 let categoriesRequest = null;
 let categoriesViewId = null;
 
+// Virtual kategoriya: faqat so‘nggi 7 * 24 soat ichida qo‘shilgan mahsulotlar.
+// Asosiy kategoriyalar va mahsulotlarning haqiqiy category qiymati o‘zgarmaydi.
+const NEW_ARRIVALS_CATEGORY = '__aroma_new_arrivals_7d__';
+const NEW_ARRIVALS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+let newArrivalRefreshTimer = null;
+
+function getNewArrivalTimestamp(product) {
+    const value = product && product.newArrivalAt;
+    if (typeof value !== 'string' || !value.trim()) return null;
+    const timestamp = Date.parse(value);
+    return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function isNewArrival(product, now = Date.now()) {
+    const timestamp = getNewArrivalTimestamp(product);
+    return timestamp !== null && timestamp <= now && now - timestamp < NEW_ARRIVALS_WINDOW_MS;
+}
+
+function orderNewArrivals(productList) {
+    // Eng avval qo‘shilgan mahsulot yuqorida; u muddati tugagach keyingisi yuqoriga ko‘tariladi.
+    return [...productList].sort((a, b) =>
+        getNewArrivalTimestamp(a) - getNewArrivalTimestamp(b) || Number(a.id) - Number(b.id)
+    );
+}
+
+function scheduleNewArrivalsRefresh(currentProducts) {
+    if (newArrivalRefreshTimer !== null) {
+        clearTimeout(newArrivalRefreshTimer);
+        newArrivalRefreshTimer = null;
+    }
+    if (selectedCategory !== NEW_ARRIVALS_CATEGORY) return;
+    const now = Date.now();
+    const futureExpirations = currentProducts
+        .map(p => getNewArrivalTimestamp(p) + NEW_ARRIVALS_WINDOW_MS)
+        .filter(expiresAt => Number.isFinite(expiresAt) && expiresAt > now);
+    if (!futureExpirations.length) return;
+    const nextExpiration = Math.min(...futureExpirations);
+    newArrivalRefreshTimer = setTimeout(() => renderProducts(),
+        Math.min(Math.max(nextExpiration - now + 1, 1), 2147483647));
+}
+
 function loadProducts() {
     if (productsRequest) return productsRequest;
     if (!productsLoaded) catalogMessage('productGrid', 'Mahsulotlar yuklanmoqda…');
@@ -1550,12 +1591,27 @@ subButton.style.cssText = `
             category => category.parent_id == null
         );
 
-        if (!mainCategories.length) {
-            catalogMessage('categories', 'Hozircha kategoriya yo‘q.');
-            return;
-        }
+        // Bu maxsus karta doim birinchi turadi; Supabase categories jadvalida saqlanmaydi.
+        container.style.height = Math.ceil((mainCategories.length + 1) / 5) * 85 + "px";
 
-        container.style.height = Math.ceil(mainCategories.length / 5) * 85 + "px";
+        const newArrivalsButton = document.createElement('button');
+        newArrivalsButton.type = 'button';
+        newArrivalsButton.className = 'category-btn new-arrivals-category';
+        newArrivalsButton.setAttribute('aria-label', 'Yangi mahsulotlar, oxirgi 7 kun');
+        newArrivalsButton.innerHTML = `
+            <span><span aria-hidden="true" style="font-size:28px;line-height:1;">🆕</span></span>
+            <span>Yangi<br>mahsulotlar</span>
+        `;
+        if (selectedCategory === NEW_ARRIVALS_CATEGORY) {
+            newArrivalsButton.classList.add('active');
+        }
+        newArrivalsButton.onclick = function () {
+            selectedCategory = NEW_ARRIVALS_CATEGORY;
+            document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+            newArrivalsButton.classList.add('active');
+            renderProducts();
+        };
+        container.appendChild(newArrivalsButton);
 
         mainCategories.forEach(mainCategory => {
             const button = document.createElement("button");
@@ -1809,7 +1865,9 @@ if (!grid) {
 
         let matchesCategory = true;
 
-        if (selectedCategory) {
+        if (selectedCategory === NEW_ARRIVALS_CATEGORY) {
+            matchesCategory = isNewArrival(p);
+        } else if (selectedCategory) {
             const selected = allCategories.find(
                 category => category.name === selectedCategory
             );
@@ -1841,6 +1899,11 @@ if (!grid) {
         return matchesSearch && matchesCategory;
     });
 
+    if (selectedCategory === NEW_ARRIVALS_CATEGORY) {
+        filtered = orderNewArrivals(filtered);
+    }
+    scheduleNewArrivalsRefresh(filtered);
+
 console.log("PRODUCTS:", products);
 console.log("FILTERED:", filtered);
 
@@ -1852,7 +1915,9 @@ console.log("FILTERED:", filtered);
                 padding:30px;
                 color:#777;
             ">
-                Mahsulot topilmadi 😔
+                ${selectedCategory === NEW_ARRIVALS_CATEGORY
+                    ? 'Hozircha yangi mahsulot yo‘q. Oxirgi 7 kunda qo‘shilgan mahsulotlar shu yerda chiqadi.'
+                    : 'Mahsulot topilmadi 😔'}
             </div>
         `;
         return;
