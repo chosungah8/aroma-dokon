@@ -3012,6 +3012,7 @@ if (!Array.isArray(data) || data.length === 0) {
                     Kategoriyalar mavjud emas
                 </div>
             `;
+            renderNewArrivalsImageControl(list);
             return;
         }
 
@@ -3255,11 +3256,110 @@ const mainCategories = data.filter(
             `;
         }).join('');
 
+        renderNewArrivalsImageControl(list);
+
     } catch (error) {
         console.error('Kategoriya yuklashda xatolik:', error);
     }
 }
 
+
+function renderNewArrivalsImageControl(list) {
+        list.insertAdjacentHTML('afterbegin', `
+            <div style="padding:12px;margin:0 0 12px;background:#f5f5f5;border:1px solid #e7e7e7;border-radius:12px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div id="newArrivalsImagePreview" style="width:48px;height:48px;flex-shrink:0;border:1px solid #e5e5e5;background:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:25px;">🆕</div>
+                    <div style="font-size:15px;font-weight:700;">🆕 Yangi mahsulotlar
+                        <div style="font-size:11px;font-weight:400;color:#666;margin-top:4px;">Doim birinchi · mahsulotlar 7 kun ko‘rinadi</div>
+                    </div>
+                </div>
+                <label for="newArrivalsImageInput" style="font-size:12px;display:block;margin:10px 0 5px;">Kategoriya rasmini almashtirish (JPG, PNG, WEBP, 3 MB gacha)</label>
+                <input id="newArrivalsImageInput" type="file" accept="image/jpeg,image/png,image/webp" onchange="changeNewArrivalsImage(this)" style="width:100%;font-size:12px;">
+                <button type="button" onclick="clearNewArrivalsImage()" style="margin-top:7px;padding:8px 12px;">🗑 Rasmni olib tashlash</button>
+                <p id="newArrivalsImageStatus" role="status" style="font-size:12px;color:#555;margin:8px 0 0;"></p>
+            </div>
+        `);
+        void loadNewArrivalsImagePreview();
+}
+
+function updateNewArrivalsImagePreview(imageUrl) {
+    const preview = document.getElementById('newArrivalsImagePreview');
+    if (!preview) return;
+    preview.replaceChildren();
+    if (!imageUrl) { preview.textContent = '🆕'; return; }
+    const img = document.createElement('img');
+    img.src = imageUrl;
+    img.alt = 'Yangi mahsulotlar rasmi';
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+    img.onerror = () => { preview.textContent = '🆕'; };
+    preview.appendChild(img);
+}
+
+async function loadNewArrivalsImagePreview() {
+    const status = document.getElementById('newArrivalsImageStatus');
+    if (!status) return;
+    try {
+        const response = await fetch('/api/new-arrivals-image', { cache: 'no-store' });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || 'Rasm sozlamasi olinmadi');
+        updateNewArrivalsImagePreview(result.image || '');
+    } catch (error) { status.textContent = error.message || 'Rasm yuklanmadi'; }
+}
+
+async function saveNewArrivalsImage(imageUrl) {
+    const response = await fetch('/api/admin/new-arrivals-image', {
+        method: 'PUT',
+        headers: { 'Authorization': 'Bearer ' + adminToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: imageUrl })
+    });
+    const data = await response.json();
+    if (response.status === 401) { logout(); throw Error('Admin panelga qayta kiring.'); }
+    if (!response.ok || !data.success) throw Error(data.message || 'Rasmni saqlab bo‘lmadi');
+    updateNewArrivalsImagePreview(data.image || '');
+}
+
+async function changeNewArrivalsImage(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const status = document.getElementById('newArrivalsImageStatus');
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 3 * 1024 * 1024) {
+        if (status) status.textContent = 'JPG, PNG yoki WEBP rasm tanlang (3 MB gacha).';
+        input.value = '';
+        return;
+    }
+    input.disabled = true;
+    if (status) status.textContent = 'Rasm yuklanmoqda…';
+    try {
+        const encoded = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(Error('Rasmni o‘qib bo‘lmadi'));
+            reader.readAsDataURL(file);
+        });
+        const uploadResponse = await fetch('/api/admin/upload-image', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + adminToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: encoded })
+        });
+        const upload = await uploadResponse.json();
+        if (uploadResponse.status === 401) { logout(); throw Error('Admin panelga qayta kiring.'); }
+        if (!uploadResponse.ok || !upload.success || !upload.url) {
+            throw Error(upload.message || 'Rasmni yuklab bo‘lmadi');
+        }
+        await saveNewArrivalsImage(upload.url);
+        if (status) status.textContent = '✅ Yangi mahsulotlar rasmi saqlandi.';
+    } catch (error) {
+        if (status) status.textContent = error.message || 'Rasm yuklashda xatolik.';
+    } finally { input.disabled = false; input.value = ''; }
+}
+
+async function clearNewArrivalsImage() {
+    const status = document.getElementById('newArrivalsImageStatus');
+    try {
+        await saveNewArrivalsImage('');
+        if (status) status.textContent = '✅ Rasm olib tashlandi. 🆕 belgisi ko‘rinadi.';
+    } catch (error) { if (status) status.textContent = error.message || 'Rasmni o‘chirib bo‘lmadi'; }
+}
 
 async function addCategory() {
     const input = document.getElementById('newCategoryName');

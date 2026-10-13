@@ -1313,6 +1313,28 @@ let categoriesViewId = null;
 const NEW_ARRIVALS_CATEGORY = '__aroma_new_arrivals_7d__';
 const NEW_ARRIVALS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 let newArrivalRefreshTimer = null;
+let newArrivalsImage = '';
+
+async function loadNewArrivalsImage() {
+    // Rasm sozlamasi xatosi katalogni ochishga xalaqit bermasligi kerak.
+    try {
+        const response = await fetch('/api/new-arrivals-image', { cache: 'no-store' });
+        if (!response.ok) return;
+        const data = await response.json();
+        newArrivalsImage = typeof data.image === 'string' ? data.image : '';
+        if (categoriesLoaded && categoriesViewId === null) renderCategories(null);
+    } catch (error) {
+        console.warn('Yangi mahsulotlar rasmi yuklanmadi:', error);
+    }
+}
+
+function newArrivalsCategoryPicture() {
+    const emoji = '<span aria-hidden="true" style="font-size:28px;line-height:1;">🆕</span>';
+    if (!newArrivalsImage) return emoji;
+    const safeSrc = String(newArrivalsImage).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return `<img src="${safeSrc}" alt="" style="width:46px;height:46px;object-fit:cover;border-radius:10px;display:block;margin:0 auto;" onerror="this.style.display='none';this.nextElementSibling.style.display='block';"><span aria-hidden="true" style="display:none;font-size:28px;line-height:1;">🆕</span>`;
+}
+
 
 function getNewArrivalTimestamp(product) {
     const value = product && product.newArrivalAt;
@@ -1599,7 +1621,7 @@ subButton.style.cssText = `
         newArrivalsButton.className = 'category-btn new-arrivals-category';
         newArrivalsButton.setAttribute('aria-label', 'Yangi mahsulotlar, oxirgi 7 kun');
         newArrivalsButton.innerHTML = `
-            <span><span aria-hidden="true" style="font-size:28px;line-height:1;">🆕</span></span>
+            <span>${newArrivalsCategoryPicture()}</span>
             <span>Yangi<br>mahsulotlar</span>
         `;
         if (selectedCategory === NEW_ARRIVALS_CATEGORY) {
@@ -3605,6 +3627,7 @@ function startCatalog() {
     catalogStarted = true;
     trackStoreEvent('visit');
     loadCategories();
+    loadNewArrivalsImage();
     loadProducts();
     loadDeliverySettings();
     loadPublicPromotions();
