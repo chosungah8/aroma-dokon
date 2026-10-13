@@ -169,6 +169,29 @@
         @media(max-width:370px) { .aroma-stat-grid { gap:7px; } .aroma-stat { padding:11px 9px; }
             .aroma-stat-number { font-size:20px; } }
 
+
+        /* Mijozlar ro'yxati */
+        .aroma-customer-search { display:flex; flex-wrap:wrap; gap:9px; align-items:end; margin:12px 0; }
+        .aroma-customer-search label { flex:1 1 170px; font-size:13px; font-weight:700; color:var(--aroma-muted); }
+        .aroma-customer-search input,.aroma-customer-search select { display:block; width:100%; box-sizing:border-box; margin-top:6px; }
+        .aroma-customer-pages { display:flex; align-items:center; flex-wrap:wrap; gap:9px; margin:12px 0; }
+        .aroma-customer-pages span { font-size:13px; color:var(--aroma-muted); }
+
+        /* Admin xaridorlar reytingi */
+        .aroma-rank-filters { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; align-items:end; margin:8px 0 12px; }
+        .aroma-rank-filters label { display:block; font-size:13px; font-weight:700; color:var(--aroma-muted); }
+        .aroma-rank-filters select { margin-top:6px; margin-bottom:0; }
+        .aroma-rank-actions { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; }
+        .aroma-rank-table-wrap { overflow-x:auto; border:1px solid var(--aroma-line); border-radius:12px; background:white; }
+        .aroma-rank-table { border-collapse:collapse; width:100%; min-width:720px; font-size:13px; }
+        .aroma-rank-table th, .aroma-rank-table td { padding:12px 10px; border-bottom:1px solid var(--aroma-line); text-align:left; }
+        .aroma-rank-table th { color:var(--aroma-muted); background:#f7fbfa; white-space:nowrap; }
+        .aroma-rank-table tr:last-child td { border-bottom:0; }
+        .aroma-rank-table .aroma-rank-money { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+        .aroma-rank-table .aroma-rank-name { font-weight:700; }
+        .aroma-rank-secondary { color:var(--aroma-muted); font-size:11px; margin-top:3px; word-break:break-word; }
+        @media(max-width:550px) { .aroma-rank-filters { grid-template-columns:1fr; gap:8px; } }
+
     </style>
 </head>
 
@@ -223,6 +246,86 @@
             <div id="analyticsPopular">Hozircha ko‘rishlar yo‘q.</div>
             <p class="aroma-stat-footnote">Toshkent vaqti. Har bir Telegram foydalanuvchisi bir marta sanaladi. Faqat yangilanishdan keyingi, Telegram orqali tasdiqlangan kirishlar hisoblanadi. «Faol» — mahsulot ko‘rgan, savatga qo‘shgan yoki buyurtma bergan odam; «xaridga aylanish» — 30 kunlik xaridorlar / tashrif buyuruvchilar. Bu ko‘rsatkichlar barcha eski buyurtmalarni qamrab olmaydi.</p>
             <button type="button" onclick="loadAnalytics()">↻ Yangilash</button>
+        </div>
+    </details>
+
+
+
+    <details id="customerListSection" ontoggle="if (this.open) loadCustomerList(1)">
+        <summary>👥 Mijozlar ro‘yxati — barcha xaridorlar</summary>
+        <div>
+            <p class="aroma-stat-footnote">Buyurtma bergan xaridorlar ro‘yxati. Ismi, telefoni yoki Telegram ID bo‘yicha qidiring. Har bir mijozning jami buyurtmasi va xarid summasi ko‘rsatiladi.</p>
+            <form class="aroma-customer-search" onsubmit="event.preventDefault();loadCustomerList(1)">
+                <label>Mijozni qidirish
+                    <input id="customerListSearch" type="search" maxlength="80" placeholder="Ism, telefon yoki Telegram ID" autocomplete="off">
+                </label>
+                <label>Saralash
+                    <select id="customerListSort" onchange="loadCustomerList(1)">
+                        <option value="recent">🕒 Oxirgi buyurtma</option>
+                        <option value="orders">📦 Buyurtmalar soni</option>
+                        <option value="spend">💰 Jami xarid summasi</option>
+                        <option value="name">👤 Ism bo‘yicha</option>
+                    </select>
+                </label>
+                <button type="submit">🔍 Qidirish</button>
+                <button type="button" onclick="document.getElementById('customerListSearch').value='';loadCustomerList(1)">Tozalash</button>
+            </form>
+            <p id="customerListStatus" role="status" aria-live="polite" class="aroma-stat-footnote">Ro‘yxat ochilganda yuklanadi.</p>
+            <div class="aroma-rank-table-wrap">
+                <table class="aroma-rank-table">
+                    <thead><tr><th>№</th><th>Mijoz</th><th>Telefon</th><th>Buyurtmalar</th><th>Jami xarid</th><th>Oxirgi buyurtma</th><th>Amal</th></tr></thead>
+                    <tbody id="customerListRows"><tr><td colspan="7">Ma’lumot hali yuklanmagan.</td></tr></tbody>
+                </table>
+            </div>
+            <div class="aroma-customer-pages">
+                <button type="button" id="customerListPrev" onclick="loadCustomerList(customerListPage-1)" disabled>← Oldingi</button>
+                <span id="customerListPaging">—</span>
+                <button type="button" id="customerListNext" onclick="loadCustomerList(customerListPage+1)" disabled>Keyingi →</button>
+                <button type="button" onclick="downloadCustomerListPage()">⬇ Sahifani CSV</button>
+            </div>
+            <p class="aroma-stat-footnote">Har sahifada 25 ta mijoz. Faol va arxivdagi buyurtmalar hisoblanadi; bekor qilinganlari hisoblanmaydi. Telegram ID bo‘lmagan eski buyurtmalar telefon asosida ajratiladi. Bir mijoz turli aloqa ma’lumotlari bilan ko‘ringan bo‘lsa, alohida satr bo‘lishi mumkin. CSV ichida shaxsiy ma’lumotlar bor — himoyalangan joyda saqlang.</p>
+        </div>
+    </details>
+
+    <details id="customerRankingsSection" ontoggle="if (this.open) loadCustomerRankings()">
+        <summary>🏆 Eng yaxshi mijozlar — buyurtmalar reytingi</summary>
+        <div>
+            <p class="aroma-stat-footnote">Mavjud buyurtmalar bo‘yicha: eng ko‘p buyurtma berganlar, eng katta umumiy xarid va eng qimmat bitta buyurtma. Ma’lumotlar faqat admin uchun.</p>
+            <div class="aroma-rank-filters">
+                <label>Davr
+                    <select id="customerRankPeriod" onchange="loadCustomerRankings()">
+                        <option value="0">Barcha vaqt</option>
+                        <option value="7">Oxirgi 7 kun</option>
+                        <option value="30">Oxirgi 30 kun</option>
+                        <option value="90">Oxirgi 90 kun</option>
+                        <option value="365">Oxirgi 365 kun</option>
+                    </select>
+                </label>
+                <label>Reyting turi
+                    <select id="customerRankMetric" onchange="renderCustomerRankings()">
+                        <option value="by_orders">📦 Eng ko‘p buyurtma</option>
+                        <option value="by_spending">💰 Eng katta umumiy xarid</option>
+                        <option value="by_biggest_order">💎 Eng qimmat bitta buyurtma</option>
+                    </select>
+                </label>
+            </div>
+            <p id="customerRankStatus" role="status" aria-live="polite" class="aroma-stat-footnote">Bo‘lim ochilganda ma’lumot yuklanadi.</p>
+            <div class="aroma-stat-grid">
+                <div class="aroma-stat"><div class="aroma-stat-label">Xarid qilgan mijozlar</div><div class="aroma-stat-number" id="rankCustomerCount">—</div></div>
+                <div class="aroma-stat"><div class="aroma-stat-label">Buyurtmalar soni</div><div class="aroma-stat-number" id="rankOrderCount">—</div></div>
+                <div class="aroma-stat"><div class="aroma-stat-label">Jami savdo (chegirmadan keyin)</div><div class="aroma-stat-number" id="rankTotalSpent">—</div></div>
+            </div>
+            <div class="aroma-rank-actions">
+                <button type="button" onclick="loadCustomerRankings()">↻ Yangilash</button>
+                <button type="button" onclick="downloadCustomerRankings()">⬇ CSV ro‘yxat</button>
+            </div>
+            <div class="aroma-rank-table-wrap">
+                <table class="aroma-rank-table">
+                    <thead><tr><th>№</th><th>Mijoz</th><th>Telefon</th><th>Buyurtma</th><th>Jami xarid</th><th>Eng katta buyurtma</th><th>So‘nggi buyurtma</th></tr></thead>
+                    <tbody id="customerRankRows"><tr><td colspan="7">Ma’lumot hali yuklanmagan.</td></tr></tbody>
+                </table>
+            </div>
+            <p class="aroma-stat-footnote">Eng yaxshi 50 ta mijoz ko‘rsatiladi. Reytingga arxivdagi buyurtmalar ham kiradi, bekor qilinganlari esa hisoblanmaydi. Mijozlar Telegram ID bo‘yicha birlashtiriladi; eski buyurtmada ID bo‘lmasa reytingga qo‘shilmaydi. Jami xarid — chegirmalardan keyingi buyurtma summasi. CSV faylda mijozning shaxsiy ma’lumotlari bor — ehtiyotkorlik bilan saqlang.</p>
         </div>
     </details>
 
@@ -388,6 +491,8 @@
                 <option value="telegram">👤 Telegram ID</option>
             </select>
             <input id="personalTarget" type="text" placeholder="+998 90 123 45 67 yoki Telegram ID" autocomplete="off" style="width:100%;box-sizing:border-box;margin-top:8px;" />
+            <button type="button" onclick="lookupPersonalCouponCustomer()" style="margin-top:8px;width:100%;">🔍 Mijozni tekshirish (kupon yuborilmaydi)</button>
+            <div id="personalLookupMessage" role="status" aria-live="polite" style="font-size:13px;margin-top:8px;white-space:pre-wrap;"></div>
             <label style="display:block;margin:8px 0;">Chegirma turi</label>
             <select id="personalDiscountType" style="width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;">
                 <option value="fixed">💰 So‘m miqdorida</option>
@@ -1358,6 +1463,187 @@ async function loadAnalytics() {
     } catch (error) { status.textContent = error.message || 'Statistika yuklanmadi.'; }
 }
 
+
+
+// All buyers list. Results are paginated on the database and never persisted to browser storage.
+let customerListPage=1;
+let customerListData=null;
+let customerListLoadSeq=0;
+async function loadCustomerList(page=1) {
+    const section=document.getElementById('customerListSection');
+    if (!section?.open || !adminToken) return;
+    const wantedPage=Math.max(1,Math.min(10000,Number(page)||1));
+    const search=document.getElementById('customerListSearch').value.trim();
+    const sort=document.getElementById('customerListSort').value;
+    const seq=++customerListLoadSeq;
+    const status=document.getElementById('customerListStatus');
+    status.textContent='Mijozlar yuklanmoqda…';
+    customerListData=null;
+    const tbody=document.getElementById('customerListRows');
+    tbody.replaceChildren();
+    document.getElementById('customerListPrev').disabled=true;
+    document.getElementById('customerListNext').disabled=true;
+    try {
+        const params=new URLSearchParams({page:String(wantedPage),search,sort});
+        const response=await fetch('/api/admin/customers?'+params.toString(),{
+            headers:{'Authorization':'Bearer '+adminToken}, cache:'no-store'
+        });
+        const result=await response.json();
+        if (seq!==customerListLoadSeq || !adminToken) return;
+        if(response.status===401) {logout();return;}
+        if(!response.ok || !result.success || !result.customers) throw new Error(result.message||'Mijozlar ro‘yxati yuklanmadi.');
+        customerListData=result.customers;
+        customerListPage=Number(customerListData.page)||wantedPage;
+        const total=Math.max(0,Number(customerListData.total)||0);
+        const totalPages=Math.max(1,Math.ceil(total/25));
+        document.getElementById('customerListPaging').textContent=customerListPage+' / '+totalPages+'-sahifa · '+rankNumber(total)+' mijoz';
+        document.getElementById('customerListPrev').disabled=customerListPage<=1;
+        document.getElementById('customerListNext').disabled=customerListPage>=totalPages;
+        const rows=Array.isArray(customerListData.rows)?customerListData.rows:[];
+        if(!rows.length) {
+            const tr=document.createElement('tr'),td=document.createElement('td');
+            td.colSpan=7;td.textContent='Bu qidiruv bo‘yicha mijoz topilmadi.';tr.append(td);tbody.append(tr);
+        }
+        for(const [index,c] of rows.entries()) {
+            const tr=document.createElement('tr');
+            const cell=(value,cls)=>{const td=document.createElement('td');td.textContent=String(value??'—');if(cls)td.className=cls;tr.append(td);return td;};
+            cell((customerListPage-1)*25+index+1);
+            const name=cell(c.customer_name||'Noma’lum','aroma-rank-name');
+            const info=document.createElement('div');info.className='aroma-rank-secondary';
+            info.textContent=(c.customer_id?'Telegram ID: '+c.customer_id:'Telegram ID aniqlanmagan')+(c.customer_username?' · @'+String(c.customer_username).replace(/^@/,''):'');
+            name.append(info);
+            cell(c.phone||'—');cell(rankNumber(c.order_count));
+            cell(rankMoney(c.total_spent),'aroma-rank-money');cell(rankLocalDate(c.last_order_at));
+            const act=document.createElement('td');
+            if(c.customer_id) {
+                const btn=document.createElement('button');btn.type='button';btn.textContent='🎁 Kupon berish';
+                btn.onclick=()=>openPersonalCouponForCustomer(String(c.customer_id));
+                act.append(btn);
+            } else act.textContent='Telegram ID yo‘q';
+            tr.append(act);tbody.append(tr);
+        }
+        status.textContent='Ro‘yxat yangilandi.';
+    } catch(error) {
+        if(seq!==customerListLoadSeq)return;
+        status.textContent='❌ '+(error.message||'Serverga ulanishda xatolik.');
+    }
+}
+function openPersonalCouponForCustomer(id) {
+    if(!/^[1-9][0-9]{0,19}$/.test(id))return;
+    const coupon=document.getElementById('personalTargetType');
+    const target=document.getElementById('personalTarget');
+    if(!coupon||!target)return;
+    coupon.value='telegram';target.value=id;
+    const details=target.closest('details');if(details)details.open=true;
+    document.getElementById('personalLookupMessage').textContent='Telegram ID tanlandi. Avval mijozni tekshiring, keyin kupon shartlarini kiriting.';
+    target.scrollIntoView({behavior:'smooth',block:'center'});
+}
+function downloadCustomerListPage(){
+    const data=customerListData;
+    if(!data||!Array.isArray(data.rows)||!data.rows.length){alert('Bu sahifada yuklab olinadigan mijozlar yo‘q.');return;}
+    // Formula injection protection: untrusted text cannot execute in Excel/Sheets.
+    const safeCsv=value=>{
+        let str=String(value??'').replace(/[\x00-\x1f\x7f]/g,' ');
+        if(/^\s*[=+@\-]/.test(str))str="'"+str;
+        return '"'+str.replace(/"/g,'""')+'"';
+    };
+    const rows=[['№','Mijoz','Telegram ID','Username','Telefon','Buyurtmalar soni','Jami xarid (so‘m)','Eng katta buyurtma (so‘m)','Oxirgi buyurtma']];
+    for (const [i,c] of data.rows.entries()) rows.push([(customerListPage-1)*25+i+1,c.customer_name,c.customer_id,c.customer_username,c.phone,c.order_count,c.total_spent,c.biggest_order,rankLocalDate(c.last_order_at)]);
+    const csv='\uFEFF'+rows.map(r=>r.map(safeCsv).join(',')).join('\r\n');
+    const href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+    const a=document.createElement('a');a.href=href;a.download='aroma-mijozlar-royxati-sahifa-'+customerListPage+'.csv';
+    document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(href),2000);
+}
+
+// Buyer rankings (admin-only API). No customer data is cached in browser storage.
+let customerRankingData = null;
+let customerRankingLoadSeq = 0;
+const rankNumber = value => Math.max(0, Number(value) || 0).toLocaleString('uz-UZ');
+const rankMoney = value => rankNumber(value) + ' so‘m';
+function rankLocalDate(value) {
+    if (!value) return '—';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    return new Intl.DateTimeFormat('uz-UZ', {timeZone:'Asia/Tashkent',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);
+}
+async function loadCustomerRankings() {
+    const section=document.getElementById('customerRankingsSection');
+    if (!section?.open || !adminToken) return;
+    const seq=++customerRankingLoadSeq;
+    const period=document.getElementById('customerRankPeriod').value;
+    const status=document.getElementById('customerRankStatus');
+    customerRankingData=null;
+    status.textContent='Mijozlar reytingi yuklanmoqda…';
+    document.getElementById('customerRankRows').replaceChildren();
+    try {
+        const response=await fetch('/api/admin/customer-rankings?days='+encodeURIComponent(period),{
+            headers:{'Authorization':'Bearer '+adminToken},cache:'no-store'
+        });
+        const result=await response.json();
+        if (seq!==customerRankingLoadSeq || !adminToken) return;
+        if (response.status===401) {logout();return;}
+        if (!response.ok || !result.success || !result.rankings)
+            throw new Error(result.message||'Reytingni olishda xatolik.');
+        customerRankingData=result.rankings;
+        status.textContent='Ma’lumot yangilandi · Toshkent vaqti';
+        renderCustomerRankings();
+    } catch(error) {
+        if (seq!==customerRankingLoadSeq) return;
+        status.textContent='❌ '+(error.message||'Serverga ulanib bo‘lmadi.');
+        document.getElementById('customerRankRows').replaceChildren();
+    }
+}
+function renderCustomerRankings() {
+    const data=customerRankingData;
+    if (!data) return;
+    document.getElementById('rankCustomerCount').textContent=rankNumber(data.customer_count);
+    document.getElementById('rankOrderCount').textContent=rankNumber(data.order_count);
+    document.getElementById('rankTotalSpent').textContent=rankMoney(data.total_spent);
+    const metric=document.getElementById('customerRankMetric').value;
+    const rows=['by_orders','by_spending','by_biggest_order'].includes(metric) ? data[metric] : [];
+    const tbody=document.getElementById('customerRankRows');
+    tbody.replaceChildren();
+    if (!Array.isArray(rows)||!rows.length) {
+        const tr=document.createElement('tr');const td=document.createElement('td');
+        td.colSpan=7;td.textContent='Bu davrda mijozlar topilmadi.';tr.append(td);tbody.append(tr);return;
+    }
+    for (const [index,customer] of rows.entries()) {
+        const tr=document.createElement('tr');
+        const cell=(str,className)=>{const td=document.createElement('td');td.textContent=String(str);if(className)td.className=className;tr.append(td);return td;};
+        cell(index+1);
+        const person=cell(customer.customer_name||'Noma’lum','aroma-rank-name');
+        const secondary=document.createElement('div');secondary.className='aroma-rank-secondary';
+        secondary.textContent='Telegram ID: '+(customer.customer_id||'—')+(customer.customer_username?' · @'+String(customer.customer_username).replace(/^@/,''):'');
+        person.append(secondary);
+        cell(customer.phone||'—');
+        cell(rankNumber(customer.order_count));
+        cell(rankMoney(customer.total_spent),'aroma-rank-money');
+        cell(rankMoney(customer.biggest_order),'aroma-rank-money');
+        cell(rankLocalDate(customer.last_order_at));
+        tbody.append(tr);
+    }
+}
+function downloadCustomerRankings() {
+    if (!customerRankingData) {alert('Avval reytingni yuklang.');return;}
+    const metric=document.getElementById('customerRankMetric').value;
+    if (!['by_orders','by_spending','by_biggest_order'].includes(metric)) return;
+    const rows=customerRankingData[metric];
+    if (!Array.isArray(rows)||!rows.length) {alert('Yuklab olish uchun mijozlar yo‘q.');return;}
+    // Excel/Sheets formula injection protection for untrusted names and phone values.
+    const safeCsv=value=>{
+        let s=String(value??'').replace(/[\x00-\x1f\x7f]/g,' ');
+        if (/^\s*[=+@\-]/.test(s)) s="'"+s;
+        return '"'+s.replace(/"/g,'""')+'"';
+    };
+    const table=[['№','Mijoz','Telegram ID','Telegram username','Telefon','Buyurtmalar soni','Jami xarid (so‘m)','Eng katta buyurtma (so‘m)','Oxirgi buyurtma']];
+    for (const [i,c] of rows.entries()) table.push([i+1,c.customer_name,c.customer_id,c.customer_username,c.phone,c.order_count,c.total_spent,c.biggest_order,rankLocalDate(c.last_order_at)]);
+    const csv='\uFEFF'+table.map(row=>row.map(safeCsv).join(',')).join('\r\n');
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+    const href=URL.createObjectURL(blob);const a=document.createElement('a');
+    a.href=href;a.download='aroma-mijozlar-reytingi-'+metric+'-'+document.getElementById('customerRankPeriod').value+'kun.csv';
+    document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(href),2000);
+}
+
 function showAdmin() {
 
     document
@@ -1384,6 +1670,12 @@ loadPromotionGames();
 
 function logout() {
 
+    ++customerListLoadSeq;
+    customerListData = null;
+    document.getElementById('customerListRows')?.replaceChildren();
+    ++customerRankingLoadSeq;
+    customerRankingData = null;
+    document.getElementById('customerRankRows')?.replaceChildren();
     sessionStorage.removeItem(
         "aroma_admin_token"
     );
@@ -4401,6 +4693,28 @@ async function createCoupon() {
 
 
 // === AROMA shaxsiy kuponlar (admin) ===
+async function lookupPersonalCouponCustomer() {
+    const message=document.getElementById('personalLookupMessage');
+    const targetType=document.getElementById('personalTargetType').value;
+    const target=document.getElementById('personalTarget').value.trim();
+    if (!target) { message.textContent='❌ Telefon raqami yoki Telegram ID kiriting.';return; }
+    message.textContent='Mijoz tekshirilmoqda…';
+    try {
+        const response=await fetch('/api/admin/personal-coupons/lookup',{
+            method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+adminToken},
+            body:JSON.stringify({targetType,target})
+        });
+        const result=await response.json();
+        if (!response.ok || !result.success) throw Error(result.message||'Mijozni tekshirib bo‘lmadi.');
+        // Results can arrive after the admin edits the target; never label another input as verified.
+        if (targetType!==document.getElementById('personalTargetType').value ||
+            target!==document.getElementById('personalTarget').value.trim()) {
+            message.textContent='⚠️ Ma’lumot o‘zgargan. Qayta tekshiring.';
+            return;
+        }
+        message.textContent=(result.confirmed?'✅ ':'ℹ️ ')+result.message;
+    } catch(error){message.textContent='❌ '+error.message;}
+}
 async function issuePersonalCoupon() {
     const message=document.getElementById('personalCouponMessage');
     const payload={
@@ -4477,6 +4791,12 @@ async function cancelPersonalCoupon(id) {
     } catch(error){alert(error.message);}
 }
 
+document.getElementById('personalTarget')?.addEventListener('input',()=>{
+    const m=document.getElementById('personalLookupMessage');if(m)m.textContent='';
+});
+document.getElementById('personalTargetType')?.addEventListener('change',()=>{
+    const m=document.getElementById('personalLookupMessage');if(m)m.textContent='';
+});
 </script>
 
 

@@ -141,3 +141,63 @@ test('order RPC uses v3 and verified Telegram identity only with personal id',as
   assert.equal(calls[0].args.p_customer_id,'701');
   assert.equal(calls[0].args.p_personal_coupon_id,15);
 });
+
+test('separate admin customer lookup requires login and does not issue coupon or message',async()=>{
+  const body={targetType:'phone',target:'+998 90 123 45 67'};
+  const effects=[];
+  const db={
+    rpc:async(name,args)=>{effects.push({type:'lookup',name,args});return {data:[{customer_id:'701'}],error:null};},
+    from:()=>{throw Error('Read-only lookup must not create coupons');}
+  };
+  const bot={telegram:{sendMessage:async()=>{throw Error('Lookup must not send Telegram messages');}}};
+  const target=url('/api/admin/personal-coupons/lookup');
+  const denied=response();
+  await handlePersonalCouponRoutes({method:'POST',headers:{},body},denied,target,
+    {supabase:db,isAdmin:false,bot});
+  assert.equal(denied.status,401);
+  assert.equal(effects.length,0);
+  const res=response();
+  await handlePersonalCouponRoutes({method:'POST',headers:{},body},res,target,
+    {supabase:db,isAdmin:true,bot});
+  assert.equal(res.status,200);
+  assert.equal(res.body.confirmed,true);
+  assert.equal(res.body.customerId,'701');
+  assert.equal(effects.length,1);
+  assert.equal(effects[0].name,'aroma_find_personal_coupon_customer_v1');
+});
+
+test('Telegram ID lookup validates format but does not falsely claim a verified existing customer',async()=>{
+  const db={rpc:async()=>{throw Error('Should not query phone RPC for Telegram ID');}};
+  const good=response();
+  await handlePersonalCouponRoutes({method:'POST',headers:{},body:{targetType:'telegram',target:'701'}},
+    good,url('/api/admin/personal-coupons/lookup'),{supabase:db,isAdmin:true});
+  assert.equal(good.status,200);
+  assert.equal(good.body.confirmed,false);
+  assert.equal(good.body.valid,true);
+  assert.match(good.body.message,/Kupon yuborilmadi/);
+  const bad=response();
+  await handlePersonalCouponRoutes({method:'POST',headers:{},body:{targetType:'telegram',target:'abc'}},
+    bad,url('/api/admin/personal-coupons/lookup'),{supabase:db,isAdmin:true});
+  assert.equal(bad.status,400);
+});
+
+test('lookup handles unknown and ambiguous phone numbers without selecting a customer',async()=>{
+  const target=url('/api/admin/personal-coupons/lookup');
+  const body={targetType:'phone',target:'+998901234567'};
+  let data=[];
+  const db={rpc:async()=>({data,error:null})};
+  const missing=response();
+  await handlePersonalCouponRoutes({method:'POST',headers:{},body},missing,target,{supabase:db,isAdmin:true});
+  assert.equal(missing.status,404);
+  data=[{customer_id:'701'},{customer_id:'702'}];
+  const ambiguous=response();
+  await handlePersonalCouponRoutes({method:'POST',headers:{},body},ambiguous,target,{supabase:db,isAdmin:true});
+  assert.equal(ambiguous.status,409);
+});
+
+test('admin UI contains a dedicated read-only customer lookup button',()=>{
+  const ui=fs.readFileSync(path.join(root,'admin.html'),'utf8');
+  assert.match(ui,/onclick="lookupPersonalCouponCustomer\(\)"/);
+  assert.match(ui,/id="personalLookupMessage"/);
+  assert.match(ui,/fetch\('\/api\/admin\/personal-coupons\/lookup'/);
+});
