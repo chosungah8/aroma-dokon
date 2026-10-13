@@ -113,6 +113,62 @@
         .hidden {
             display: none;
         }
+
+        /* Aroma Admin 2026: consistent cards, forms and responsive layout. */
+        :root { --aroma-ink:#172a35; --aroma-muted:#60747e; --aroma-line:#e1ebea;
+                --aroma-brand:#087f72; --aroma-soft:#edf8f5; --aroma-bg:#f2f7f7; }
+        body { background:var(--aroma-bg); color:var(--aroma-ink); padding:clamp(12px, 3vw, 30px); font-family:system-ui,-apple-system,'Segoe UI',sans-serif; }
+        #adminPanel.box { max-width:1080px; margin:12px auto 40px; border-radius:22px;
+            padding:clamp(14px, 2.5vw, 28px); box-shadow:0 12px 45px rgba(20,70,63,.08); }
+        #adminPanel h1 { color:var(--aroma-ink); font-size:clamp(21px, 3vw, 29px); letter-spacing:-.04em; }
+        #adminPanel > details { margin:0 0 12px !important; background:white; border:1px solid var(--aroma-line);
+            border-radius:16px; overflow:hidden; box-shadow:0 2px 8px rgba(12,50,42,.035); }
+        #adminPanel > details > summary { margin:0 !important; padding:16px 18px !important;
+            background:#f8fbfa !important; color:var(--aroma-ink) !important;
+            cursor:pointer; font-size:16px !important; font-weight:750 !important;
+            border-radius:0 !important; list-style-position:inside; line-height:1.35; }
+        #adminPanel > details > summary:hover { background:var(--aroma-soft) !important; }
+        #adminPanel > details[open] > summary { background:var(--aroma-soft) !important;
+            color:#07594f !important; border-bottom:1px solid var(--aroma-line); }
+        #adminPanel > details > :not(summary) { margin-left:18px; margin-right:18px; }
+        #adminPanel > details > div { padding-top:16px !important; padding-bottom:16px; }
+        #adminPanel input:not([type=checkbox]):not([type=hidden]),
+        #adminPanel select, #adminPanel textarea { border:1px solid #cbded9; background:#fff;
+            border-radius:10px; min-height:43px; font-family:inherit; color:var(--aroma-ink); }
+        #adminPanel input:focus-visible,#adminPanel select:focus-visible,#adminPanel textarea:focus-visible,
+        #adminPanel button:focus-visible,#adminPanel summary:focus-visible { outline:2px solid var(--aroma-brand); outline-offset:2px; }
+        #adminPanel input[type=checkbox] { width:auto; min-height:auto; margin:0; accent-color:var(--aroma-brand); }
+        #adminPanel button { border-radius:10px; min-height:40px; transition:filter .15s ease; }
+        #adminPanel button:hover { filter:brightness(.95); }
+        #adminPanel .primary { background:var(--aroma-brand); color:#fff; }
+        #adminPanel .danger { background:#c83b50; }
+        #adminPanel .logout { background:#ecf1f0; color:#354d55; }
+        #adminPanel .product { border-bottom-color:var(--aroma-line); }
+        .aroma-stat-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:11px; margin:12px 0 18px; }
+        .aroma-stat { padding:15px 13px; border-radius:14px; background:#f7fbfa; border:1px solid var(--aroma-line); min-width:0; }
+        .aroma-stat-label { font-size:12px; font-weight:650; color:var(--aroma-muted); margin-bottom:8px; }
+        .aroma-stat-number { font-size:clamp(21px,2.6vw,29px); font-weight:800; letter-spacing:-.035em; color:#075e53; font-variant-numeric:tabular-nums; }
+        .aroma-chart { display:flex; align-items:end; gap:7px; height:160px; padding:12px 3px 4px; border-bottom:1px solid var(--aroma-line); }
+        .aroma-chart-item { flex:1; min-width:0; height:100%; display:flex; align-items:center; flex-direction:column; justify-content:flex-end; gap:5px; }
+        .aroma-chart-value { font-size:11px; color:var(--aroma-muted); font-variant-numeric:tabular-nums; }
+        .aroma-chart-bar { min-height:3px; width:min(38px,92%); background:linear-gradient(180deg,#16a38d,#087f72);
+            border-radius:7px 7px 2px 2px; }
+        .aroma-chart-day { font-size:11px; color:var(--aroma-muted); white-space:nowrap; }
+        .aroma-stat-footnote { color:var(--aroma-muted); font-size:12px; line-height:1.6; margin-top:12px; }
+        .aroma-stat-heading { font-size:14px; font-weight:750; margin:18px 0 8px; }
+        .aroma-top-product { display:flex; gap:10px; justify-content:space-between; align-items:center;
+            border-bottom:1px solid var(--aroma-line); padding:11px 3px; font-size:13px; }
+        @media(max-width:760px) { .aroma-stat-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+            #adminPanel > details > :not(summary) { margin-left:12px; margin-right:12px; }
+            #adminPanel > details > summary { padding:14px !important; }
+            #adminPanel h1 { margin-bottom:12px; }
+            #adminPanel > div:first-child { gap:8px; flex-wrap:wrap; }
+            #adminPanel .product { gap:9px; flex-wrap:wrap; }
+            #adminPanel img { max-width:100%; }
+        }
+        @media(max-width:370px) { .aroma-stat-grid { gap:7px; } .aroma-stat { padding:11px 9px; }
+            .aroma-stat-number { font-size:20px; } }
+
     </style>
 </head>
 
@@ -146,6 +202,29 @@
             Chiqish
         </button>
     </div>
+
+    <details id="analyticsSection" class="aroma-analytics-panel" open>
+        <summary>📊 Do‘kon statistikasi</summary>
+        <div>
+            <p id="analyticsStatus" role="status" style="margin:0 0 8px;color:#60747e;font-size:13px;">Statistika yuklanmoqda...</p>
+            <div class="aroma-stat-grid" id="analyticsCards">
+                <div class="aroma-stat"><div class="aroma-stat-label">Bugun kirganlar</div><div class="aroma-stat-number" id="statToday">—</div></div>
+                <div class="aroma-stat"><div class="aroma-stat-label">7 kunlik kiruvchilar</div><div class="aroma-stat-number" id="statWeek">—</div></div>
+                <div class="aroma-stat"><div class="aroma-stat-label">30 kunlik kiruvchilar</div><div class="aroma-stat-number" id="statMonth">—</div></div>
+                <div class="aroma-stat"><div class="aroma-stat-label">Jami kiruvchilar</div><div class="aroma-stat-number" id="statAll">—</div></div>
+                <div class="aroma-stat"><div class="aroma-stat-label">Faol foydalanuvchilar (30 kun)</div><div class="aroma-stat-number" id="statActive">—</div></div>
+                <div class="aroma-stat"><div class="aroma-stat-label">Savatga qo‘shganlar (30 kun)</div><div class="aroma-stat-number" id="statCart">—</div></div>
+                <div class="aroma-stat"><div class="aroma-stat-label">Buyurtma berganlar (30 kun)</div><div class="aroma-stat-number" id="statBuyers">—</div></div>
+                <div class="aroma-stat"><div class="aroma-stat-label">Xaridga aylanish (30 kun)</div><div class="aroma-stat-number" id="statConversion">—</div></div>
+            </div>
+            <h3 class="aroma-stat-heading">Oxirgi 7 kun — noyob tashrif buyuruvchilar</h3>
+            <div class="aroma-chart" id="analyticsChart" role="img" aria-label="Oxirgi 7 kunlik tashriflar grafigi"></div>
+            <h3 class="aroma-stat-heading">Eng ko‘p ko‘rilgan mahsulotlar (30 kun)</h3>
+            <div id="analyticsPopular">Hozircha ko‘rishlar yo‘q.</div>
+            <p class="aroma-stat-footnote">Toshkent vaqti. Har bir Telegram foydalanuvchisi bir marta sanaladi. Faqat yangilanishdan keyingi, Telegram orqali tasdiqlangan kirishlar hisoblanadi. «Faol» — mahsulot ko‘rgan, savatga qo‘shgan yoki buyurtma bergan odam; «xaridga aylanish» — 30 kunlik xaridorlar / tashrif buyuruvchilar. Bu ko‘rsatkichlar barcha eski buyurtmalarni qamrab olmaydi.</p>
+            <button type="button" onclick="loadAnalytics()">↻ Yangilash</button>
+        </div>
+    </details>
 
     <details style="margin-bottom:15px;">
         <summary style="cursor:pointer;font-weight:bold;padding:12px;">Telegram ulanishi</summary>
@@ -1201,6 +1280,59 @@ async function setupTelegramWebhook(button) {
     finally { button.disabled = false; }
 }
 
+// Protected API: this never queries the database directly from the browser.
+async function loadAnalytics() {
+    const status = document.getElementById('analyticsStatus');
+    if (!status || !adminToken) return;
+    status.textContent = 'Statistika yuklanmoqda...';
+    try {
+        const response = await fetch('/api/admin/analytics', {
+            headers: { Authorization: 'Bearer ' + adminToken }, cache: 'no-store'
+        });
+        const json = await response.json();
+        if (response.status === 401) { logout(); return; }
+        if (!response.ok || !json.success || !json.stats)
+            throw new Error(json.message || 'Statistikani yuklashda xatolik.');
+        const d = json.stats;
+        const integer = v => (Number(v) || 0).toLocaleString('uz-UZ');
+        for (const [id, val] of Object.entries({
+            statToday: d.visitors_today, statWeek: d.visitors_7d,
+            statMonth: d.visitors_30d, statAll: d.visitors_all,
+            statActive: d.active_30d, statCart: d.cart_30d,
+            statBuyers: d.buyers_30d
+        })) document.getElementById(id).textContent = integer(val);
+        const visitors = Number(d.visitors_30d) || 0;
+        const converted = Number(d.converted_30d) || 0;
+        document.getElementById('statConversion').textContent = visitors
+            ? (converted * 100 / visitors).toFixed(1) + '%' : '0%';
+        const chart = document.getElementById('analyticsChart');
+        chart.replaceChildren();
+        const rows = Array.isArray(d.daily_7d) ? d.daily_7d : [];
+        const max = Math.max(1, ...rows.map(row => Number(row.visitors) || 0));
+        for (const row of rows) {
+            const item = document.createElement('div'); item.className = 'aroma-chart-item';
+            const value = document.createElement('span'); value.className = 'aroma-chart-value';
+            value.textContent = integer(row.visitors);
+            const bar = document.createElement('div'); bar.className = 'aroma-chart-bar';
+            bar.style.height = Math.max(3, Math.round((Number(row.visitors) || 0) / max * 105)) + 'px';
+            const day = document.createElement('span'); day.className = 'aroma-chart-day';
+            day.textContent = String(row.day || '').slice(5).replace('-', '.');
+            item.append(value, bar, day); chart.appendChild(item);
+        }
+        const list = document.getElementById('analyticsPopular');
+        list.replaceChildren();
+        const products = Array.isArray(d.top_products) ? d.top_products : [];
+        if (!products.length) list.textContent = 'Hozircha ko‘rishlar yo‘q.';
+        for (const product of products) {
+            const row = document.createElement('div'); row.className = 'aroma-top-product';
+            const name = document.createElement('span'); name.textContent = String(product.name || ('Mahsulot #' + product.id));
+            const amount = document.createElement('strong'); amount.textContent = integer(product.visitors) + ' kishi';
+            row.append(name, amount); list.appendChild(row);
+        }
+        status.textContent = 'Statistika yangilandi · Toshkent vaqti';
+    } catch (error) { status.textContent = error.message || 'Statistika yuklanmadi.'; }
+}
+
 function showAdmin() {
 
     document
@@ -1211,6 +1343,7 @@ function showAdmin() {
         .getElementById("adminPanel")
         .classList.remove("hidden");
 
+loadAnalytics();
 loadProducts();
 loadOrders();
 loadCategories();

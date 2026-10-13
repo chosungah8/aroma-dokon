@@ -2128,6 +2128,7 @@ function renderProductDescription(desc) {
 }
 
 function showProductDetails(id) {
+    trackStoreEvent('product_view', Number(id));
     const product = products.find(
         p => Number(p.id) === Number(id)
     );
@@ -2606,6 +2607,7 @@ function addToCart(id) {
     }
 
     cart[cartKey] = currentQty + 1;
+    trackStoreEvent('cart_add', Number(id));
 
     persistCart();
     updateCartBar();
@@ -3512,10 +3514,31 @@ async function loadDeliverySettings() {
     }
 }
 
+// Only authenticated Telegram Web App visitors are counted.
+// Failed analytics calls never interrupt shopping or checkout.
+const trackedProductViews = new Set();
+function trackStoreEvent(type, productId) {
+    if (!tg?.initData) return;
+    if (type === 'product_view') {
+        if (trackedProductViews.has(productId)) return;
+        trackedProductViews.add(productId);
+    }
+    const data = { type };
+    if (type !== 'visit') data.productId = productId;
+    try {
+        void fetch('/api/analytics/event', {
+            method: 'POST', keepalive: true,
+            headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': tg.initData },
+            body: JSON.stringify(data)
+        }).catch(() => {});
+    } catch (_) { /* Analytics must not affect the shop. */ }
+}
+
 let catalogStarted = false;
 function startCatalog() {
     if (catalogStarted) return;
     catalogStarted = true;
+    trackStoreEvent('visit');
     loadCategories();
     loadProducts();
     loadDeliverySettings();
