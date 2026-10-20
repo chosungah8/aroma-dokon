@@ -2473,6 +2473,11 @@ async function loadOrders() {
         }
 
         const orders = await response.json();
+        window.aromaPilotBonusOrderIds = new Set(
+            (Array.isArray(orders) ? orders : [])
+                .filter(x => Number(x.bonusExpected || 0) > 0 || Number(x.bonusSpent || 0) > 0)
+                .map(x => String(x.id))
+        );
         // Orders use the shop's calendar, independent of the admin device timezone.
         const shopDate = (value) => {
             const parts = new Intl.DateTimeFormat('en-CA', {
@@ -2545,9 +2550,13 @@ async function loadOrders() {
                 </div>
 
                 <p>
-                    💰 <b>Jami:</b>
+                    💰 <b>${Number(order.bonusSpent) > 0 ? 'Bonusdan oldin' : 'Jami'}:</b>
                     ${Number(order.total).toLocaleString()} so'm
                 </p>
+                ${Number(order.bonusSpent) > 0 ? `
+                    <p style="color:#be185d;">🎁 Bonus: -${Number(order.bonusSpent).toLocaleString()} so‘m</p>
+                    <p><b>To‘lanadigan summa:</b> ${Math.max(0, Number(order.total) - Number(order.bonusSpent)).toLocaleString()} so‘m</p>
+                ` : ''}
 
                 <p>
                     📞 <b>Telefon:</b> ${escapeHtml(order.phone || "—")}<br>
@@ -2649,6 +2658,13 @@ async function loadOrders() {
 }
 
 async function updateOrderStatus(orderId, status) {
+    // Confirmation only for pilot bonus orders, not ordinary customers.
+    let paymentConfirmed = false;
+    if (status === 'Yakunlandi' &&
+        window.aromaPilotBonusOrderIds?.has(String(orderId))) {
+        paymentConfirmed = confirm('Bu bonusli buyurtma yetkazildi va to‘lov to‘liq olindimi?');
+        if (!paymentConfirmed) return;
+    }
     try {
         const response = await fetch(
             "/api/admin/orders/" + encodeURIComponent(orderId),
@@ -2659,7 +2675,8 @@ async function updateOrderStatus(orderId, status) {
                     "Authorization": "Bearer " + adminToken
                 },
                 body: JSON.stringify({
-                    status: status
+                    status: status,
+                    paymentConfirmed: paymentConfirmed
                 })
             }
         );

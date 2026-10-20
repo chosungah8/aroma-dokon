@@ -604,6 +604,80 @@
                     <span id="cartTotalDiscount">-0 so'm</span>
                 </div>
 
+                <!-- BONUS BALL: limit serverdan olinadi, haqiqiy chegirma buyurtma SQLida tekshiriladi -->
+                <div id="cartBonusSection" style="
+                    margin:12px 0;
+                    padding:12px;
+                    border:1px solid #f5d5e2;
+                    border-radius:12px;
+                    background:#fff9fc;
+                ">
+                    <div style="
+                        font-size:14px;
+                        font-weight:700;
+                        color:#be185d;
+                        margin-bottom:9px;
+                    ">
+                        🎁 Bonus Ball
+                    </div>
+
+                    <label for="cartBonusSpendInput" style="
+                        display:block;
+                        font-size:13px;
+                        margin-bottom:6px;
+                    ">
+                        Sarflanadigan ball:
+                    </label>
+
+                    <input
+                        id="cartBonusSpendInput"
+                        type="number"
+                        min="0"
+                        step="1"
+                        value="0"
+                        disabled
+                        oninput="onCartBonusSpendInput()"
+                        aria-describedby="cartBonusNotice cartBonusInputError"
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                            padding:10px;
+                            border:1px solid #ddd;
+                            border-radius:8px;
+                            background:#f4f4f4;
+                        "
+                    >
+
+                    <div
+                        id="cartBonusNotice"
+                        role="status"
+                        style="
+                            margin-top:8px;
+                            font-size:12px;
+                            color:#777;
+                            line-height:1.5;
+                        "
+                    >
+                        Bonus bilan to‘lash imkoniyati
+                        hozircha tayyorlanmoqda.
+                    </div>
+                    <div id="cartBonusInputError" role="alert" style="font-size:12px;color:#b91c1c;margin-top:5px;"></div>
+                </div>
+
+                <div
+                    id="cartBonusSpentRow"
+                    style="
+                        display:none;
+                        justify-content:space-between;
+                        margin-bottom:7px;
+                        font-size:13px;
+                        color:#be185d;
+                    "
+                >
+                    <span>🎁 Sarflangan bonus:</span>
+                    <span id="cartBonusSpent">-0 so'm</span>
+                </div>
+
                 <div
                     id="freeDeliveryRow"
                     style="
@@ -2867,7 +2941,13 @@ function updateCartBar() {
     if (totalDiscountEl) {
         totalDiscountEl.innerText = `-${(productDiscountAmount + couponAmount + totals.personalDiscountAmount).toLocaleString()} so'm`;
     }
-    if (finalTotalEl) finalTotalEl.innerText = `${total.toLocaleString()} so'm`;
+    const selectedBonus = selectedCartBonusSpend(total);
+    const payableTotal = Math.max(0, total - selectedBonus);
+    if (finalTotalEl) finalTotalEl.innerText = `${payableTotal.toLocaleString()} so'm`;
+    const spentRow = document.getElementById('cartBonusSpentRow');
+    const spentText = document.getElementById('cartBonusSpent');
+    if (spentRow) spentRow.style.display = selectedBonus > 0 ? 'flex' : 'none';
+    if (spentText) spentText.textContent = `-${selectedBonus.toLocaleString()} so'm`;
 
     const deliveryRow = document.getElementById('freeDeliveryRow');
     const deliveryText = document.getElementById('freeDeliveryText');
@@ -2883,14 +2963,215 @@ function updateCartBar() {
         bar.style.display = 'flex';
         document.getElementById('cartCountBadge').innerText = count;
         document.getElementById('cartBarTotal').innerText =
-            `${total.toLocaleString()} so'm (${count} ta)`;
+            `${payableTotal.toLocaleString()} so'm (${count} ta)`;
     } else {
         bar.style.display = 'flex';
         document.getElementById('cartCountBadge').innerText = '0';
         document.getElementById('cartBarTotal').innerText = "0 so'm";
         // Savat bo‘sh bo‘lsa ham ochiq qoladi. Uni faqat mijoz yopadi.
     }
+    // Kupon, mahsulot soni yoki narx o'zgarsa eski bonus limitini ishlatmaymiz.
+    if (document.getElementById('cartModal')?.style.display === 'flex') {
+        void requestCartBonusQuote();
+    }
 }
+
+        // BONUS BALL: faqat balansni o'qish.
+        // Bonus sarflash bu bosqichda faol emas.
+        let cartBonusLoadSerial = 0;
+
+        async function loadCartBonusBalance() {
+            const serial = ++cartBonusLoadSerial;
+            const modal = document.getElementById('cartModal');
+            const notice = document.getElementById('cartBonusNotice');
+            const input = document.getElementById('cartBonusSpendInput');
+            const spentRow = document.getElementById('cartBonusSpentRow');
+
+            if (!modal || !notice) return;
+
+            // Bonus sarflashni hech qachon bu yerda yoqmaymiz.
+            if (input) {
+                input.disabled = true;
+                input.value = '0';
+            }
+
+            if (spentRow) {
+                spentRow.style.display = 'none';
+            }
+
+            if (!tg?.initData) {
+                notice.textContent =
+                    'Bonuslarni ko‘rish uchun do‘konni ' +
+                    'Telegram botidan oching.';
+                return;
+            }
+
+            notice.textContent = 'Bonus balansi yuklanmoqda...';
+
+            try {
+                const response = await fetch('/api/bonus/balance', {
+                    method: 'GET',
+                    headers: {
+                        'X-Telegram-Init-Data': tg.initData
+                    },
+                    cache: 'no-store'
+                });
+
+                const data = await response.json();
+
+                // Savat yopilgan yoki qayta ochilgan bo'lsa,
+                // eski javob ekranga yozilmaydi.
+                if (serial !== cartBonusLoadSerial ||
+                    modal.style.display === 'none') {
+                    return;
+                }
+
+                if (response.status === 401) {
+                    notice.textContent =
+                        'Telegram seansi eskirgan. ' +
+                        'Do‘konni botdan qayta oching.';
+                    return;
+                }
+
+                if (!response.ok || data?.success !== true) {
+                    throw new Error('Bonus balansi olinmadi');
+                }
+
+                const balance = Number(data.balance);
+
+                if (!Number.isSafeInteger(balance) ||
+                    balance < 0 ||
+                    typeof data.enabled !== 'boolean') {
+                    throw new Error('Bonus ma’lumoti noto‘g‘ri');
+                }
+
+                const formatted = balance.toLocaleString('en-US');
+
+                notice.textContent =
+                    'Mavjud bonus: ' + formatted + ' ball. ' +
+                    (data.enabled
+                        ? 'Bonus bilan to‘lash hozircha ishga tushirilmagan.'
+                        : 'Bonus tizimi hozir o‘chirilgan. Ballaringiz saqlanadi.');
+
+            } catch (error) {
+                if (serial !== cartBonusLoadSerial ||
+                    modal.style.display === 'none') {
+                    return;
+                }
+
+                notice.textContent =
+                    'Bonus balansini yuklab bo‘lmadi. ' +
+                    'Keyinroq qayta urinib ko‘ring.';
+            }
+        }
+
+        // Server quote is a preview only. At checkout SQL revalidates the
+        // authenticated user, current item prices, coupons and spend amount.
+        let cartBonusQuote = null;
+        let cartBonusQuoteSerial = 0;
+        let cartBonusQuoteLoadingTotal = null;
+        let cartBonusQuoteFailedTotal = null;
+
+        function selectedCartBonusSpend(total = getCartTotals().total) {
+            const input = document.getElementById('cartBonusSpendInput');
+            if (!input || input.disabled || !cartBonusQuote?.enabled ||
+                cartBonusQuote.total !== total) return 0;
+            const raw = String(input.value).trim();
+            if (!/^(0|[1-9][0-9]*)$/.test(raw)) return 0;
+            const points = Number(raw);
+            return Number.isSafeInteger(points) && points <= cartBonusQuote.maxRedeemable
+                ? points : 0;
+        }
+
+        function onCartBonusSpendInput() {
+            const input = document.getElementById('cartBonusSpendInput');
+            const error = document.getElementById('cartBonusInputError');
+            const total = getCartTotals().total;
+            const raw = String(input?.value ?? '').trim();
+            const valid = raw === '' || (cartBonusQuote?.enabled &&
+                cartBonusQuote.total === total && /^(0|[1-9][0-9]*)$/.test(raw) &&
+                Number.isSafeInteger(Number(raw)) &&
+                Number(raw) <= cartBonusQuote.maxRedeemable);
+            if (error) error.textContent = valid ? '' :
+                `0 dan ${Number(cartBonusQuote?.maxRedeemable || 0).toLocaleString()} gacha butun ball kiriting.`;
+            updateCartBar();
+        }
+
+        async function fetchCartBonusQuote(total) {
+            const response = await fetch('/api/bonus/quote?total=' + encodeURIComponent(total), {
+                method: 'GET',
+                headers: { 'X-Telegram-Init-Data': tg.initData },
+                cache: 'no-store'
+            });
+            const data = await response.json();
+            if (!response.ok || data?.success !== true ||
+                typeof data.enabled !== 'boolean' ||
+                !Number.isSafeInteger(data.balance) || data.balance < 0 ||
+                !Number.isSafeInteger(data.maxRedeemable) ||
+                data.maxRedeemable < 0 || data.maxRedeemable > data.balance ||
+                data.maxRedeemable > total ||
+                (!data.enabled && data.maxRedeemable !== 0)) {
+                throw new Error(response.status === 401 ? 'telegram_session' : 'invalid_quote');
+            }
+            return { ...data, total };
+        }
+
+        async function requestCartBonusQuote(force = false) {
+            const modal = document.getElementById('cartModal');
+            const input = document.getElementById('cartBonusSpendInput');
+            const notice = document.getElementById('cartBonusNotice');
+            const error = document.getElementById('cartBonusInputError');
+            if (!modal || !input || !notice || modal.style.display === 'none') return null;
+            const total = getCartTotals().total;
+            if (!force && cartBonusQuote?.total === total) return cartBonusQuote;
+            if (!force && (cartBonusQuoteLoadingTotal === total ||
+                cartBonusQuoteFailedTotal === total)) return null;
+            const serial = ++cartBonusQuoteSerial;
+            cartBonusQuote = null;
+            cartBonusQuoteLoadingTotal = null;
+            input.disabled = true;
+            input.value = '0';
+            if (error) error.textContent = '';
+            const noSession = !tg?.initData;
+            if (noSession || !Number.isSafeInteger(total) || total <= 0) {
+                notice.textContent = noSession
+                    ? 'Bonuslarni ko‘rish uchun do‘konni Telegram botidan oching.'
+                    : 'Bonus ishlatish uchun savatga mahsulot qo‘shing.';
+                return null;
+            }
+            cartBonusQuoteFailedTotal = null;
+            cartBonusQuoteLoadingTotal = total;
+            notice.textContent = 'Bonus limiti yuklanmoqda...';
+            try {
+                const quote = await fetchCartBonusQuote(total);
+                if (serial !== cartBonusQuoteSerial || modal.style.display === 'none' ||
+                    total !== getCartTotals().total) return null;
+                cartBonusQuote = quote;
+                input.max = String(quote.maxRedeemable);
+                input.disabled = !quote.enabled || quote.maxRedeemable === 0 ||
+                    Boolean(readPendingCheckout());
+                if (input.style) input.style.background = input.disabled ? '#f4f4f4' : '#fff';
+                notice.textContent =
+                    `Mavjud bonus: ${quote.balance.toLocaleString()} ball. ` +
+                    `Sarflash mumkin: ${quote.maxRedeemable.toLocaleString()} ball. ` +
+                    (!quote.enabled ? 'Bonus tizimi hozir o‘chirilgan. Ballaringiz saqlanadi.' :
+                    quote.maxRedeemable === 0 ? 'Hozir bu buyurtmada ball sarflab bo‘lmaydi.' :
+                    '1 ball = 1 so‘m. Kerakli miqdorni kiriting.');
+                updateCartBar();
+                return quote;
+            } catch (e) {
+                if (serial === cartBonusQuoteSerial && modal.style.display !== 'none') {
+                    cartBonusQuoteFailedTotal = total;
+                    notice.textContent = e.message === 'telegram_session'
+                        ? 'Telegram seansi eskirgan. Do‘konni botdan qayta oching.'
+                        : 'Bonus limitini yuklab bo‘lmadi. Savatni qayta oching.';
+                    updateCartBar();
+                }
+                return null;
+            } finally {
+                if (serial === cartBonusQuoteSerial) cartBonusQuoteLoadingTotal = null;
+            }
+        }
 
         function openCartModal() {
             const modal = document.getElementById('cartModal');
@@ -2914,9 +3195,15 @@ function updateCartBar() {
             void loadAvailableCoupons();
             void loadSavedCoupons();
             void loadPersonalCoupons();
+            void requestCartBonusQuote(true);
         }
 
         function closeCartModal() {
+            cartBonusLoadSerial++;
+            cartBonusQuoteSerial++;
+            cartBonusQuote = null;
+            cartBonusQuoteLoadingTotal = null;
+            cartBonusQuoteFailedTotal = null;
             document.getElementById('cartModal').style.display = 'none';
 
             const bottomOrdersNav = document.getElementById('bottomOrdersNav');
@@ -3338,6 +3625,17 @@ async function sendOrder() {
         if (state === 'pending' && pendingCheckout && confirm('Tasdiq hali kelmagan. Avvalgi buyurtmani aynan qayta yuborasizmi?')) transmitCheckout(pendingCheckout);
         return;
     }
+    const spendInput = document.getElementById('cartBonusSpendInput');
+    const rawBonus = String(spendInput?.value ?? '0').trim();
+    if (!/^(0|[1-9][0-9]*)$/.test(rawBonus) ||
+        !Number.isSafeInteger(Number(rawBonus)) || Number(rawBonus) > 1000000000 ||
+        (spendInput?.disabled && Number(rawBonus) !== 0)) {
+        alert('Sarflanadigan bonus miqdorini tekshiring.');
+        return;
+    }
+    const requestedBonusSpent = Number(rawBonus);
+    const totalAtClick = getCartTotals().total;
+    const cartBeforeVerification = JSON.stringify(cart);
     const phone = document.getElementById('phoneInput').value.trim();
     const address = document.getElementById('addressInput').value.trim();
 
@@ -3422,12 +3720,40 @@ async function sendOrder() {
         alert('Savatcha bo‘sh!');
         return;
     }
+    if (JSON.stringify(cart) !== cartBeforeVerification) {
+        alert('Savat o‘zgardi. Buyurtmani qayta tekshirib tasdiqlang.');
+        return;
+    }
+
+    if (requestedBonusSpent > 0) {
+        if (!tg?.initData) {
+            alert('Bonus bilan to‘lash uchun do‘konni Telegram botidan oching.');
+            return;
+        }
+        // The displayed quote may be stale. Force a fresh server quote after
+        // both coupon refreshes, then let the order RPC validate it again.
+        let freshQuote;
+        try { freshQuote = await fetchCartBonusQuote(total); }
+        catch (_) {
+            alert('Bonus limitini qayta tekshirib bo‘lmadi. Savatingiz saqlandi.');
+            return;
+        }
+        if (!freshQuote.enabled || requestedBonusSpent > freshQuote.maxRedeemable ||
+            total !== totalAtClick ||
+            JSON.stringify(cart) !== cartBeforeVerification ||
+            getCartTotals().total !== total) {
+            alert('Bonus yoki savat summasi o‘zgardi. Savatni qayta ochib tekshiring.');
+            void requestCartBonusQuote(true);
+            return;
+        }
+    }
 
 const orderData = {
     items: orderItems,
     originalTotal: originalTotal,
     productDiscountAmount: productDiscountAmount,
     total: total,
+    bonusSpent: requestedBonusSpent,
     couponCode: appliedCoupon?.code || null,
     couponDiscountPercent: appliedCoupon ? Number(appliedCoupon.discountPercent) || 0 : 0,
     couponDiscountAmount: couponDiscountAmount || 0,
@@ -3447,6 +3773,106 @@ function escapeOrderText(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     })[character]);
+}
+
+let myBonusRequest = 0;
+
+async function openMyBonus() {
+    const box = document.getElementById('myBonusBox');
+    const result = document.getElementById('myBonusResult');
+    const requestNumber = ++myBonusRequest;
+
+    box.style.display = 'block';
+    result.textContent = 'Bonuslaringiz yuklanmoqda...';
+
+    if (!tg?.initData) {
+        result.textContent =
+            'Bonuslaringizni ko‘rish uchun do‘konni Telegram botidan oching.';
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/bonus/balance', {
+            method: 'GET',
+            headers: {
+                'X-Telegram-Init-Data': tg.initData
+            },
+            cache: 'no-store'
+        });
+
+        const data = await response.json();
+
+        if (requestNumber !== myBonusRequest ||
+            box.style.display === 'none') return;
+
+        if (response.status === 401) {
+            result.textContent =
+                'Telegram seansi eskirgan. Do‘konni botdan qayta oching.';
+            return;
+        }
+
+        if (!response.ok || data?.success !== true) {
+            throw new Error('Bonus ma’lumoti olinmadi');
+        }
+
+        const balance = Number(data.balance);
+        const percent = Number(data.defaultPercent);
+
+        if (!Number.isSafeInteger(balance) ||
+            balance < 0 ||
+            !Number.isFinite(percent) ||
+            percent < 0 ||
+            percent > 100 ||
+            typeof data.enabled !== 'boolean') {
+            throw new Error('Bonus ma’lumoti noto‘g‘ri');
+        }
+
+        const enabled = data.enabled;
+        const format = n => n.toLocaleString('en-US');
+
+        const balanceLine = document.createElement('div');
+        balanceLine.textContent =
+            'Mavjud bonus: ' + format(balance) + ' ball';
+
+        const valueLine = document.createElement('div');
+        valueLine.textContent =
+            'Bonus qiymati: ' + format(balance) + ' so‘m';
+
+        const percentLine = document.createElement('div');
+        percentLine.textContent =
+            'Bonus yig‘ish foizi: ' + percent + '%';
+
+        const statusLine = document.createElement('div');
+        statusLine.textContent =
+            'Bonus tizimi: ' + (enabled ? 'Yoqilgan' : 'O‘chirilgan');
+
+        const noticeLine = document.createElement('div');
+        noticeLine.style.marginTop = '12px';
+        noticeLine.style.color = '#666';
+        noticeLine.textContent = enabled
+            ? 'Bonus sarflash imkoniyati savatga hali ulanmagan.'
+            : 'Bonus tizimi hozir o‘chirilgan. Ballaringiz saqlanadi.';
+
+        result.replaceChildren(
+            balanceLine,
+            valueLine,
+            percentLine,
+            statusLine,
+            noticeLine
+        );
+
+    } catch (_) {
+        if (requestNumber === myBonusRequest &&
+            box.style.display !== 'none') {
+            result.textContent =
+                'Bonus balansini yuklab bo‘lmadi. Keyinroq qayta urinib ko‘ring.';
+        }
+    }
+}
+
+function closeMyBonus() {
+    myBonusRequest++;
+    document.getElementById('myBonusBox').style.display = 'none';
 }
 
 async function showMyOrders() {
@@ -3534,7 +3960,8 @@ orderBox.onclick = function() {
                 </div>
 
                 <div style="font-weight:bold; margin-bottom:8px;">
-                    💰 ${Number(order.total).toLocaleString()} so'm
+                    💰 ${Math.max(0, Number(order.total) - Number(order.bonusSpent || 0)).toLocaleString()} so'm
+                    ${Number(order.bonusSpent) > 0 ? `<div style="font-size:12px;color:#be185d;">🎁 Bonus: -${Number(order.bonusSpent).toLocaleString()} so‘m</div>` : ''}
                 </div>
 
                 <div style="
@@ -3640,7 +4067,8 @@ function showOrderDetails(order) {
             font-weight:bold;
             margin-top:15px;
         ">
-            💰 Jami: ${Number(order.total).toLocaleString()} so'm
+            💰 To‘lov: ${Math.max(0, Number(order.total) - Number(order.bonusSpent || 0)).toLocaleString()} so'm
+            ${Number(order.bonusSpent) > 0 ? `<div style="font-size:13px;color:#be185d;">Bonusdan oldin: ${Number(order.total).toLocaleString()} so‘m; 🎁 bonus: -${Number(order.bonusSpent).toLocaleString()} so‘m</div>` : ''}
         </div>
 
         <div style="
@@ -3814,6 +4242,61 @@ document.addEventListener('visibilitychange', recoverCatalog);
     </div>
 </div>
 
+<!-- MIJOZ BONUS BALL OYNASI -->
+<div id="myBonusBox"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="myBonusTitle"
+     style="
+        display:none;
+        position:fixed;
+        top:70px;
+        left:0;
+        right:0;
+        bottom:0;
+        background:#fff;
+        padding:15px;
+        box-sizing:border-box;
+        overflow-y:auto;
+        z-index:100000;
+     ">
+    <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-bottom:18px;
+    ">
+        <b id="myBonusTitle" style="font-size:17px;">
+            🎁 Mening bonuslarim
+        </b>
+
+        <button type="button"
+                onclick="closeMyBonus()"
+                aria-label="Bonus oynasini yopish"
+                style="
+                    border:none;
+                    background:#f1f1f1;
+                    border-radius:8px;
+                    padding:6px 10px;
+                ">
+            ✕
+        </button>
+    </div>
+
+    <div id="myBonusResult"
+         role="status"
+         aria-live="polite"
+         style="
+            font-size:15px;
+            line-height:1.9;
+            padding:14px;
+            border-radius:12px;
+            background:#fafafa;
+         ">
+        Bonuslar yuklanmoqda...
+    </div>
+</div>
+
 <!-- PASTKI BUYURTMALARIM -->
 <div id="bottomOrdersNav" style="
     position:fixed;
@@ -3829,6 +4312,27 @@ document.addEventListener('visibilitychange', recoverCatalog);
     z-index:9999;
     box-shadow:0 -3px 15px rgba(0,0,0,0.08);
 ">
+    <button
+        type="button"
+        onclick="openMyBonus()"
+        style="
+            border:none;
+            background:transparent;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:7px;
+            color:#e83e73;
+            font-size:12px;
+            font-weight:700;
+            cursor:pointer;
+            padding:8px 10px;
+        "
+    >
+        <span style="font-size:21px;">🎁</span>
+        <span>Bonuslarim</span>
+    </button>
+
     <button
         onclick="showMyOrders()"
         style="
