@@ -1515,6 +1515,25 @@ function scheduleNewArrivalsRefresh(currentProducts) {
         Math.min(Math.max(nextExpiration - now + 1, 1), 2147483647));
 }
 
+let bonusCatalogRefreshTimer = null;
+function scheduleBonusCatalogRefresh(items) {
+    if (bonusCatalogRefreshTimer !== null) clearTimeout(bonusCatalogRefreshTimer);
+    const now = Date.now();
+    const next = items.flatMap(p => [p.bonusPromoStartsAt, p.bonusPromoEndsAt]
+        .map(s => Date.parse(s)).filter(t => Number.isFinite(t) && t > now))
+        .sort((a,b) => a-b)[0];
+    // Browser stays open: refetch live rates and badge amounts after promotion boundaries.
+    const delay = next ? Math.min(next - now + 1000, 180000) : 180000;
+    bonusCatalogRefreshTimer = setTimeout(async () => {
+        try {
+            const refreshed = await fetchCatalogArray('/api/products');
+            const countries = new Map(products.map(x => [String(x.id), x.country || null]));
+            products = refreshed.map(x => ({...x, country:countries.get(String(x.id)) || null}));
+            renderProducts();
+            scheduleBonusCatalogRefresh(products);
+        } catch(e) { console.warn('Bonus badge refresh:',e); scheduleBonusCatalogRefresh(products); }
+    }, delay);
+}
 function loadProducts() {
     if (productsRequest) return productsRequest;
     if (!productsLoaded) catalogMessage('productGrid', 'Mahsulotlar yuklanmoqda…');
@@ -1524,6 +1543,7 @@ function loadProducts() {
             renderProducts();
             updateCartBar();
             productsLoaded = true;
+            scheduleBonusCatalogRefresh(products);
             loadAvailableCoupons();
 
             // Country information is optional; display products before fetching it.
@@ -2205,6 +2225,14 @@ ${p.discountActive && p.discountPercent > 0
        <span style="color:#e53935;font-size:8px;">-${Number(p.discountPercent)}%</span>`
     : `<span style="font-size:12px;">${Number(variantPrice).toLocaleString()} so'm</span>`}
                 </div>
+                ${Number.isFinite(Number(p.bonusPercent)) && p.bonusPercent !== null &&
+                  Number(p.bonusPercent) > 0 && stock > 0 ? (() => {
+                    const base = Number(variantPrice);
+                    const paid = p.discountActive && Number(p.discountPercent) > 0
+                        ? Math.round(base * (1 - Number(p.discountPercent) / 100)) : base;
+                    const points = Math.floor(paid * Number(p.bonusPercent) / 100);
+                    return points > 0 ? `<div class="bonus-card-rate" style="font-size:12px;font-weight:700;color:#b91c64;line-height:1.4;margin:2px 0 7px;">🎁 ${points.toLocaleString('en-US').replace(/,/g, ' ')} ballgacha</div>` : '';
+                  })() : ''}
 
                 <div style="
                     display:flex;
@@ -4143,6 +4171,11 @@ function startCatalog() {
     loadCategories();
     loadNewArrivalsImage();
     loadProducts();
+    if (tg?.initData) {
+        fetch('/api/bonus/balance', {method:'GET', cache:'no-store',
+            headers:{'X-Telegram-Init-Data':tg.initData}})
+            .catch(() => {}); // Grant is independently idempotent in PostgreSQL.
+    }
     loadDeliverySettings();
     loadPublicPromotions();
     void loadAvailableCoupons();

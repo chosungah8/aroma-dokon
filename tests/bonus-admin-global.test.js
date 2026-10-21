@@ -41,7 +41,7 @@ test('Noto‘g‘ri HTTP usuli va noma’lum ruta bloklanadi',async()=>{
 });
 test('Global SQL migratsiyasiz admin boshqaruvi bloklanadi',async()=>{
   assert.equal((await run({rollout:'pilot'})).res.status,503);
-  const x=await run({endpoint:'settings',method:'PUT',rollout:'pilot',body:{enabled:true,defaultPercent:2,minRedeemOrder:0,maxRedeemPercent:100}});
+  const x=await run({endpoint:'settings',method:'PUT',rollout:'pilot',body:{enabled:true,defaultPercent:2,minRedeemOrder:0,maxRedeemPercent:100,welcomePoints:0}});
   assert.equal(x.res.status,503);
   assert.equal(x.calls.filter(c=>c.params.update).length,0);
 });
@@ -51,7 +51,7 @@ test('Admin sozlamalarni o‘qiydi (faqat himoyalangan API)',async()=>{
   assert.equal(e.res.body.categories[0].id,1);assert.equal(e.res.body.products[0].id,1);
 });
 test('Admin global yoqish va foizlarni saqlaydi',async()=>{
-  const e=await run({endpoint:'settings',method:'PUT',body:{enabled:true,defaultPercent:2.5,minRedeemOrder:100000,maxRedeemPercent:50}});
+  const e=await run({endpoint:'settings',method:'PUT',body:{enabled:true,defaultPercent:2.5,minRedeemOrder:100000,maxRedeemPercent:50,welcomePoints:0}});
   assert.equal(e.res.status,200);
   const update=e.calls.find(c=>c.params.update);
   assert.equal(update.params.update.enabled,true);
