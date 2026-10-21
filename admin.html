@@ -399,6 +399,60 @@
     </details>
 
 
+
+<!-- Bonus Ball global configuration: signed-admin API only. -->
+<details id="bonusAdminSection" style="margin-bottom:15px;" ontoggle="if(this.open) loadBonusAdmin()">
+  <summary style="font-size:18px;font-weight:bold;cursor:pointer;padding:12px;background:#fff0f7;border-radius:10px;">
+    🎁 Bonus Ball — umumiy, kategoriya va mahsulot sozlamalari
+  </summary>
+  <div style="padding:12px;display:grid;gap:12px;max-width:760px;">
+    <p style="font-size:13px;line-height:1.5;">
+      Barcha mijozlar uchun bonusni yoqish/o‘chirish va foizlarni boshqarish.
+      Ustuvorlik: <b>vaqtli mahsulot aksiyasi → mahsulot → kategoriya → umumiy foiz</b>.
+      Biror kategoriya yoki mahsulot uchun <b>0%</b> belgilasangiz, shu guruhga bonus berilmaydi;
+      maydonni bo‘sh qoldirsangiz umumiy qoida amal qiladi.
+      <b>Ball faqat to‘lov tasdiqlanib, buyurtma yakunlanganda beriladi.</b>
+    </p>
+    <p id="bonusAdminStatus" role="status" aria-live="polite">Bo‘lim ochilganda ma’lumotlar yuklanadi.</p>
+    <div style="padding:12px;border:1px solid #e5e7eb;border-radius:10px;display:grid;gap:9px;">
+      <h3 style="margin:0">Umumiy Bonus Ball</h3>
+      <label><input id="bonusGlobalEnabled" type="checkbox"> Barcha mijozlar uchun Bonus Ball faol</label>
+      <label>Har bir xariddan bonus (%)
+        <input id="bonusGlobalPercent" type="number" min="0" max="100" step="0.01" value="2">
+      </label>
+      <label>Bonus bilan to‘lashning minimal buyurtma summasi (so‘m)
+        <input id="bonusMinOrder" type="number" min="0" max="1000000000" step="0.01" value="0">
+      </label>
+      <label>Bonus bilan to‘lashning maksimal ulushi (%)
+        <input id="bonusMaxRedeemPercent" type="number" min="0" max="100" step="0.01" value="100">
+      </label>
+      <button type="button" onclick="saveBonusGlobal()">💾 Umumiy sozlamalarni saqlash</button>
+    </div>
+    <div style="padding:12px;border:1px solid #e5e7eb;border-radius:10px;display:grid;gap:9px;">
+      <h3 style="margin:0">Kategoriya uchun alohida bonus</h3>
+      <label>Kategoriya <select id="bonusCategorySelect" onchange="bonusFillCategory()"></select></label>
+      <label>Bonus foizi (%) — bo‘sh qoldirsangiz umumiy foiz
+        <input id="bonusCategoryPercent" type="number" min="0" max="100" step="0.01" placeholder="Umumiy foiz ishlasin">
+      </label>
+      <button type="button" onclick="saveBonusCategory()">💾 Kategoriya bonusini saqlash</button>
+    </div>
+    <div style="padding:12px;border:1px solid #e5e7eb;border-radius:10px;display:grid;gap:9px;">
+      <h3 style="margin:0">Mahsulot uchun alohida bonus va vaqtli aksiya</h3>
+      <label>Mahsulot <select id="bonusProductSelect" onchange="bonusFillProduct()"></select></label>
+      <label>Oddiy mahsulot bonusi (%) — bo‘sh qoldirsangiz kategoriya yoki umumiy foiz
+        <input id="bonusProductPercent" type="number" min="0" max="100" step="0.01" placeholder="Ota-ona qoida ishlasin">
+      </label>
+      <label>Vaqtli bonus aksiyasi (%) — ixtiyoriy
+        <input id="bonusProductPromoPercent" type="number" min="0" max="100" step="0.01" placeholder="Aksiya yo‘q">
+      </label>
+      <label>Aksiya boshlanishi <input id="bonusProductPromoStart" type="datetime-local"></label>
+      <label>Aksiya tugashi <input id="bonusProductPromoEnd" type="datetime-local"></label>
+      <button type="button" onclick="saveBonusProduct()">💾 Mahsulot bonusini saqlash</button>
+      <p style="font-size:12px">Vaqtli aksiyani o‘chirish: aksiya foizi va ikkala sanani tozalab saqlang.</p>
+    </div>
+  </div>
+</details>
+
 <details id="couponSection" style="margin-bottom:15px;">
     <summary style="
         font-size:18px;
@@ -4814,6 +4868,139 @@ document.getElementById('personalTarget')?.addEventListener('input',()=>{
 document.getElementById('personalTargetType')?.addEventListener('change',()=>{
     const m=document.getElementById('personalLookupMessage');if(m)m.textContent='';
 });
+
+// Barcha Bonus Ball sozlamalari faqat imzolangan admin seansi orqali.
+let bonusAdminConfig = null;
+function bonusAdminMessage(text) {
+    const node = document.getElementById('bonusAdminStatus');
+    if (node) node.textContent = text;
+}
+async function bonusAdminRequest(path, data) {
+    if (!adminToken) throw Error('Admin panelga qayta kiring.');
+    const options = {
+        method: data === undefined ? 'GET' : 'PUT',
+        headers: {Authorization: 'Bearer ' + adminToken},
+        cache: 'no-store'
+    };
+    if (data !== undefined) {
+        options.headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(data);
+    }
+    const response = await fetch('/api/admin/bonus/' + path, options);
+    const result = await response.json();
+    if (response.status === 401) throw Error('Admin seansi eskirgan. Qayta kiring.');
+    if (!response.ok || result.success !== true)
+        throw Error(result.message || 'Bonus sozlamasi saqlanmadi.');
+    return result;
+}
+function bonusChoose(id) {
+    const el = document.getElementById(id);
+    const value = el.value.trim();
+    if (value === '') return null;
+    const number = Number(value);
+    if (!Number.isFinite(number) || number < 0 || number > 100 ||
+        !/^\d{1,3}(?:\.\d{1,2})?$/.test(value)) {
+        throw Error('Foiz 0–100 oralig‘ida, ko‘pi bilan 2 kasr xonali bo‘lsin.');
+    }
+    return number;
+}
+function bonusChoice(selectId, items, label) {
+    const select = document.getElementById(selectId);
+    select.replaceChildren();
+    for (const item of items) {
+        const option = document.createElement('option');
+        option.value = String(item.id);
+        option.textContent = label(item);
+        select.appendChild(option);
+    }
+}
+function bonusTimeValue(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const pad = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) +
+        'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+function bonusFillCategory() {
+    const id = Number(document.getElementById('bonusCategorySelect').value);
+    const c = bonusAdminConfig?.categories?.find(x => Number(x.id) === id);
+    document.getElementById('bonusCategoryPercent').value =
+        c?.bonus_percent_override == null ? '' : String(c.bonus_percent_override);
+}
+function bonusFillProduct() {
+    const id = Number(document.getElementById('bonusProductSelect').value);
+    const p = bonusAdminConfig?.products?.find(x => Number(x.id) === id);
+    document.getElementById('bonusProductPercent').value =
+        p?.bonus_percent_override == null ? '' : String(p.bonus_percent_override);
+    document.getElementById('bonusProductPromoPercent').value =
+        p?.bonus_promo_percent == null ? '' : String(p.bonus_promo_percent);
+    document.getElementById('bonusProductPromoStart').value =
+        bonusTimeValue(p?.bonus_promo_starts_at);
+    document.getElementById('bonusProductPromoEnd').value =
+        bonusTimeValue(p?.bonus_promo_ends_at);
+}
+async function loadBonusAdmin() {
+    bonusAdminMessage('Bonus sozlamalari yuklanmoqda…');
+    try {
+        const config = await bonusAdminRequest('config');
+        if (config.settings?.rollout_mode !== 'global') throw Error('Global SQL migratsiyasi tayyor emas.');
+        bonusAdminConfig = config;
+        document.getElementById('bonusGlobalEnabled').checked = config.settings.enabled === true;
+        document.getElementById('bonusGlobalPercent').value = config.settings.default_percent;
+        document.getElementById('bonusMinOrder').value = config.settings.min_redeem_order;
+        document.getElementById('bonusMaxRedeemPercent').value = config.settings.max_redeem_percent;
+        bonusChoice('bonusCategorySelect', config.categories,
+            c => String(c.name || 'Nomsiz') + ' (#' + c.id + ')');
+        bonusChoice('bonusProductSelect', config.products,
+            p => String(p.name || 'Nomsiz') + ' (#' + p.id + ', ' + String(p.category || '') + ')');
+        bonusFillCategory();bonusFillProduct();
+        bonusAdminMessage('Tizim: ' + (config.settings.enabled ? 'FAOL' : 'O‘CHIQ') +
+            '. Kategoriya va mahsulot uchun alohida foizlarni shu yerda saqlashingiz mumkin.');
+    } catch (err) { bonusAdminMessage('❌ ' + err.message); }
+}
+async function saveBonusGlobal() {
+    try {
+        const enabled = document.getElementById('bonusGlobalEnabled').checked;
+        const defaultPercent = bonusChoose('bonusGlobalPercent');
+        const maxRedeemPercent = bonusChoose('bonusMaxRedeemPercent');
+        const minRedeemOrder = Number(document.getElementById('bonusMinOrder').value);
+        if (defaultPercent === null || maxRedeemPercent === null ||
+            !Number.isFinite(minRedeemOrder) || minRedeemOrder < 0 || minRedeemOrder > 1000000000 ||
+            !/^\d{1,10}(?:\.\d{1,2})?$/.test(document.getElementById('bonusMinOrder').value.trim()))
+            throw Error('Bonus foizi yoki minimal summa noto‘g‘ri.');
+        if (enabled && !confirm('Diqqat! BONUS BALL BARCHA MIJOZLAR UCHUN YOQILADI. Davom etasizmi?')) return;
+        await bonusAdminRequest('settings', {enabled, defaultPercent, maxRedeemPercent, minRedeemOrder});
+        await loadBonusAdmin();bonusAdminMessage('✅ Umumiy bonus sozlamalari saqlandi.');
+    } catch (err) { bonusAdminMessage('❌ ' + err.message); }
+}
+async function saveBonusCategory() {
+    try {
+        const id = Number(document.getElementById('bonusCategorySelect').value);
+        if (!Number.isSafeInteger(id) || id < 1) throw Error('Kategoriyani tanlang.');
+        await bonusAdminRequest('category',{id, percent:bonusChoose('bonusCategoryPercent')});
+        await loadBonusAdmin();bonusAdminMessage('✅ Kategoriya bonusi saqlandi.');
+    } catch(err) {bonusAdminMessage('❌ ' + err.message);}
+}
+async function saveBonusProduct() {
+    try {
+        const id = Number(document.getElementById('bonusProductSelect').value);
+        if (!Number.isSafeInteger(id) || id < 1) throw Error('Mahsulotni tanlang.');
+        const percent = bonusChoose('bonusProductPercent');
+        const promoPercent = bonusChoose('bonusProductPromoPercent');
+        const start = document.getElementById('bonusProductPromoStart').value;
+        const end = document.getElementById('bonusProductPromoEnd').value;
+        if ((promoPercent === null) !== (!start) || (promoPercent === null) !== (!end))
+            throw Error('Vaqtli aksiya uchun foiz va ikkala sanani to‘ldiring.');
+        const promoStartsAt = start ? new Date(start).toISOString() : null;
+        const promoEndsAt = end ? new Date(end).toISOString() : null;
+        if (promoStartsAt && Date.parse(promoStartsAt) >= Date.parse(promoEndsAt))
+            throw Error('Aksiya tugashi boshlanishidan keyin bo‘lishi kerak.');
+        await bonusAdminRequest('product', {id,percent,promoPercent,promoStartsAt,promoEndsAt});
+        await loadBonusAdmin();bonusAdminMessage('✅ Mahsulot bonusi saqlandi.');
+    } catch(err) {bonusAdminMessage('❌ ' + err.message);}
+}
+
 </script>
 
 

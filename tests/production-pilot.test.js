@@ -1,89 +1,66 @@
 'use strict';
+// Old production pilot tests were deliberately replaced for GLOBAL rollout.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { placeOrder } = require('../lib/orders.js');
-const { handleBonusRoutes } = require('../lib/bonus-routes.js');
-
-const PILOT = '123456789';
+const {placeOrder} = require('../lib/orders.js');
+const {handleBonusRoutes} = require('../lib/bonus-routes.js');
+const fs = require('node:fs');
+const path = require('node:path');
+const sql = fs.readFileSync(path.join(__dirname, '../sql/aroma-bonus-global-migration.sql'), 'utf8');
 const OTHER = '987654321';
-function checkoutData(bonusSpent = 0, extra = {}) {
-  return {
-    requestId: '550e8400-e29b-41d4-a716-446655440000',
-    items: [{id:1,count:1}], phone:'TEST', address:'TEST',
-    bonusSpent, ...extra
-  };
-}
-function mockRpc() {
+const DATA = {requestId:'550e8400-e29b-41d4-a716-446655440000',
+  items:[{id:1,count:1}],phone:'TEST',address:'TEST'};
+function database(reply={data:{order:{id:'AR-TEST-1'}},error:null}) {
   const calls=[];
-  return {calls,supabase:{rpc:async (name,params) => {
-    calls.push({name,params});
-    return {data:{order:{id:'AR-TEST-1'}},error:null};
-  }}};
+  return {calls, supabase:{rpc:async(name,params)=>{calls.push({name,params});return reply;}}};
 }
-function usingPilot(id,run) {
-  const prev=process.env.AROMA_BONUS_PILOT_TELEGRAM_ID;
-  if (id===null) delete process.env.AROMA_BONUS_PILOT_TELEGRAM_ID;
-  else process.env.AROMA_BONUS_PILOT_TELEGRAM_ID=id;
-  return Promise.resolve().then(run).finally(() => {
-    if (prev===undefined) delete process.env.AROMA_BONUS_PILOT_TELEGRAM_ID;
-    else process.env.AROMA_BONUS_PILOT_TELEGRAM_ID=prev;
-  });
-}
-test('Pilot env yo‘q bo‘lsa bonus sarflash mutlaqo bloklanadi', () => usingPilot(null,async()=> {
-  const db=mockRpc();
-  await assert.rejects(() => placeOrder(db.supabase,checkoutData(2000),{from:{id:PILOT}}),/faqat sinov/);
-  assert.equal(db.calls.length,0);
-}));
-test('Pilot bo‘lmagan foydalanuvchining bonus RPC chaqiruvi bloklanadi', () => usingPilot(PILOT,async()=> {
-  const db=mockRpc();
-  await assert.rejects(() => placeOrder(db.supabase,checkoutData(2000,{telegramUserId:PILOT}),{from:{id:OTHER}}),/faqat sinov/);
-  assert.equal(db.calls.length,0);
-}));
-test('Boshqa mijoz oddiy buyurtma bilan v2 RPC ishlatishda davom etadi', () => usingPilot(PILOT,async()=> {
-  const db=mockRpc();
-  await placeOrder(db.supabase,checkoutData(0),{from:{id:OTHER}});
+test('Oddiy mijoz bonus sarflamasa avvalgi v2 buyurtma ishlaydi',async()=>{
+  const db=database();await placeOrder(db.supabase,{...DATA,bonusSpent:0},{from:{id:OTHER}});
   assert.equal(db.calls[0].name,'aroma_place_order_v2');
-  assert.equal(db.calls[0].params.p_customer_id,OTHER);
-}));
-test('Pilot mijozning bonusli buyurtmasi bonus RPCga boradi', () => usingPilot(PILOT,async()=> {
-  const db=mockRpc();
-  await placeOrder(db.supabase,checkoutData(2000),{from:{id:PILOT}});
+});
+test('Hamma tasdiqlangan mijozlar bonus RPCga o‘ta oladi; SQL balansni tekshiradi',async()=>{
+  const db=database(); await placeOrder(db.supabase,{...DATA,bonusSpent:2000,telegramUserId:'999999999'},{from:{id:OTHER}});
   assert.equal(db.calls[0].name,'aroma_place_order_with_bonus_v1');
-  assert.equal(db.calls[0].params.p_customer_id,PILOT);
+  assert.equal(db.calls[0].params.p_customer_id,OTHER);
   assert.equal(db.calls[0].params.p_spend_points,2000);
-}));
-async function getBonus({id=PILOT,token='signed',pilot=PILOT,path='/api/bonus/quote?total=100000'}={}) {
+});
+test('SQL bonus disabled yoki balans yetmaganda buyurtma rad qilinadi',async()=>{
+  const db=database({data:null,error:{code:'P0001',message:'Sarflanadigan ball belgilangan limitdan oshgan'}});
+  await assert.rejects(()=>placeOrder(db.supabase,{...DATA,bonusSpent:2000},{from:{id:OTHER}}),/Sarflanadigan ball/);
+});
+test('Noto‘g‘ri bonus miqdori SQLga bormaydi',async()=>{
+  for(const bonusSpent of [-5,1.5, '5',null,1000000001]){
+    const db=database();await assert.rejects(()=>placeOrder(db.supabase,{...DATA,bonusSpent},{from:{id:OTHER}}));
+    assert.equal(db.calls.length,0);
+  }
+});
+async function quote({initData='signed',customer=OTHER}={}) {
   const calls=[];
-  const res={code:0,body:null,headers:{},setHeader(k,v){this.headers[k]=v;},writeHead(n){this.code=n;},end(v){this.body=JSON.parse(v);}};
-  await usingPilot(pilot,() => handleBonusRoutes(
-    {method:'GET',headers:{'x-telegram-init-data':token}}, res,
-    new URL(path,'https://test.example'), {
-      botToken:'test-token', verifiedMiniAppUser:(header)=>header==='signed'?{id}:null,
-      supabase:{rpc:async(n,params)=>{calls.push([n,params]);return {data:{enabled:false,balance:2000,max_redeemable:0,min_redeem_order:0,max_redeem_percent:100,reason:'bonus_disabled'},error:null};}}
-    }
-  ));
-  return {res,calls};
+  const res={code:null,body:null,setHeader(){},writeHead(n){this.code=n;},end(v){this.body=JSON.parse(v);}};
+  await handleBonusRoutes({method:'GET',headers:{'x-telegram-init-data':initData}},res,
+    new URL('/api/bonus/quote?total=100000&customerId=1234','https://example.test'),{
+      botToken:'x',verifiedMiniAppUser:value=>value==='signed'?{id:customer}:null,
+      supabase:{rpc:async(name,params)=>{
+        calls.push({name,params});return {data:{enabled:false,balance:0,max_redeemable:0,
+          min_redeem_order:0,max_redeem_percent:100,reason:'bonus_disabled'},error:null};
+      }}
+    });return {calls,res};
 }
-test('Bonus API Telegram tasdig‘isiz ochilmaydi',async()=> {
-  const {res,calls}=await getBonus({token:''});
-  assert.equal(res.code,401);
-  assert.equal(calls.length,0);
+test('Telegram seansisiz bonus balansiga ruxsat berilmaydi',async()=>{
+  const r=await quote({initData:''});assert.equal(r.res.code,401);assert.equal(r.calls.length,0);
 });
-test('Pilot bo‘lmagan mijoz uchun bonus quote 0 va bazaga so‘rovsiz',async()=> {
-  const {res,calls}=await getBonus({id:OTHER});
-  assert.equal(res.code,200);
-  assert.equal(res.body.maxRedeemable,0);
-  assert.equal(res.body.enabled,false);
-  assert.equal(calls.length,0);
+test('Bonus quote mijoz IDni URLdan emas imzolangan Telegram seansidan oladi',async()=>{
+  const r=await quote();assert.equal(r.res.code,200);
+  assert.equal(r.calls.length,1);assert.equal(r.calls[0].params.p_customer_id,OTHER);
 });
-test('Pilot ID yo‘q bo‘lsa ham quote API yopiq',async()=> {
-  const {res,calls}=await getBonus({pilot:null});
-  assert.equal(res.body.maxRedeemable,0);
-  assert.equal(calls.length,0);
+test('SQL migratsiyasi avval tizimni o‘chiq saqlaydi va pilot cheklovini olib tashlaydi',()=>{
+  assert.match(sql,/enabled=false/);
+  assert.match(sql,/rollout_mode='global'/);
+  assert.doesNotMatch(sql,/IF NOT public\.aroma_bonus_pilot_allowed_v1/);
+  assert.doesNotMatch(sql,/IF NOT public\.aroma_bonus_pilot_allowed_v1/);
+  assert.match(sql,/COMMIT;/);
 });
-test('Haqiqiy pilot quote faqat tasdiqlangan Telegram IDga uzatiladi',async()=> {
-  const {res,calls}=await getBonus({path:'/api/bonus/quote?total=100000&customerId=987654321'});
-  assert.equal(res.code,200);
-  assert.equal(calls.length,1);
-  assert.equal(calls[0][1].p_customer_id,PILOT);
+test('Global SQL funksiyalari service_role uchungina mavjud',()=>{
+  assert.match(sql,/REVOKE ALL ON FUNCTION .*FROM PUBLIC, anon, authenticated/);
+  assert.match(sql,/GRANT EXECUTE ON FUNCTION .*TO service_role/);
 });
