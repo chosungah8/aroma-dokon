@@ -741,7 +741,10 @@
         <section id="gameParticipantsPanel" hidden style="margin-top:20px;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
                 <h3 id="gameParticipantsTitle"></h3>
-                <button type="button" onclick="closeGameParticipants()">Yopish</button>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button type="button" onclick="downloadGameExcel(selectedGameId)">📥 Excelni yuklab olish</button>
+                    <button type="button" onclick="closeGameParticipants()">Yopish</button>
+                </div>
             </div>
             <!-- AROMA_PROMOTION_PARTICIPANT_DELETE_STATUS_V2 -->
             <div id="gameParticipantsFeedback" role="status" aria-live="polite" style="margin:10px 0;font-size:14px;"></div>
@@ -3065,11 +3068,21 @@ async function deletePromotionParticipant(id, participant, page, previousTotal) 
     }
 }
 async function downloadGameExcel(id) {
+    if (!id) return;
     const message = document.getElementById('promotionGamesMessage');
-    message.textContent = `${promotionGameLabelForId(id)}: Excel tayyorlanmoqda…`;
+    const feedback = document.getElementById('gameParticipantsFeedback');
+    const show = (text, failed = false) => {
+        message.textContent = text;
+        if (feedback && selectedGameId === String(id)) {
+            feedback.textContent = text;
+            feedback.style.color = failed ? '#b42318' : '#166534';
+        }
+    };
+    show(`${promotionGameLabelForId(id)}: Excel tayyorlanmoqda…`);
     try {
         const response = await gameFetch(`/${id}/excel`);
         const blob = await response.blob();
+        if (blob.size < 100) throw new Error('Server bo‘sh Excel faylini qaytardi.');
         const objectUrl = URL.createObjectURL(blob);
         const link = gameElement('a');
         link.href = objectUrl;
@@ -3078,8 +3091,8 @@ async function downloadGameExcel(id) {
         link.click();
         link.remove();
         setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
-        message.textContent = `${promotionGameLabelForId(id)}: Excel yuklab olish boshlandi.`;
-    } catch (error) { message.textContent = error.message; }
+        show(`${promotionGameLabelForId(id)}: Excel yuklab olish boshlandi. Brauzerning Yuklab olinganlar bo‘limini tekshiring.`);
+    } catch (error) { show('Excel yuklanmadi: ' + error.message, true); }
 }
 async function togglePromotionGame(id, enabled, current) {
     if (enabled && !current && !confirm(`${promotionGameLabelForId(id)} yoqilsinmi? Ishtirok raqamlari shu aksiya bo‘yicha davom etadi. Boshqa aksiya joriy bo‘lsa, uning o‘rnini oladi.`)) return;
