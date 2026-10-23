@@ -62,13 +62,16 @@ test('personal vouchers are active only if unused, enabled, and not expired',()=
 
 test('public GET mine uses ONLY verified Telegram ID, does not trust spoofed query user IDs',async()=>{
   let requestedId=null;
+  let usedCouponFilter=false;
   const db={from(name){assert.equal(name,'personal_coupons');const q={
-      select(){return q;},eq(name,id){assert.equal(name,'customer_id');requestedId=id;return q;},order(){return q;},
+      select(){return q;},eq(name,id){assert.equal(name,'customer_id');requestedId=id;return q;},
+      is(name,value){assert.equal(name,'used_at');assert.equal(value,null);usedCouponFilter=true;return q;},order(){return q;},
       limit:async()=>({data:[{id:5,code:'VIP-AAAABBBBCCCCDD',discount_type:'fixed',discount_value:15000,min_order_amount:100000,expires_at:'2099-01-01',active:true,used_at:null}],error:null})};return q;}};
   const res=response();
   await handlePersonalCouponRoutes(req('GET'),res,url('/api/coupons/personal/mine'),{
       supabase:db,isAdmin:false,botToken:'secret',verifiedMiniAppUser:()=>({id:12})});
-  assert.equal(requestedId,'12');assert.equal(res.status,200);assert.equal(res.body.coupons[0].discountValue,15000);
+  assert.equal(requestedId,'12');assert.equal(usedCouponFilter,true);
+  assert.equal(res.status,200);assert.equal(res.body.coupons[0].discountValue,15000);
   const denied=response();
   await handlePersonalCouponRoutes(req('GET'),denied,url('/api/coupons/personal/mine'),{
       supabase:db,isAdmin:false,botToken:'secret',verifiedMiniAppUser:()=>null});

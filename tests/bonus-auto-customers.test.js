@@ -27,7 +27,9 @@ test('Tizim o‘chiq bo‘lsa yoki mahsulotda 0% bo‘lsa banner yo‘q',()=>{
 });
 test('Mahsulot narxi asosida ballgacha banneri yozilgan, eski foiz banneri yo‘q',()=>{
  assert.match(shop,/🎁 \$\{points\.toLocaleString\('en-US'\)\.replace\(\/,\/g, ' '\)\} ballgacha/);
- assert.match(shop,/Math\.floor\(paid \* Number\(p\.bonusPercent\) \/ 100\)/);
+ assert.match(shop,/function bonusPointsForProduct\(/);
+ assert.match(shop,/Math\.floor\(unitPrice \* count \* percent \/ 100\)/);
+ assert.match(shop,/bonusPointsMarkup\(p, selectedVariant/);
  assert.match(shop,/scheduleBonusCatalogRefresh/);
  assert.doesNotMatch(shop,/\+\$\{Number\(p\.bonusPercent\)/);
 });

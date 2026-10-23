@@ -192,6 +192,23 @@
         .form-group input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
 
         .submit-btn { background: #007aff; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 14px; width: 100%; margin-top: 14px; cursor: pointer; }
+
+        /* Aroma: compact, accessible checkout blocks. All discounts are still calculated server-side. */
+        #cartModal .modal-content { padding:12px 12px 16px; }
+        #cartModal .cart-item { padding:7px 0; gap:6px; }
+        #cartSummary { padding:10px !important; margin:8px 0 !important; }
+        .bonus-card-rate { font-size:12px; font-weight:700; color:#b91c64; line-height:1.4; margin:2px 0 7px; }
+        .cart-compact-box { margin:8px 0; padding:9px 10px; border:1px solid #e8e8eb; border-radius:10px; background:#fafafa; }
+        .cart-compact-header { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:13px; font-weight:700; }
+        .cart-compact-status { font-size:11px; font-weight:500; color:#666; margin-left:auto; text-align:right; }
+        .cart-compact-content { padding-top:9px; }
+        .cart-compact-bonus { margin:8px 0 0; background:#fff9fc; border-color:#f4dbe4; }
+        .cart-compact-bonus-title { font-size:13px; font-weight:700; color:#be185d; margin-bottom:6px; }
+        .cart-compact-bonus-row { display:flex; justify-content:space-between; gap:8px; align-items:center; }
+        .cart-compact-bonus-row label { margin:0; color:#555; font-size:12px; }
+        #cartBonusSpendInput { width:112px; max-width:45%; padding:7px 8px; border:1px solid #ddd; border-radius:7px; font-size:13px; text-align:right; }
+        #cartBonusNotice { margin-top:5px; font-size:11px; line-height:1.35; color:#666; }
+        .cart-bonus-points { font-size:11px; font-weight:700; color:#be185d; line-height:1.4; margin-top:4px; }
     </style>
 </head>
 <body>
@@ -505,41 +522,16 @@
                 <span class="close-btn" onclick="closeCartModal()">✕</span>
             </div>
 
-            <div
-                id="cartCouponsSection"
-                style="
-                    margin:12px 0;
-                    padding:12px;
-                    background:#f8f8f8;
-                    border-radius:12px;
-                "
-            >
-                <div style="
-                    font-weight:700;
-                    margin-bottom:10px;
-                    font-size:15px;
-                ">
-                    🎟️ Kuponlar
+            <div id="cartCouponsSection" class="cart-compact-box">
+                <div class="cart-compact-header">🎟️ Kuponlar <span id="cartCouponCompactStatus" class="cart-compact-status">Mos kupon avtomatik qo‘llanadi</span></div>
+                <div class="cart-compact-content">
+                    <div id="savedCouponsHeadline" role="status" style="font-size:11px;color:#555;margin:0 0 6px;line-height:1.35;">
+                        Kuponlar tekshirilmoqda…
+                    </div>
+                    <div id="cartCouponsList" style="display:flex;flex-direction:column;gap:6px;">Kuponlar yuklanmoqda…</div>
+                    <div id="personalCouponCards" style="display:flex;flex-direction:column;gap:5px;margin-top:6px;" role="status"></div>
+                    <div id="couponResult" style="margin-top:6px;font-size:11px;"></div>
                 </div>
-
-                <div id="savedCouponsHeadline" role="status" style="font-size:12px;color:#555;margin:0 0 9px;line-height:1.4;">
-                    Yuklab olingan kuponlar tekshirilmoqda…
-                </div>
-                <div
-                    id="cartCouponsList"
-                    style="display:flex; flex-direction:column; gap:8px; max-height:190px; overflow-y:auto;"
-                >
-                    Kuponlar yuklanmoqda...
-                </div>
-
-                <div id="personalCouponCards" style="display:flex;flex-direction:column;gap:7px;margin-top:10px;" role="status"></div>
-                <div
-                    id="couponResult"
-                    style="
-                        margin-top:8px;
-                        font-size:13px;
-                    "
-                ></div>
             </div>
 
             <div id="cartItemsList"></div>
@@ -605,63 +597,16 @@
                 </div>
 
                 <!-- BONUS BALL: limit serverdan olinadi, haqiqiy chegirma buyurtma SQLida tekshiriladi -->
-                <div id="cartBonusSection" style="
-                    margin:12px 0;
-                    padding:12px;
-                    border:1px solid #f5d5e2;
-                    border-radius:12px;
-                    background:#fff9fc;
-                ">
-                    <div style="
-                        font-size:14px;
-                        font-weight:700;
-                        color:#be185d;
-                        margin-bottom:9px;
-                    ">
-                        🎁 Bonus Ball
+                <div id="cartBonusSection" class="cart-compact-box cart-compact-bonus">
+                    <div class="cart-compact-bonus-title">🎁 Bonus Ball</div>
+                    <div class="cart-compact-bonus-row">
+                        <label for="cartBonusSpendInput">Sarflanadigan ball:</label>
+                        <input id="cartBonusSpendInput" type="number" min="0" step="1" value="0"
+                            disabled oninput="onCartBonusSpendInput()"
+                            aria-describedby="cartBonusNotice cartBonusInputError" style="background:#f4f4f4;">
                     </div>
-
-                    <label for="cartBonusSpendInput" style="
-                        display:block;
-                        font-size:13px;
-                        margin-bottom:6px;
-                    ">
-                        Sarflanadigan ball:
-                    </label>
-
-                    <input
-                        id="cartBonusSpendInput"
-                        type="number"
-                        min="0"
-                        step="1"
-                        value="0"
-                        disabled
-                        oninput="onCartBonusSpendInput()"
-                        aria-describedby="cartBonusNotice cartBonusInputError"
-                        style="
-                            width:100%;
-                            box-sizing:border-box;
-                            padding:10px;
-                            border:1px solid #ddd;
-                            border-radius:8px;
-                            background:#f4f4f4;
-                        "
-                    >
-
-                    <div
-                        id="cartBonusNotice"
-                        role="status"
-                        style="
-                            margin-top:8px;
-                            font-size:12px;
-                            color:#777;
-                            line-height:1.5;
-                        "
-                    >
-                        Bonus bilan to‘lash imkoniyati
-                        hozircha tayyorlanmoqda.
-                    </div>
-                    <div id="cartBonusInputError" role="alert" style="font-size:12px;color:#b91c1c;margin-top:5px;"></div>
+                    <div id="cartBonusNotice" role="status">Bonus balansi tekshirilmoqda…</div>
+                    <div id="cartBonusInputError" role="alert" style="font-size:11px;color:#b91c1c;margin-top:3px;"></div>
                 </div>
 
                 <div
@@ -1239,7 +1184,8 @@ async function loadPersonalCoupons() {
         });
         const data=await response.json().catch(()=>({}));
         if (!response.ok||!data.success||!Array.isArray(data.coupons)) throw Error(data.message||'Kuponlar olinmadi.');
-        personalCoupons=data.coupons;
+        // Consumed coupons are history, not reusable cart options.
+        personalCoupons=data.coupons.filter(c => c && c.status !== 'used');
         personalCouponsLoaded=true;
         updateCartBar();
         return true;
@@ -1257,6 +1203,7 @@ function renderPersonalCoupons() {
     const amount=calculateCartSubtotal();
     const chosen=getCartTotals().personalCoupon;
     for (const c of personalCoupons) {
+        if (!c || c.status === 'used') continue;
         const box=document.createElement('div');
         box.style.cssText='border:1px solid #fbcfe8;border-radius:9px;background:#fff7fb;padding:9px;font-size:12px;';
         const heading=document.createElement('div');
@@ -1266,7 +1213,7 @@ function renderPersonalCoupons() {
         info.style.cssText='color:#6b7280;margin-top:5px;';
         const needed=Math.max(0,Number(c.minOrderAmount)-amount);
         info.textContent='Minimal xarid: '+Number(c.minOrderAmount).toLocaleString()+' so‘m. '+
-            (c.status==='used'?'Ishlatilgan':c.status==='cancelled'?'Bekor qilingan':(c.status==='expired'||new Date(c.expiresAt).getTime()<=Date.now())?'Muddati tugagan':
+            (c.status==='cancelled'?'Bekor qilingan':(c.status==='expired'||new Date(c.expiresAt).getTime()<=Date.now())?'Muddati tugagan':
                 chosen?.id===c.id?'✅ Oddiy kupon bilan qo‘shib qo‘llandi':needed>0?'Yana '+needed.toLocaleString()+' so‘m kerak':'Xarid shartiga mos');
         box.append(heading,info);list.append(box);
     }
@@ -2026,6 +1973,22 @@ function renderSearchResults() {
     `).join('');
 }
 
+function bonusPointsForProduct(product, variant = '', quantity = 1) {
+    if (!product || Number(product.stock) <= 0 ||
+        product.bonusPercent === null || product.bonusPercent === undefined) return 0;
+    const percent = Number(product.bonusPercent);
+    const count = Number(quantity);
+    if (!Number.isFinite(percent) || percent <= 0 || percent > 100 ||
+        !Number.isSafeInteger(count) || count <= 0) return 0;
+    const unitPrice = getDiscountedProductPrice(product, getVariantPrice(product, variant));
+    if (!Number.isFinite(unitPrice) || unitPrice <= 0) return 0;
+    return Math.max(0, Math.floor(unitPrice * count * percent / 100));
+}
+function bonusPointsMarkup(product, variant = '', quantity = 1, cssClass = 'cart-bonus-points') {
+    const points = bonusPointsForProduct(product, variant, quantity);
+    return points ? `<div class="${cssClass}">🎁 ${points.toLocaleString('en-US').replace(/,/g, ' ')} ballgacha</div>` : '';
+}
+
 function renderProducts() {
     console.log("RENDER START");
     console.log("PRODUCTS COUNT:", products.length);
@@ -2225,14 +2188,7 @@ ${p.discountActive && p.discountPercent > 0
        <span style="color:#e53935;font-size:8px;">-${Number(p.discountPercent)}%</span>`
     : `<span style="font-size:12px;">${Number(variantPrice).toLocaleString()} so'm</span>`}
                 </div>
-                ${Number.isFinite(Number(p.bonusPercent)) && p.bonusPercent !== null &&
-                  Number(p.bonusPercent) > 0 && stock > 0 ? (() => {
-                    const base = Number(variantPrice);
-                    const paid = p.discountActive && Number(p.discountPercent) > 0
-                        ? Math.round(base * (1 - Number(p.discountPercent) / 100)) : base;
-                    const points = Math.floor(paid * Number(p.bonusPercent) / 100);
-                    return points > 0 ? `<div class="bonus-card-rate" style="font-size:12px;font-weight:700;color:#b91c64;line-height:1.4;margin:2px 0 7px;">🎁 ${points.toLocaleString('en-US').replace(/,/g, ' ')} ballgacha</div>` : '';
-                  })() : ''}
+                ${bonusPointsMarkup(p, selectedVariant, 1, 'bonus-card-rate')}
 
                 <div style="
                     display:flex;
@@ -2338,6 +2294,15 @@ function selectVariant(id, value) {
                <span style="color:#e53935;font-size:8px;">-${Number(product.discountPercent)}%</span>`
             : `<span style="font-size:12px;">${Number(variantPrice).toLocaleString()} so'm</span>`;
     }
+    const card = priceEl?.closest('.card');
+    const badge = card?.querySelector('.bonus-card-rate');
+    if (badge) {
+        const points = bonusPointsForProduct(product, value);
+        badge.textContent = points ? `🎁 ${points.toLocaleString('en-US').replace(/,/g, ' ')} ballgacha` : '';
+        badge.style.display = points ? '' : 'none';
+    }
+    const detailBadge = document.getElementById('detailBonusPoints');
+    if (detailBadge) detailBadge.innerHTML = bonusPointsMarkup(product, value);
 }
 
 function renderProductDescription(desc) {
@@ -2524,6 +2489,7 @@ ${product.variants.map(v => {
                 <div style="font-size:14px; color:#555; margin-bottom:10px;"><b>Hajmi:</b> ${product.size || "Ko‘rsatilmagan"}</div>
                 ${product.country ? `<div style="font-size:14px; color:#555; margin-bottom:10px;">${product.country.flag} ${product.country.name}</div>` : ""}
 ${detailVariantOptions}
+                <div id="detailBonusPoints" class="cart-bonus-points" aria-live="polite">${bonusPointsMarkup(product, window.selectedVariants?.[product.id] || '', 1)}</div>
  </div>
 
             <div style="
@@ -2940,6 +2906,13 @@ function updateCartBar() {
         }
     }
     couponDiscountAmount = couponAmount;
+    const couponCompactStatus = document.getElementById('cartCouponCompactStatus');
+    if (couponCompactStatus) {
+        const couponTotal = couponAmount + totals.personalDiscountAmount;
+        couponCompactStatus.textContent = couponTotal > 0
+            ? `−${couponTotal.toLocaleString()} so‘m qo‘llandi`
+            : 'Mos kupon avtomatik qo‘llanadi';
+    }
     renderCouponCards();
     renderPersonalCoupons();
 
@@ -3338,6 +3311,7 @@ function updateCartBar() {
                                     : ''}
                                 <span style="color:${hasDiscount ? '#e53935' : '#007aff'};">${finalPrice.toLocaleString()} so'm</span>
                             </div>
+                            ${bonusPointsMarkup(p, variant, quantity)}
                         </div>
                     </div>
 
@@ -3545,6 +3519,8 @@ async function checkCheckoutReceipt() {
             personalCoupons=[];
             personalCouponsLoaded=false;
             updateCartBar(); renderCartItems(); renderProducts();
+            // The accepted receipt confirms coupon consumption; reload fresh customer coupons.
+            if (tg?.initData) void loadPersonalCoupons();
             receiptNotice('Buyurtma qabul qilindi: ' + result.orderId);
             alert('Buyurtma qabul qilindi: ' + result.orderId + (unchanged ? '' : '. Savat boshqa oynada o‘zgargani uchun saqlandi; uni tekshiring.'));
             return 'accepted';

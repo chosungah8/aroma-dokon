@@ -38,6 +38,7 @@ function fixture() {
         getCategoryVisual: () => '<span>📦</span>',
         getProductCartQty: () => 0,
         getVariantPrice: p => p.price,
+        getDiscountedProductPrice: (_product, price) => price,
         catalogMessage: () => { throw Error('No catalog message expected'); },
         loadCategories: () => {}, renderProducts: () => {},
         window: {}, console: {log() {},error() {}},
@@ -45,9 +46,11 @@ function fixture() {
     });
     const freshHelper = html.slice(html.indexOf('const NEW_ARRIVALS_CATEGORY ='), html.indexOf('function loadProducts()'));
     const categoryCode = html.slice(html.indexOf('function renderCategories('), html.indexOf('function selectCategory('));
+    const bonusHelpers = html.slice(html.indexOf('function bonusPointsForProduct('), html.indexOf('function renderProducts()'));
     const productsCode = html.slice(html.indexOf('function renderProducts()'), html.indexOf('function getVariantPrice('));
     assert.ok(freshHelper.startsWith('const NEW_ARRIVALS_CATEGORY ='));
-    vm.runInContext(freshHelper+'\n'+categoryCode+'\n'+productsCode, ctx);
+    assert.ok(bonusHelpers.startsWith('function bonusPointsForProduct('));
+    vm.runInContext(freshHelper+'\n'+categoryCode+'\n'+bonusHelpers+'\n'+productsCode, ctx);
     return { ctx, categories, grid };
 }
 
