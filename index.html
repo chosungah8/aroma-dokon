@@ -20,7 +20,9 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
         body { background-color: #f4f4f5; color: #18181b; padding: 12px; padding-bottom: 100px; }
 
-        .shop-logo { display:block; width:150px; height:auto; margin:5px 0 3px; }
+        .shop-logo { display:block; width:150px; max-height:90px; object-fit:contain; height:auto; margin:0; }
+        .shop-logo-link { display:inline-block; cursor:pointer; margin:5px 0 3px; border-radius:7px; }
+        .shop-logo-link:focus-visible { outline:2px solid #e83e73; outline-offset:3px; }
         .header h2 { font-size: 20px; margin: 5px 0 3px; font-weight: 600; letter-spacing: 0.5px; }
         .header p { display: none; }
 
@@ -214,7 +216,9 @@
 <body>
 
     <div class="header">
-        <img src="images/aroma-logo.png" alt="AROMA DKON" class="shop-logo">
+        <a class="shop-logo-link" href="/" aria-label="Asosiy sahifaga qaytish" onclick="return openShopHome(event)">
+            <img id="shopLogoImage" src="images/aroma-logo.png" alt="Aroma Do‘kon — bosh sahifa" class="shop-logo">
+        </a>
         <p>Eksklyuziv parfyumeriya to'plami</p>
     </div>
 
@@ -4093,6 +4097,19 @@ function showOrderDetails(order) {
     });
 }
 
+// Preserve Telegram query string when opening the home page from any category.
+function openShopHome(event) {
+    if (event) event.preventDefault();
+    window.location.assign(window.location.pathname + window.location.search);
+    return false;
+}
+const ORIGINAL_SHOP_LOGO = 'images/aroma-logo.png';
+function setShopLogo(url) {
+    const logo = document.getElementById('shopLogoImage');
+    if (!logo) return;
+    logo.onerror = function () { logo.onerror = null; logo.src = ORIGINAL_SHOP_LOGO; };
+    logo.src = url || ORIGINAL_SHOP_LOGO;
+}
 let freeDeliveryEnabled = false;
 let freeDeliveryMinAmount = 0;
 
@@ -4107,6 +4124,8 @@ async function loadDeliverySettings() {
         }
 
         const settings = result.settings || {};
+
+        setShopLogo(typeof settings.logo_url === 'string' ? settings.logo_url : '');
 
         freeDeliveryEnabled =
             settings.free_delivery_enabled === true;

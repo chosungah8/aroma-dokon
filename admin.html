@@ -251,6 +251,41 @@
 
 
 
+    <details id="salesSummarySection" class="aroma-analytics-panel" open>
+        <summary>💰 Kunlik, oylik va yillik savdo</summary>
+        <div>
+            <p id="salesSummaryStatus" role="status" style="color:#60747e;font-size:13px;">Savdo statistikasi yuklanmoqda…</p>
+            <div class="aroma-stat-grid" id="salesSummaryCards">
+                <div class="aroma-stat"><div class="aroma-stat-label">Bugun (buyurtma)</div><div class="aroma-stat-number" id="salesTodayOrders">—</div><div id="salesTodayRevenue">—</div></div>
+                <div class="aroma-stat"><div class="aroma-stat-label">Shu oy (buyurtma)</div><div class="aroma-stat-number" id="salesMonthOrders">—</div><div id="salesMonthRevenue">—</div></div>
+                <div class="aroma-stat"><div class="aroma-stat-label">Shu yil (buyurtma)</div><div class="aroma-stat-number" id="salesYearOrders">—</div><div id="salesYearRevenue">—</div></div>
+                <div class="aroma-stat"><div class="aroma-stat-label">Jami yakunlangan</div><div class="aroma-stat-number" id="salesAllOrders">—</div><div id="salesAllRevenue">—</div></div>
+            </div>
+            <h3 class="aroma-stat-heading">Eng ko‘p sotilgan mahsulotlar</h3>
+            <label for="salesTopPeriod">Davr: </label>
+            <select id="salesTopPeriod" onchange="loadSalesSummary()" style="max-width:180px;">
+                <option value="today">Bugun</option>
+                <option value="month" selected>Shu oy</option>
+                <option value="year">Shu yil</option>
+                <option value="all">Barcha vaqt</option>
+            </select>
+            <div id="salesTopProducts" style="margin-top:12px;">Ma’lumot yuklanmoqda…</div>
+            <p class="aroma-stat-footnote">Faqat «Yakunlandi» buyurtmalari hisoblanadi. Tushum — kupon va bonus chegirmalaridan keyingi to‘lov summasi, yetkazib berish haqi kiritilmagan. Kun, oy va yil buyurtma yaratilgan sana bo‘yicha, Toshkent vaqtida hisoblanadi. «Yangi» buyurtmalar sotuvga kiritilmaydi.</p>
+            <button type="button" onclick="loadSalesSummary()">↻ Savdoni yangilash</button>
+        </div>
+    </details>
+
+    <details id="shopLogoSection" class="aroma-analytics-panel">
+        <summary>🖼 Do‘kon logosi</summary>
+        <div>
+            <p class="aroma-stat-footnote">JPG, PNG yoki WEBP, 3 MB gacha. Mijozlar logoni bosganda bosh sahifaga o‘tadi.</p>
+            <img id="shopLogoAdminPreview" src="images/aroma-logo.png" alt="Do‘kon logosi" style="display:block;max-width:180px;max-height:110px;object-fit:contain;background:#fff;padding:8px;border:1px solid #ddd;border-radius:12px;margin:10px 0;">
+            <input type="file" id="shopLogoFile" accept="image/jpeg,image/png,image/webp" onchange="changeShopLogo(this)" style="max-width:100%;">
+            <button type="button" onclick="clearShopLogo()">Eski standart logoga qaytish</button>
+            <p id="shopLogoAdminStatus" role="status" aria-live="polite" style="color:#60747e;font-size:13px;margin-top:8px;">Logo sozlamasi yuklanadi.</p>
+        </div>
+    </details>
+
     <details id="customerListSection" ontoggle="if (this.open) loadCustomerList(1)">
         <summary>👥 Mijozlar ro‘yxati — barcha xaridorlar</summary>
         <div>
@@ -1489,6 +1524,109 @@ async function setupTelegramWebhook(button) {
 }
 
 // Protected API: this never queries the database directly from the browser.
+// Only server-authenticated aggregate statistics, never client-side orders.
+async function loadSalesSummary() {
+    const status = document.getElementById('salesSummaryStatus');
+    if (!status || !adminToken) return;
+    status.textContent = 'Savdo hisoblanmoqda…';
+    try {
+        const period = document.getElementById('salesTopPeriod').value;
+        const response = await fetch('/api/admin/sales-summary?period=' + encodeURIComponent(period), {
+            headers:{Authorization:'Bearer '+adminToken},cache:'no-store'
+        });
+        const data = await response.json();
+        if (response.status === 401) { logout(); return; }
+        if (!response.ok || !data.success) throw Error(data.message || 'Savdo statistikasi yuklanmadi.');
+        const stats = data.stats || {};
+        const nf = value => (Number(value) || 0).toLocaleString('uz-UZ');
+        const money = value => nf(value) + ' so‘m';
+        for (const [key, prefix] of [['today','Today'],['month','Month'],['year','Year'],['all','All']]) {
+            const summary = stats[key] || {};
+            document.getElementById('sales'+prefix+'Orders').textContent = nf(summary.orders);
+            document.getElementById('sales'+prefix+'Revenue').textContent = money(summary.revenue);
+        }
+        const list = document.getElementById('salesTopProducts');
+        list.replaceChildren();
+        const items = Array.isArray(stats.top_products) ? stats.top_products : [];
+        if (!items.length) list.textContent = 'Tanlangan davrda yakunlangan mahsulot savdosi yo‘q.';
+        for (const [i, item] of items.entries()) {
+            const row = document.createElement('div');
+            row.className = 'aroma-top-product';
+            const name = document.createElement('span');
+            name.textContent = (i+1) + '. ' + String(item.name || 'Noma’lum mahsulot');
+            const qty = document.createElement('strong');
+            qty.textContent = nf(item.units) + ' dona';
+            row.append(name, qty); list.append(row);
+        }
+        status.textContent = 'Toshkent vaqti • Sotuvlar bo‘yicha ma’lumot yangilandi.';
+    } catch(error) { status.textContent = error.message || 'Statistikani yuklab bo‘lmadi.'; }
+}
+const DEFAULT_ADMIN_SHOP_LOGO = 'images/aroma-logo.png';
+function previewShopLogo(url) {
+    const image = document.getElementById('shopLogoAdminPreview');
+    if (!image) return;
+    image.onerror = () => { image.onerror = null; image.src = DEFAULT_ADMIN_SHOP_LOGO; };
+    image.src = url || DEFAULT_ADMIN_SHOP_LOGO;
+}
+async function loadShopLogo() {
+    const status = document.getElementById('shopLogoAdminStatus');
+    if (!status || !adminToken) return;
+    try {
+        const response = await fetch('/api/admin/shop-logo', {
+            headers:{Authorization:'Bearer '+adminToken},cache:'no-store'
+        });
+        const result = await response.json();
+        if (response.status === 401) { logout(); return; }
+        if (!response.ok || !result.success) throw Error(result.message || 'Logo yuklanmadi.');
+        previewShopLogo(result.logoUrl || '');
+        status.textContent = 'Logoni almashtirish uchun rasm tanlang.';
+    } catch (error) { status.textContent = error.message || 'Logo sozlamasi yuklanmadi.'; }
+}
+async function saveShopLogo(logoUrl) {
+    const response = await fetch('/api/admin/shop-logo', {
+        method:'PUT',headers:{Authorization:'Bearer '+adminToken,'Content-Type':'application/json'},
+        body:JSON.stringify({logoUrl})
+    });
+    const result = await response.json();
+    if (response.status === 401) { logout(); throw Error('Admin panelga qayta kiring.'); }
+    if (!response.ok || !result.success) throw Error(result.message || 'Logo saqlanmadi.');
+    previewShopLogo(result.logoUrl || '');
+}
+async function changeShopLogo(input) {
+    const file = input.files?.[0];
+    if (!file) return;
+    const status = document.getElementById('shopLogoAdminStatus');
+    if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 3 * 1024 * 1024) {
+        status.textContent = 'Faqat JPG, PNG yoki WEBP rasm tanlang (3 MB gacha).';
+        input.value = ''; return;
+    }
+    input.disabled = true;
+    status.textContent = 'Logo yuklanmoqda…';
+    try {
+        const dataUrl = await new Promise((resolve,reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(Error('Rasmni o‘qib bo‘lmadi.'));
+            reader.readAsDataURL(file);
+        });
+        const upload = await fetch('/api/admin/upload-image', {
+            method:'POST',headers:{Authorization:'Bearer '+adminToken,'Content-Type':'application/json'},
+            body:JSON.stringify({image:dataUrl})
+        });
+        const uploaded = await upload.json();
+        if (upload.status === 401) { logout(); throw Error('Admin panelga qayta kiring.'); }
+        if (!upload.ok || !uploaded.success || !uploaded.url) throw Error(uploaded.message || 'Rasm yuklanmadi.');
+        await saveShopLogo(uploaded.url);
+        status.textContent = '✅ Do‘kon logosi saqlandi.';
+    } catch (error) { status.textContent = error.message || 'Logo yuklanmadi.'; }
+    finally { input.disabled = false; input.value = ''; }
+}
+async function clearShopLogo() {
+    const status = document.getElementById('shopLogoAdminStatus');
+    try { await saveShopLogo(''); status.textContent = '✅ Standart logo tiklandi.'; }
+    catch (error) { status.textContent = error.message || 'Logo saqlanmadi.'; }
+}
+
 async function loadAnalytics() {
     const status = document.getElementById('analyticsStatus');
     if (!status || !adminToken) return;
@@ -1733,6 +1871,8 @@ function showAdmin() {
         .classList.remove("hidden");
 
 loadAnalytics();
+loadSalesSummary();
+loadShopLogo();
 loadProducts();
 loadOrders();
 loadCategories();
